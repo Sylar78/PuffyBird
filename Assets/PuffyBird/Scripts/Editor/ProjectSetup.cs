@@ -24,6 +24,8 @@ namespace PuffyBird.Editor
         const string RendererPath = SettingsFolder + "/PuffyBird_Renderer.asset";
         const string PostProcessDataPath = "Packages/com.unity.render-pipelines.universal/Runtime/Data/PostProcessData.asset";
         const string BundleId = "com.sylar78.puffybird";
+        /// <summary>Icône générée par tools/icon/make_icon.py (1024 px, sans alpha).</summary>
+        public const string IconPath = "Assets/PuffyBird/Icons/AppIcon.png";
 
         static ProjectSetup()
         {
@@ -119,6 +121,14 @@ namespace PuffyBird.Editor
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.Android.bundleVersionCode = 1;
             PlayerSettings.iOS.buildNumber = "1";
+            PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
+            PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+            // Portrait seul sur iPad : plein écran obligatoire (sinon l'App Store exige toutes les orientations).
+            PlayerSettings.iOS.requiresFullScreen = true;
+
+            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
+            if (icon != null) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
+            else Debug.LogWarning("PuffyBird : icône introuvable (" + IconPath + ").");
         }
 
         static void EnsureScene(bool openScene)

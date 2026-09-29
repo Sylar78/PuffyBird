@@ -20,7 +20,7 @@ Documents de référence (hors dépôt, dans les fichiers partagés du projet Cl
 | `puffybird-reference.html` | Implémentation de référence jouable, un seul fichier HTML5/JS, sprites et sons générés par le code (aucun asset externe). Couvre les étapes 2 à 9 de la feuille de route. |
 | `strategie-croissance.md` | Stratégie de croissance : modèle gratuit + pub, achats intégrés, acquisition digitale, distribution web puis stores. |
 
-La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont.
+La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt ne contient pour l'instant que `publication-ios-testflight.md`.
 
 ## Règles de gameplay à respecter
 
@@ -56,11 +56,15 @@ Points qui se trompent facilement :
 | `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView`, `PipeView`, `BirdView`, `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
 | `Scripts/Runtime/UI/`, `Audio/` | idem | `HudView` et `VoxelFont` (texte en volume, police 5 × 7), `SfxPlayer` |
 | `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes), `PuffySky` |
-| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, scène `Main`), `BuildScript` |
+| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist) |
+| `Assets/PuffyBird/Icons/` | — | `AppIcon.png`, générée par `tools/icon/make_icon.py` (Python sans dépendance) |
 | `Assets/PuffyBird/Tests/EditMode/` | `PuffyBird.Tests.EditMode` | Tests NUnit de la simulation (critères A1 à A13) |
 | `tools/CoreTests/` | — | Projet .NET qui compile `Core` et les tests EditMode hors de Unity |
+| `.github/workflows/ios-testflight.yml`, `ci/ios/` | — | Build iOS (GameCI sous Linux) puis archive, signature et envoi TestFlight sur un Mac GitHub |
 
 Repère monde : 1 unité = 100 px, y vers le haut, le sol (y logique 400) à y = 0, le plan de jeu à z = 0, la caméra à z = −8 regardant vers +z. Toujours convertir via `WorldSpace`.
+
+Formats d'écran (§21.3) : jusqu'au 3:4 (`CameraRig.MaxAspect`), la vue s'élargit (option « extension ») et la simulation reçoit la largeur visible en plus (`GameSimulation.ViewMargin`, bornée par `MaxViewMargin` = 64 px) pour faire apparaître et disparaître les tuyaux hors champ, sans changer le gameplay. Au-delà du 3:4, bandes noires sur les côtés. Les boucles de décor (`SceneryView`) sont dimensionnées pour ce format maximal : tout élément ne se recycle qu'hors champ.
 
 Principes :
 
@@ -162,3 +166,5 @@ Skills de projet à créer plus tard dans `.claude/skills/` : un contrôle de co
 - **Jouer** : ouvrir la scène `Main`, Play. Touches : Espace / clic = tap, Échap ou P = pause, M = muet, B = pilote automatique.
 - **Tests EditMode dans Unity** : Window > General > Test Runner, ou `Unity -batchmode -projectPath . -runTests -testPlatform EditMode -testResults results.xml`.
 - **Builds** : menu **PuffyBird > Build Android (APK)** / **Build iOS (projet Xcode)**, ou `Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildAndroid` (ajouter `-release` pour un `.aab`) et `...BuildScript.BuildIOS`.
+- **TestFlight** : GitHub, onglet Actions > **iOS TestFlight** > Run workflow. Prérequis (compte Apple, clé API, licence Unity, secrets) : `docs/publication-ios-testflight.md`. La version Unity de la CI est fixée dans le workflow (`UNITY_VERSION`) : la garder alignée sur `ProjectSettings/ProjectVersion.txt`.
+- **Icône** : `python3 tools/icon/make_icon.py`, puis menu **PuffyBird > Configurer le projet** pour l'appliquer.

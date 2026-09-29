@@ -1,0 +1,132 @@
+# Build iOS et envoi sur TestFlight, lancé à la main (onglet Actions > iOS TestFlight > Run workflow).
+# 1. Unity (image GameCI, Linux) génère le projet Xcode.
+# 2. Un Mac GitHub archive, signe (signature automatique via la clé App Store Connect) et envoie.
+# Secrets à créer dans le dépôt : voir docs/publication-ios-testflight.md.
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+env:
+  # Même version que l'éditeur utilisé en local (image GameCI disponible).
+  UNITY_VERSION: 6000.6.3f1
+
+jobs:
+  unity:
+    name: Projet Xcode (Unity)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Libérer de l'espace disque (image Unity volumineuse)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: false
+          haskell: true
+          large-packages: false
+          tool-cache: false
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-iOS-
+
+      - name: Build Unity iOS
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: iOS
+          buildName: PuffyBird
+          buildMethod: PuffyBird.Editor.BuildScript.BuildIOS
+          versioning: None
+          customParameters: -buildNumber ${{ github.run_number }} -appleTeamId ${{ secrets.APPLE_TEAM_ID }}
+
+      # Archive tar : conserve les droits d'exécution des scripts du projet Xcode.
+      - name: Empaqueter le projet Xcode
+        run: sudo tar -czf xcode-project.tgz -C build/iOS PuffyBird
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xcode-project
+          path: xcode-project.tgz
+          retention-days: 3
+
+  testflight:
+    name: Archive, signature et envoi TestFlight
+    needs: unity
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Apple exige le SDK iOS le plus récent pour tout envoi : dernier Xcode stable.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: xcode-project
+
+      - name: Extraire le projet Xcode
+        run: |
+          mkdir -p build
+          tar -xzf xcode-project.tgz -C build
+
+      - name: Clé API App Store Connect
+        env:
+          APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "$APPSTORE_P8" > "$RUNNER_TEMP/keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+
+      - name: Archive signée
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -project build/PuffyBird/Unity-iPhone.xcodeproj \
+            -scheme Unity-iPhone \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PuffyBird.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic
+
+      - name: Envoi sur App Store Connect (TestFlight)
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          sed "s/__TEAM_ID__/${TEAM_ID}/" ci/ios/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/PuffyBird.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+          echo "Build ${{ github.run_number }} envoyé : il apparaît dans TestFlight après le traitement par Apple."
+
+      - name: Nettoyer la clé
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -10,29 +9,34 @@ namespace PuffyBird.Editor
     /// Builds mobiles, depuis le menu ou en ligne de commande :
     ///   Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildAndroid
     ///   Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildIOS
-    /// Ajouter « -release » pour un bundle Android (.aab) destiné au Play Store.
+    /// Options : « -release » pour un bundle Android (.aab) destiné au Play Store,
+    /// « -buildNumber N » (numéro de build, unique par envoi sur les stores),
+    /// « -appleTeamId ID » (équipe Apple pour la signature automatique, ou variable APPLE_TEAM_ID),
+    /// « -customBuildPath chemin » (dossier de sortie, fourni par GameCI dans GitHub Actions).
     /// </summary>
     public static class BuildScript
     {
         [MenuItem("PuffyBird/Build Android (APK)", priority = 20)]
         public static void BuildAndroid()
         {
-            bool release = Environment.GetCommandLineArgs().Contains("-release");
+            bool release = HasArg("-release");
             EditorUserBuildSettings.buildAppBundle = release;
             string path = release ? "Builds/Android/PuffyBird.aab" : "Builds/Android/PuffyBird.apk";
-            Build(BuildTarget.Android, path);
+            Build(BuildTarget.Android, Arg("-customBuildPath") ?? path);
         }
 
-        /// <summary>Génère le projet Xcode ; la signature et l'envoi se font ensuite dans Xcode, sur un Mac.</summary>
+        /// <summary>Génère le projet Xcode ; la signature et l'envoi se font ensuite sur un Mac.</summary>
         [MenuItem("PuffyBird/Build iOS (projet Xcode)", priority = 21)]
         public static void BuildIOS()
         {
-            Build(BuildTarget.iOS, "Builds/iOS");
+            Build(BuildTarget.iOS, Arg("-customBuildPath") ?? "Builds/iOS");
         }
 
         static void Build(BuildTarget target, string path)
         {
             ProjectSetup.Configure(openScene: false);
+            ApplyCommandLineOverrides();
+
             var options = new BuildPlayerOptions
             {
                 scenes = new[] { ProjectSetup.ScenePath },
@@ -49,6 +53,32 @@ namespace PuffyBird.Editor
             }
             Debug.LogError($"PuffyBird : build {target} échoué ({summary.totalErrors} erreurs)");
             if (Application.isBatchMode) EditorApplication.Exit(1);
+        }
+
+        static void ApplyCommandLineOverrides()
+        {
+            string buildNumber = Arg("-buildNumber");
+            if (int.TryParse(buildNumber, out int number) && number > 0)
+            {
+                PlayerSettings.iOS.buildNumber = number.ToString();
+                PlayerSettings.Android.bundleVersionCode = number;
+            }
+
+            string team = Arg("-appleTeamId") ?? Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
+            if (!string.IsNullOrEmpty(team))
+            {
+                PlayerSettings.iOS.appleDeveloperTeamID = team;
+                PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+            }
+        }
+
+        static bool HasArg(string name) => Array.IndexOf(Environment.GetCommandLineArgs(), name) >= 0;
+
+        static string Arg(string name)
+        {
+            var args = Environment.GetCommandLineArgs();
+            int i = Array.IndexOf(args, name);
+            return i >= 0 && i + 1 < args.Length && !args[i + 1].StartsWith("-") ? args[i + 1] : null;
         }
     }
 }
