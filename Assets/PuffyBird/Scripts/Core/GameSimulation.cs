@@ -47,6 +47,18 @@ namespace PuffyBird.Core
         public bool NewBest { get; private set; }
         public Bird Bird => _bird;
         public PipeField Pipes => _pipes;
+
+        float _viewMargin;
+
+        /// <summary>
+        /// Largeur visible au-delà de l'écran logique, de chaque côté, en px (0 en 9:16), bornée à
+        /// <see cref="GameConfig.MaxViewMargin"/>. Fixée par le rendu selon le format de l'écran.
+        /// </summary>
+        public float ViewMargin
+        {
+            get => _viewMargin;
+            set => _viewMargin = Math.Max(0f, Math.Min(_cfg.MaxViewMargin, value));
+        }
         /// <summary>Distance totale défilée en px ; figée pendant DYING et OVER.</summary>
         public double ScrollDistance { get; private set; }
         public double PrevScrollDistance { get; private set; }
@@ -151,7 +163,7 @@ namespace PuffyBird.Core
 
             if (State != GameState.Playing) return;
 
-            _pipes.Advance(dt, _rng, _cfg);
+            _pipes.Advance(dt, _rng, _cfg, _viewMargin);
 
             float cx = _cfg.BirdCenterX;
             float cy = _bird.CenterY(_cfg);

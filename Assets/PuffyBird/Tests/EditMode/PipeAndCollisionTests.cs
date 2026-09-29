@@ -45,6 +45,35 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void WideViewSpawnsAndRemovesPipesOffScreen()
+        {
+            float margin = _cfg.MaxViewMargin;
+            var rng = new Rng(11);
+            var field = new PipeField(4);
+            field.SpawnRandom(_cfg.FirstPipeX, rng, _cfg);
+            int lastId = field.Last.Id;
+            int steps = (int)(60f / _cfg.Step);
+            for (int s = 0; s < steps; s++)
+            {
+                float firstRight = field[0].X + _cfg.PipeWidth;
+                int firstId = field[0].Id;
+                field.Advance(_cfg.Step, rng, _cfg, margin);
+
+                if (field[0].Id != firstId)
+                    Assert.That(firstRight - _cfg.ScrollSpeed * _cfg.Step, Is.LessThan(-margin), "disparition dans le champ (ou pool plein)");
+                if (field.Last.Id != lastId)
+                {
+                    Assert.That(field.Last.X, Is.GreaterThan(_cfg.Width + margin), "apparition dans le champ");
+                    Assert.AreEqual(lastId + 1, field.Last.Id);
+                    lastId = field.Last.Id;
+                }
+                Assert.That(field.Count, Is.LessThanOrEqualTo(field.Capacity));
+                for (int i = 1; i < field.Count; i++)
+                    Assert.That(field[i].X - field[i - 1].X, Is.EqualTo(150f).Within(0.001f));
+            }
+        }
+
+        [Test]
         public void TopPipeIsInfinite()
         {
             float cx = _cfg.BirdCenterX;

@@ -13,8 +13,11 @@ namespace PuffyBird.Rendering
     /// </summary>
     public sealed class SceneryView
     {
-        /// <summary>Format d'écran le plus large géré (tablette) pour dimensionner les boucles de décor.</summary>
-        const float WidestAspect = 0.8f;
+        /// <summary>
+        /// Format d'écran le plus large affiché, pour dimensionner les boucles de décor : chaque
+        /// élément ne réapparaît de l'autre côté qu'une fois sorti du champ.
+        /// </summary>
+        const float WidestAspect = CameraRig.MaxAspect;
         const float MaxVerticalFov = 45f;
         const float StripePeriod = 0.24f;
 
@@ -146,7 +149,7 @@ namespace PuffyBird.Rendering
         void BuildHills(Transform root, Material material, int count, float z, float minRadius, float maxRadius, float flatten, float sink)
         {
             var mesh = new MeshBuilder().AddSphere(Vector3.zero, 1f, Color.white, 28, 16).Build("Colline");
-            float span = SpanAt(z, maxRadius);
+            float span = SpanAt(z, maxRadius * 1.8f); // étirement horizontal maximal ci-dessous
             for (int i = 0; i < count; i++)
             {
                 float radius = Rand(minRadius, maxRadius);

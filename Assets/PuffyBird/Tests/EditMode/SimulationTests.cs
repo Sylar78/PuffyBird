@@ -277,6 +277,32 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void ViewMarginDoesNotChangeGameplay()
+        {
+            var narrow = NewReadySim(seed: 21);
+            var wide = NewReadySim(seed: 21);
+            wide.ViewMargin = 1000f;
+            Assert.AreEqual(_cfg.MaxViewMargin, wide.ViewMargin, "marge bornée");
+            narrow.Press();
+            wide.Press();
+            int steps = (int)(20f / _cfg.Step);
+            for (int i = 0; i < steps; i++)
+            {
+                if (AutoPilot.ShouldFlap(narrow))
+                {
+                    narrow.Press();
+                    wide.Press();
+                }
+                narrow.Step();
+                wide.Step();
+                Assert.AreEqual(narrow.Bird.Y, wide.Bird.Y, $"pas {i}");
+                Assert.AreEqual(narrow.Score, wide.Score, $"pas {i}");
+                Assert.AreEqual(narrow.State, wide.State, $"pas {i}");
+            }
+            Assert.GreaterOrEqual(narrow.Score, 14);
+        }
+
+        [Test]
         public void MedalThresholds()
         {
             Assert.AreEqual(Medal.None, Medals.For(9, _cfg));

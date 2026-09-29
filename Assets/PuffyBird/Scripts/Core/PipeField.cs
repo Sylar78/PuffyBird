@@ -14,7 +14,7 @@ namespace PuffyBird.Core
 
     /// <summary>
     /// Paires de tuyaux actives, dans un tampon circulaire de taille fixe :
-    /// aucune allocation pendant la partie (§18.2). Au plus 3 paires sont visibles.
+    /// aucune allocation pendant la partie (§18.2). Au plus 3 paires sont visibles en 9:16, 4 en 3:4.
     /// </summary>
     public sealed class PipeField
     {
@@ -77,12 +77,17 @@ namespace PuffyBird.Core
         /// base sur la position du dernier tuyau, pas sur un minuteur : l'espacement reste
         /// exactement constant.
         /// </summary>
-        public void Advance(float dt, Rng rng, GameConfig cfg)
+        /// <param name="viewMargin">
+        /// Largeur visible au-delà de l'écran logique de chaque côté, en px (0 en 9:16). Les tuyaux
+        /// apparaissent et disparaissent d'autant plus loin, donc toujours hors champ. Les positions
+        /// et l'ordre des tirages ne changent pas : seule l'apparition est plus précoce.
+        /// </param>
+        public void Advance(float dt, Rng rng, GameConfig cfg, float viewMargin = 0f)
         {
             float dx = cfg.ScrollSpeed * dt;
             for (int i = 0; i < _count; i++) this[i].X -= dx;
-            if (_count > 0 && this[0].X + cfg.PipeWidth < -cfg.PipeDespawnMargin) RemoveFirst();
-            if (_count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead - cfg.PipeSpacing)
+            if (_count > 0 && this[0].X + cfg.PipeWidth < -cfg.PipeDespawnMargin - viewMargin) RemoveFirst();
+            if (_count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead + viewMargin - cfg.PipeSpacing)
                 SpawnRandom(Last.X + cfg.PipeSpacing, rng, cfg);
         }
     }

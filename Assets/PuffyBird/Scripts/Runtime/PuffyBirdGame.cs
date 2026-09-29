@@ -95,6 +95,8 @@ namespace PuffyBird
             }
             for (int i = 0; i < input.Presses; i++) _sim.Press();
 
+            _cameraRig.UpdateViewport();
+            _sim.ViewMargin = _cameraRig.SideMarginPx;
             int steps = _clock.Advance(dt);
             for (int i = 0; i < steps; i++)
             {

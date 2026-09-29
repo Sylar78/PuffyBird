@@ -53,6 +53,12 @@ namespace PuffyBird.Core
         public float FirstPipeX = 388f;
         public float PipeDespawnMargin = 4f;
         public float SpawnLookahead = 10f;
+        /// <summary>
+        /// Largeur visible en plus de l'écran logique, de chaque côté, au plus (écran plus large que
+        /// 9:16, option « extension » du §21.3). Les tuyaux apparaissent et disparaissent au-delà,
+        /// hors champ. Au-delà de 64 px, le pool de 4 paires ne suffirait plus.
+        /// </summary>
+        public float MaxViewMargin = 64f;
 
         // Séquence de mort, écrans (§11, §12)
         public float FlashTime = 0.12f;
