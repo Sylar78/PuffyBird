@@ -1,0 +1,45 @@
+# Unity : dossiers générés
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Fichiers d'IDE générés par Unity
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.consulo/
+
+# Builds et plateformes
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Divers
+.DS_Store
+Thumbs.db
+
+# Tests de la simulation hors Unity (le .csproj de tools/ est versionné)
+!/tools/**/*.csproj
+/tools/**/bin/
+/tools/**/obj/

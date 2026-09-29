@@ -1,0 +1,76 @@
+namespace PuffyBird.Core
+{
+    /// <summary>
+    /// Toutes les constantes de gameplay (Annexe A de la spec), dans le repère logique
+    /// 288 × 512, y vers le bas, en pixels logiques et en secondes.
+    /// Aucune autre classe ne doit contenir de valeur de réglage en dur.
+    /// </summary>
+    public sealed class GameConfig
+    {
+        // Écran logique (§3)
+        public float Width = 288f;
+        public float Height = 512f;
+        public float GroundY = 400f;
+        public float GroundHeight = 112f;
+        public float GroundPattern = 12f;
+
+        // Boucle de jeu (§4)
+        public float Step = 1f / 60f;
+        public float MaxFrameDelta = 0.25f;
+
+        // Oiseau (§6)
+        public float Gravity = 900f;
+        public float FlapVelocity = -270f;
+        public float MaxFallSpeed = 300f;
+        // La spec (§6.2) donne −240, mais ce plafond ramène le saut à ≈ 34 px au lieu des
+        // 40,5 px annoncés en §6.3 et testés en §23.2. On applique donc la simplification
+        // prévue en §6.4 : plafond de montée = vitesse du flap (saut complet, comme FlapPyBird).
+        public float MaxRiseSpeed = -270f;
+        public float RotOnFlap = 45f;
+        public float RotSpeed = 90f;
+        public float RotSpeedDying = 360f;
+        public float RotVisibleMax = 20f;
+        public float RotMin = -90f;
+        public float BirdX = 57f;
+        public float BirdStartY = 244f;
+        public float BirdWidth = 34f;
+        public float BirdHeight = 24f;
+        public float BirdRadius = 11f;
+        public float WingFrameTime = 1f / 12f;
+        public int[] WingSequence = { 0, 1, 2, 1 };
+        public float BobAmplitude = 4f;
+        public float BobFrequency = 1.25f;
+
+        // Tuyaux (§7)
+        public float ScrollSpeed = 120f;
+        public float PipeWidth = 52f;
+        public float PipeBodyWidth = 48f;
+        public float PipeCapHeight = 24f;
+        public float PipeGap = 100f;
+        public float PipeSpacing = 150f;
+        public int GapTopMin = 80;
+        public int GapTopMax = 220;
+        public float FirstPipeX = 388f;
+        public float PipeDespawnMargin = 4f;
+        public float SpawnLookahead = 10f;
+
+        // Séquence de mort, écrans (§11, §12)
+        public float FlashTime = 0.12f;
+        public float DieSoundDelay = 0.25f;
+        public float OverInputDelay = 0.8f;
+        public float ScoreCountRate = 30f;
+        public float FadeTime = 0.25f;
+        public float ScoreY = 50f;
+
+        // Médailles (§10.3)
+        public int MedalBronze = 10;
+        public int MedalSilver = 20;
+        public int MedalGold = 30;
+        public int MedalPlatinum = 40;
+
+        public float BirdCenterX => BirdX + BirdWidth * 0.5f;
+
+        /// <summary>Réglages de référence (mode Normal).</summary>
+        public static GameConfig CreateDefault() => new GameConfig();
+    }
+}

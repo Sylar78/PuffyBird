@@ -10,7 +10,7 @@ Langue du projet : **français** (docs, messages de commit, échanges). Les iden
 
 ## État du dépôt
 
-Au 29/09/2026, le dépôt ne contient que ce fichier, sans code. La stack **recommandée** pour la version mobile iOS / Android est **Unity 6 + URP** (voir « Stack mobile et rendu » plus bas) ; elle reste à confirmer par le propriétaire du projet avant le premier code. Il n'y a donc encore ni commande de build, de lint ni de test ; mettre à jour la section « Commandes » dès que le projet Unity existe.
+Projet **Unity 6 LTS + URP**, en 2.5D, pour iOS et Android (choix validé le 29/09/2026, voir « Stack mobile et rendu »). Toute la scène est construite par code : aucun modèle 3D, texture, police ni son importé. Les fichiers `.meta` et les réglages `ProjectSettings/` sont générés par Unity à la première ouverture et doivent ensuite être versionnés.
 
 Documents de référence (hors dépôt, dans les fichiers partagés du projet Claude, `docs/`) :
 
@@ -47,20 +47,37 @@ Points qui se trompent facilement :
 - Machine à états : `TITLE` → `READY` → `PLAYING` → `DYING` → `OVER`. En `READY`, l'oiseau flotte sans tomber ; le premier tap lance la partie **et** fait sauter l'oiseau. En `OVER`, les entrées sont ignorées pendant 0,8 s.
 - Le meilleur score ne doit **jamais** régresser : si la lecture échoue, partir de 0 sans écraser la valeur existante.
 
-## Architecture visée
+## Architecture
 
-Modules de la spec (§18) : `config`, `main`, `game`, `bird`, `pipes`, `ground`, `collision`, `score`, `storage`, `audio`, `input`, `render`, `ui`, et un dossier `tests/`.
+| Dossier | Assembly | Rôle |
+|---|---|---|
+| `Assets/PuffyBird/Scripts/Core/` | `PuffyBird.Core` (sans référence à Unity) | Simulation complète : `GameConfig` (toutes les constantes), `GameSimulation` (machine à états, §19), `Bird`, `PipeField` (pool circulaire de 4 paires), `Collision`, `FixedStepClock`, `Rng` (graine), `OverScreenTimeline`, `SfxRecipes` (synthèse des 5 sons), `AutoPilot` (bot §23.3) |
+| `Assets/PuffyBird/Scripts/Runtime/` | `PuffyBird.Runtime` | `PuffyBirdGame` (point d'entrée : boucle à pas fixe, entrées, synchronisation du rendu), `InputReader`, `PlayerPrefsScoreStorage` |
+| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView`, `PipeView`, `BirdView`, `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
+| `Scripts/Runtime/UI/`, `Audio/` | idem | `HudView` et `VoxelFont` (texte en volume, police 5 × 7), `SfxPlayer` |
+| `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes), `PuffySky` |
+| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, scène `Main`), `BuildScript` |
+| `Assets/PuffyBird/Tests/EditMode/` | `PuffyBird.Tests.EditMode` | Tests NUnit de la simulation (critères A1 à A13) |
+| `tools/CoreTests/` | — | Projet .NET qui compile `Core` et les tests EditMode hors de Unity |
+
+Repère monde : 1 unité = 100 px, y vers le haut, le sol (y logique 400) à y = 0, le plan de jeu à z = 0, la caméra à z = −8 regardant vers +z. Toujours convertir via `WorldSpace`.
 
 Principes :
 
 - **Toutes les constantes dans `config`**, aucune valeur en dur ailleurs.
 - **Simulation séparée du rendu** : la logique doit tourner et se tester sans affichage.
 - **Aléatoire injectable** (`rng` avec graine) pour des parties reproductibles (tests, rediffusions, défi quotidien).
-- **Aucune allocation en jeu** : recycler les tuyaux (pool de 4).
-- Rendu : le prototype HTML est en pixel art (filtrage au plus proche voisin) ; la version mobile vise un rendu éclairé 2.5D (voir plus bas), ce qui remplace le style pixel art.
-- Persistance sous les clés `puffybird.best`, `puffybird.muted` (web : `localStorage` toujours dans un `try/catch`).
+- **Aucune allocation en jeu** : tout est créé au chargement (tuyaux, particules, textes, chiffres), puis seulement déplacé, affiché ou masqué. `MeshBuilder` et `VoxelFont.Build` ne s'appellent qu'au chargement.
+- Les shaders vivent dans un dossier `Resources` pour être inclus dans les builds sans matériau sur disque ; les matériaux sont créés par `MaterialLibrary`.
+- Rendu : le prototype HTML est en pixel art ; la version mobile est un rendu éclairé 2.5D, qui remplace le style pixel art.
+- Persistance sous les clés `puffybird.best`, `puffybird.muted` (PlayerPrefs).
 
-En cas de port vers un moteur dont le repère diffère (Unity : y vers le haut, 1 unité = 100 px), suivre la table de correspondance §20.2 de la spec.
+Écarts assumés par rapport à la spec :
+
+- `MaxRiseSpeed` = −270 au lieu de −240 : avec −240 le saut ne fait que ≈ 34 px, en contradiction avec §6.3 et le test §23.2 (40,5 px). La spec (§6.4) autorise cette simplification.
+- Écran de fin : un tap n'importe où (après 0,8 s) relance la partie, au lieu d'un bouton Play dédié.
+- `AutoPilot` cherche une suite de battements sûre sur ≈ 1,7 s au lieu du bot trivial de §23.3, qui meurt sur certaines combinaisons d'ouvertures. Il survit sur toutes les graines testées : la difficulté reste juste.
+- Textes du jeu en anglais (GET READY, GAME OVER, TAP…) en attendant la localisation.
 
 ## Tests et validation
 
@@ -75,17 +92,17 @@ Les critères d'acceptation A1 à A15 (§23.1) et les tests unitaires suggérés
 - Les extensions (skins, défi quotidien, tuyaux mobiles…) restent hors du mode principal.
 - Distribution prévue : web d'abord (GitHub Pages, itch.io), puis portails web, puis stores mobiles.
 
-## Stack mobile et rendu (recommandation du 29/09/2026, à confirmer)
+## Stack mobile et rendu (choix du 29/09/2026)
 
 Objectif : une version iOS / Android plus belle que le prototype, avec ombres, lumières, vertex shaders et effets proches du raytracing, en 2D ou 2.5D, sans toucher au gameplay de la spec.
 
-### Choix recommandé : Unity 6 LTS + URP, en 2.5D
+### Choix : Unity 6 LTS + URP, en 2.5D
 
 - **Moteur** : Unity 6 LTS, langage C#, export iOS (Metal) et Android (Vulkan, repli OpenGL ES 3).
-- **Pipeline** : URP avec le renderer universel (3D) en mode **Forward+**. Décor et personnages en modèles 3D stylisés, **caméra en perspective légère** fixée de profil : c'est la 2.5D. Le gameplay reste strictement dans le plan 2D de la spec.
-- **Ombres et lumières** : lumière directionnelle avec ombres temps réel (cascades réduites), quelques lumières ponctuelles (soleil couchant, lucioles, néons de nuit), lumière baked ou Adaptive Probe Volumes pour le décor statique, SSAO léger.
-- **Shaders** : Shader Graph pour les vertex shaders (battement d'ailes, herbe et arbres au vent, tuyaux qui « respirent » à l'impact, eau), matériaux toon/rim light, dissolve à la mort.
-- **Post-traitement** (Volume URP) : bloom, tonemapping ACES, color grading jour/nuit, vignette, profondeur de champ discrète sur l'arrière-plan.
+- **Pipeline** : URP avec le renderer universel (3D) en mode **Forward** (une lumière principale et au plus 3 lucioles : Forward est le plus économique sur mobile ; le shader gère aussi Forward+). Décor et personnages en modèles 3D stylisés, **caméra en perspective légère** fixée de profil : c'est la 2.5D. Le gameplay reste strictement dans le plan 2D de la spec.
+- **Ombres et lumières** : soleil (jour) ou lune (nuit) avec ombres douces temps réel, lucioles en lumières ponctuelles la nuit, lumière ambiante en harmoniques sphériques, brouillard atmosphérique. SSAO possible en ajoutant la Renderer Feature au renderer.
+- **Shaders** : écrits à la main en HLSL (pas de Shader Graph, pour tout garder en texte versionnable) : vent sur arbres et buissons, gonflement des nuages et de l'oiseau, vibration du tuyau touché, flexion des ailes, liseré lumineux.
+- **Post-traitement** (Volume URP créé par code) : bloom, tonemapping Neutral, étalonnage jour/nuit, vignette, profondeur de champ gaussienne sur le lointain ; le flash d'impact et le fondu au noir passent par l'exposition.
 - **Raytracing** : le raytracing matériel n'est **pas** disponible dans URP, et HDRP ne cible pas le mobile. Seuls les téléphones haut de gamme récents ont du RT matériel, donc pas la cible grand public. On obtient l'effet visuel autrement : réflexions par reflection probes et SSR factice, ombres de contact, GI précalculée, et au besoin une passe maison (Render Graph) d'ombres douces 2D par SDF / raymarching limitée au plan de jeu.
 - **Performance** : 60 FPS stables sur un milieu de gamme de 2021, attention à la chauffe. Prévoir un réglage de qualité (Bas / Moyen / Haut) qui coupe ombres, SSAO et post-traitement coûteux.
 
@@ -140,4 +157,8 @@ Skills de projet à créer plus tard dans `.claude/skills/` : un contrôle de co
 
 ## Commandes
 
-Aucune pour l'instant (projet Unity pas encore créé). À compléter avec ouverture du projet, build iOS / Android, lancement des tests EditMode et PlayMode dès le premier code.
+- **Tests de la simulation sans Unity** (possible dans une session cloud) : `dotnet test tools/CoreTests` (.NET 8).
+- **Ouvrir le projet** : Unity Hub > Add > Add project from disk, avec Unity 6 LTS (6000.0 ou plus récent) et les modules iOS / Android. À la première ouverture, `ProjectSetup` configure URP et crée `Assets/PuffyBird/Scenes/Main.unity` ; relançable via le menu **PuffyBird > Configurer le projet**. Si Unity propose d'activer le nouvel Input System, accepter.
+- **Jouer** : ouvrir la scène `Main`, Play. Touches : Espace / clic = tap, Échap ou P = pause, M = muet, B = pilote automatique.
+- **Tests EditMode dans Unity** : Window > General > Test Runner, ou `Unity -batchmode -projectPath . -runTests -testPlatform EditMode -testResults results.xml`.
+- **Builds** : menu **PuffyBird > Build Android (APK)** / **Build iOS (projet Xcode)**, ou `Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildAndroid` (ajouter `-release` pour un `.aab`) et `...BuildScript.BuildIOS`.

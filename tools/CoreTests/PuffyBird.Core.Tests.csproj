@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Exécute la simulation (PuffyBird.Core) et ses tests EditMode hors de Unity :
+      dotnet test tools/CoreTests
+    Les sources sont celles du projet Unity, rien n'est dupliqué.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>PuffyBird.Tests.EditMode</AssemblyName>
+    <RootNamespace>PuffyBird.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/PuffyBird/Scripts/Core/**/*.cs" Exclude="../../Assets/PuffyBird/Scripts/Core/AssemblyInfo.cs" />
+    <Compile Include="../../Assets/PuffyBird/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+</Project>
