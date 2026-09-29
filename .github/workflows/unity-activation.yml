@@ -1,0 +1,27 @@
+# Génère le fichier de demande d'activation Unity (.alf) pour une licence Personal.
+# À lancer une seule fois à la main : onglet Actions > Unity activation > Run workflow.
+# Marche à suivre complète : docs/publication-ios-testflight.md, étape 4.
+name: Unity activation
+
+on:
+  workflow_dispatch:
+
+env:
+  # Même version que le build iOS (voir ios-testflight.yml).
+  UNITY_VERSION: 6000.6.3f1
+
+jobs:
+  request:
+    name: Demande d'activation (.alf)
+    runs-on: ubuntu-latest
+    steps:
+      - id: request
+        uses: game-ci/unity-request-activation-file@v2
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Unity_v${{ env.UNITY_VERSION }}.alf
+          path: ${{ steps.request.outputs.filePath }}
+          retention-days: 1
