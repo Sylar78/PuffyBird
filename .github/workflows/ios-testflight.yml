@@ -139,6 +139,14 @@ jobs:
             -authenticationKeyIssuerID "$ISSUER_ID"
           echo "Build ${{ github.run_number }} envoyé : il apparaît dans TestFlight après le traitement par Apple."
 
+      - name: Journaux de distribution Xcode (en cas d'échec)
+        if: failure()
+        run: |
+          for f in "$TMPDIR"/*.xcdistributionlogs/*.log; do
+            echo "=== $f ==="
+            tail -n 60 "$f"
+          done
+
       - name: Nettoyer la clé
         if: always()
         run: rm -rf "$RUNNER_TEMP/keys"
