@@ -9,7 +9,7 @@ namespace PuffyBird.Monetization
     static class AdIds
     {
 #if UNITY_IOS
-        public const string AppKey = "";
+        public const string AppKey = "286c6f005";
         public const string BannerAdUnitId = "mcpqptymic0vwr00";
 #elif UNITY_ANDROID
         public const string AppKey = "";
