@@ -37,10 +37,7 @@ Dans [App Store Connect > Utilisateurs et accès > Intégrations > App Store Con
 GameCI doit activer Unity sur la machine de build.
 
 - **Licence Personal** : dans Unity Hub, être connecté avec une licence Personal active. Le fichier de licence se trouve sous Windows dans `C:\ProgramData\Unity\Unity_lic.ulf` (macOS : `/Library/Application Support/Unity/Unity_lic.ulf`). Son contenu complet va dans le secret `UNITY_LICENSE`.
-- **Licence Personal sans fichier `Unity_lic.ulf`** (cas des Unity Hub récents) : activation manuelle, une seule fois.
-  1. Sur GitHub, onglet **Actions > Unity activation > Run workflow**. Une fois terminé, télécharger l'artefact `Unity_v6000.6.3f1.alf` (en bas de la page de l'exécution) et le décompresser.
-  2. Ouvrir [license.unity3d.com/manual](https://license.unity3d.com/manual), déposer le fichier `.alf`, se connecter avec le compte Unity, choisir *Unity Personal Edition*, puis télécharger le fichier `.ulf` obtenu.
-  3. Coller le contenu complet de ce `.ulf` dans le secret `UNITY_LICENSE`.
+- **Licence Personal, fichier `.ulf` absent** : une licence affichée dans Unity Hub ne suffit pas, le fichier n'est créé que lors d'une activation. Dans Unity Hub, ouvrir *Paramètres > Licences*, cliquer sur **Ajouter une licence** et choisir **Obtenir une licence Personal gratuite**, puis aller au bout des étapes. Le fichier apparaît ensuite dans `C:\ProgramData\Unity\` (dossier masqué : coller le chemin dans la barre d'adresse de l'Explorateur). Source : [documentation GameCI](https://game.ci/docs/github/activation). L'ancienne méthode par fichier `.alf` n'est plus prise en charge.
 - **Licence Pro** : mettre le numéro de série dans `UNITY_SERIAL` ; `UNITY_LICENSE` est alors inutile.
 
 ### 5. Secrets GitHub
