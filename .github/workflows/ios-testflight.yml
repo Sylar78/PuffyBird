@@ -68,6 +68,14 @@ jobs:
           versioning: None
           customParameters: -buildNumber ${{ github.run_number }} -appleTeamId ${{ secrets.APPLE_TEAM_ID }}
 
+      # Code 137 = Unity tué par le système : dire si c'est la mémoire ou le disque.
+      - name: Diagnostic machine (en cas d'échec)
+        if: failure()
+        run: |
+          free -m
+          df -h / /home/runner/work
+          sudo dmesg | grep -iE 'out of memory|killed process|oom' | tail -n 20 || true
+
       # Archive tar : conserve les droits d'exécution des scripts du projet Xcode.
       - name: Empaqueter le projet Xcode
         run: sudo tar -czf xcode-project.tgz -C build/iOS PuffyBird
