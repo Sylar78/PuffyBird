@@ -23,7 +23,7 @@ namespace PuffyBird.Editor
         const string PipelinePath = SettingsFolder + "/PuffyBird_URP.asset";
         const string RendererPath = SettingsFolder + "/PuffyBird_Renderer.asset";
         const string PostProcessDataPath = "Packages/com.unity.render-pipelines.universal/Runtime/Data/PostProcessData.asset";
-        const string BundleId = "com.sylar78.puffybird";
+        const string BundleId = "fr.puffybird.app";
         /// <summary>Icône générée par tools/icon/make_icon.py (1024 px, sans alpha).</summary>
         public const string IconPath = "Assets/PuffyBird/Icons/AppIcon.png";
 
