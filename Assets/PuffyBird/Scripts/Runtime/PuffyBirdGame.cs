@@ -34,6 +34,7 @@ namespace PuffyBird
         LightingRig _lighting;
         PostFxController _postFx;
         SceneryView _scenery;
+        WeatherView _weather;
         PipeView _pipes;
         StarView _stars;
         BirdView _bird;
@@ -73,6 +74,7 @@ namespace PuffyBird
             _lighting = new LightingRig(world, materials);
             _postFx = new PostFxController(world);
             _scenery = new SceneryView(world, materials);
+            _weather = new WeatherView(world, materials, _space);
             _pipes = new PipeView(world, materials, _space);
             _stars = new StarView(world, materials, _space, _sim.Stars.Capacity);
             _bird = new BirdView(world, materials, _space);
@@ -141,14 +143,15 @@ namespace PuffyBird
             _banner.SetVisible(show);
         }
 
-        /// <summary>Nouvelle partie : couleur de l'oiseau et thème jour/nuit (§6.8, §8.2).</summary>
+        /// <summary>Nouvelle partie : couleur de l'oiseau et décor tiré au hasard (§6.8, §8.2).</summary>
         void ApplyRun()
         {
             _shownRun = _sim.RunId;
             var theme = Palette.Theme(_sim.Theme);
-            _lighting.ApplyTheme(_sim.Theme, theme);
+            _lighting.ApplyTheme(theme);
             _scenery.ApplyTheme(theme);
-            _postFx.ApplyTheme(_sim.Theme);
+            _weather.ApplyTheme(theme);
+            _postFx.ApplyTheme(theme);
             _cameraRig.Camera.backgroundColor = theme.SkyHorizon;
             _bird.SetColor(_sim.BirdColor);
         }
@@ -161,13 +164,18 @@ namespace PuffyBird
             _cameraRig.Update(dt, reduceFlash);
             _lighting.Update(_realTime);
             _scenery.Update(scroll, _realTime);
+            _weather.Update(scroll, dt, _realTime);
+            // Éclairs atténués si l'option « réduire les flashs » est active (§20).
+            float lightning = _weather.Flash * (reduceFlash ? 0.2f : 1f);
+            _scenery.SetFlash(lightning);
+            _lighting.SetFlash(lightning);
             _pipes.Update(_sim.Pipes, alpha, dt);
             _stars.Update(_sim.Stars, alpha, _realTime);
             _bird.Update(_sim, alpha, dt);
-            _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime);
+            _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
             _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx);
-            _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, reduceFlash);
+            _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, reduceFlash);
         }
 
         // Pause automatique quand l'application passe en arrière-plan (§4.4).

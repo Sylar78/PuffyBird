@@ -219,6 +219,32 @@ namespace PuffyBird.Rendering
             _indices.Add(start); _indices.Add(start + 1); _indices.Add(start + 2);
         }
 
+        /// <summary>
+        /// Brin d'herbe : triangle effilé double face dans le plan XY, du pied (<paramref name="root"/>)
+        /// à la pointe penchée de <paramref name="lean"/>, couleur dégradée du pied à la pointe.
+        /// </summary>
+        public MeshBuilder AddBlade(Vector3 root, float width, float height, float lean, Color rootColor, Color tipColor)
+        {
+            var a = root + new Vector3(-width * 0.5f, 0f, 0f);
+            var b = root + new Vector3(width * 0.5f, 0f, 0f);
+            var c = root + new Vector3(lean, height, 0f);
+            // Normales inclinées vers le haut : les brins prennent la lumière comme le gazon.
+            var front = new Vector3(0f, 0.6f, -0.8f);
+            var back = new Vector3(0f, 0.6f, 0.8f);
+            int start = _vertices.Count;
+            _vertices.Add(a); _vertices.Add(c); _vertices.Add(b);
+            _vertices.Add(a); _vertices.Add(b); _vertices.Add(c);
+            for (int i = 0; i < 6; i++)
+            {
+                _normals.Add(i < 3 ? front : back);
+                _uvs.Add(Vector2.zero);
+            }
+            _colors.Add(rootColor); _colors.Add(tipColor); _colors.Add(rootColor);
+            _colors.Add(rootColor); _colors.Add(rootColor); _colors.Add(tipColor);
+            for (int i = 0; i < 6; i++) _indices.Add(start + i);
+            return this;
+        }
+
         /// <summary>Ajoute un autre constructeur, transformé par <paramref name="matrix"/>.</summary>
         public MeshBuilder Append(MeshBuilder other, Matrix4x4 matrix)
         {

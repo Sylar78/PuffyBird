@@ -53,9 +53,9 @@ Points qui se trompent facilement :
 |---|---|---|
 | `Assets/PuffyBird/Scripts/Core/` | `PuffyBird.Core` (sans référence à Unity) | Simulation complète : `GameConfig` (toutes les constantes), `GameSimulation` (machine à états, §19), `Bird`, `PipeField` (pool circulaire de 4 paires, paires mobiles), `StarField` (étoiles de vitesse), `Collision`, `FixedStepClock`, `Rng` (graine), `OverScreenTimeline`, `SfxRecipes` (synthèse des 5 sons + celui de l'étoile), `AutoPilot` (bot §23.3) |
 | `Assets/PuffyBird/Scripts/Runtime/` | `PuffyBird.Runtime` | `PuffyBirdGame` (point d'entrée : boucle à pas fixe, entrées, synchronisation du rendu), `InputReader`, `PlayerPrefsScoreStorage` |
-| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView`, `PipeView`, `StarView`, `BirdView` (dont le scintillement d'accélération), `BoostTrailView` (traînée arc-en-ciel), `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
+| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView` (sol, collines, nuages et ensembles par décor), `WeatherView` (pluie, neige, pétales, éclairs), `PipeView`, `StarView`, `BirdView` (dont l'oiseau doré pailleté sous étoile), `BoostTrailView` (traînée arc-en-ciel), `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
 | `Scripts/Runtime/UI/`, `Audio/` | idem | `HudView` et `VoxelFont` (texte en volume, police 5 × 7), `SfxPlayer` |
-| `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes), `PuffySky` |
+| `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes + paillettes ; l'alpha des couleurs de sommet masque `_VertexEmission`), `PuffySky` |
 | `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist) |
 | `Assets/PuffyBird/Icons/` | — | `AppIcon.png`, générée par `tools/icon/make_icon.py` (Python sans dépendance) |
 | `Assets/PuffyBird/Tests/EditMode/` | `PuffyBird.Tests.EditMode` | Tests NUnit de la simulation (critères A1 à A13) |
@@ -83,11 +83,14 @@ Principes :
 - `AutoPilot` cherche une suite de battements sûre sur ≈ 1,7 s au lieu du bot trivial de §23.3, qui meurt sur certaines combinaisons d'ouvertures. Il survit sur toutes les graines testées : la difficulté reste juste.
 - Textes du jeu en anglais (GET READY, GAME OVER, TAP…) en attendant la localisation.
 - Score en jeu placé tout en haut de l'écran visible, sous l'encoche (`CameraRig.SafeTopPx` + `ScoreTopMargin`), au lieu de y = 50 : il gênait la visibilité.
+- Oiseau toujours bleu (`GameConfig.BirdColor`) au lieu du tirage de couleur de §6.8 ; le tirage reste consommé pour garder la suite des ouvertures de la spec.
+- Six décors au lieu de deux (`Theme` : jour, nuit, ville au crépuscule, Japon médiéval, orage, neige), tirés au hasard à chaque partie (`ThemeCount`). Ensembles de décor (`Palette.SetPiece`) et météo (`Palette.Weather`) dans `Palette.Theme`. La pluie, la neige et les pétales tombent derrière le plan de jeu ; les éclairs sont atténués avec `reduceFlash`.
+- Sol : gazon rayé doux en niveaux de gris teinté par le décor, bordure festonnée, touffes d'herbe au vent (courtes devant le plan de jeu) et fleurs.
 
 Extensions intégrées au mode principal (demandées le 30/09/2026, hors spec) :
 
 - **Tuyaux mobiles** : à partir de 15 points (`MovingPipesFromScore`), chaque nouvelle paire monte et descend de ± 30 px (30 % de l'ouverture, `PipeMoveAmplitude`, période 2,6 s). Les deux tuyaux bougent ensemble, l'ouverture garde 100 px ; `PipePair.GapTop` reste la valeur tirée, le haut réel est `OpeningTop`.
-- **Étoiles de vitesse** : environ 30 % des paires (à partir de la 4e) ont une étoile à mi-chemin de la précédente. La toucher accélère le défilement de 30 % pendant 5 s (montée et descente en 0,3 s). L'espacement des tuyaux reste exact. Effets : traînée arc-en-ciel, scintillement irisé de l'oiseau, gerbe d'étincelles, arpège.
+- **Étoiles de vitesse** : environ 15 % des paires (à partir de la 4e, `StarChance`) ont une étoile à mi-chemin de la précédente. La toucher accélère le défilement de 30 % ; 5 s après la prise, la vitesse est redevenue normale (montée et retour de 0,3 s compris). L'espacement des tuyaux reste exact. Effets : oiseau jaune doré brillant et pailleté, éclats autour de lui, traînée arc-en-ciel, gerbe d'étincelles, arpège.
 - Ces tirages utilisent un second `Rng` dérivé de la graine : la suite des ouvertures reste celle de la spec. `AutoPilot` rejoue les mouvements et les accélérations (étoiles comprises) et survit sur toutes les graines testées.
 
 ## Tests et validation

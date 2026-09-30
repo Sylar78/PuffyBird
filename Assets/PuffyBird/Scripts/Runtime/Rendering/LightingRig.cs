@@ -21,6 +21,9 @@ namespace PuffyBird.Rendering
         readonly ReflectionProbe _probe;
         bool _probeDirty;
         int _probeDelayFrames;
+        Color _sunColor;
+        float _sunIntensity;
+        float _flash;
 
         public LightingRig(Transform parent, MaterialLibrary materials)
         {
@@ -71,15 +74,17 @@ namespace PuffyBird.Rendering
             _probe.importance = 1;
         }
 
-        public void ApplyTheme(Theme theme, Palette.ThemeColors colors)
+        public void ApplyTheme(Palette.ThemeColors colors)
         {
+            _sunColor = colors.SunColor;
+            _sunIntensity = colors.SunIntensity;
+            _flash = 0f;
             _sun.color = colors.SunColor;
             _sun.intensity = colors.SunIntensity;
             _sun.transform.rotation = Quaternion.Euler(colors.SunEuler);
             RenderSettings.sun = _sun;
 
-            bool night = theme == Theme.Night;
-            for (int i = 0; i < FireflyCount; i++) _fireflies[i].gameObject.SetActive(night);
+            for (int i = 0; i < FireflyCount; i++) _fireflies[i].gameObject.SetActive(colors.Fireflies);
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = colors.AmbientSky;
@@ -94,12 +99,21 @@ namespace PuffyBird.Rendering
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = colors.Fog;
-            RenderSettings.fogStartDistance = night ? 12f : 18f;
-            RenderSettings.fogEndDistance = night ? 70f : 95f;
+            RenderSettings.fogStartDistance = colors.FogStart;
+            RenderSettings.fogEndDistance = colors.FogEnd;
 
             // La sonde est rendue quelques images plus tard, une fois le décor recoloré.
             _probeDirty = true;
             _probeDelayFrames = 2;
+        }
+
+        /// <summary>Éclair : la lumière principale devient un instant blanc bleuté et intense.</summary>
+        public void SetFlash(float amount)
+        {
+            if (amount <= 0f && _flash <= 0f) return;
+            _flash = amount;
+            _sun.color = Color.Lerp(_sunColor, Palette.Hex("#DDE6FF"), amount);
+            _sun.intensity = _sunIntensity + amount * 1.6f;
         }
 
         public void Update(float time)

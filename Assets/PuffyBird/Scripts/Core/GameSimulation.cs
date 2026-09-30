@@ -214,11 +214,14 @@ namespace PuffyBird.Core
             }
         }
 
-        /// <summary>Nouvelle partie : couleur et décor tirés au hasard, état READY (§19 resetRun).</summary>
+        /// <summary>Nouvelle partie : décor tiré au hasard, état READY (§19 resetRun).</summary>
         public void ResetRun()
         {
-            BirdColor = (BirdColor)_rng.Range(0, 2);
-            Theme = (Theme)_rng.Range(0, 1);
+            // L'oiseau est toujours de la même couleur, mais le tirage de §6.8 est conservé :
+            // la suite des ouvertures pour une graine donnée reste celle de la spec.
+            _rng.Range(0, 2);
+            BirdColor = _cfg.BirdColor;
+            Theme = (Theme)_rng.Range(0, _cfg.ThemeCount - 1);
             _bird.Reset(_cfg.BirdStartY);
             _pipes.Clear();
             _stars.Clear();
@@ -303,7 +306,8 @@ namespace PuffyBird.Core
         public static void StepBoost(ref float boostTime, ref float speedFactor, float dt, GameConfig cfg)
         {
             if (boostTime > 0f) boostTime = Math.Max(0f, boostTime - dt);
-            float target = boostTime > 0f ? cfg.StarBoostFactor : 1f;
+            // Le retour à la vitesse normale commence avant la fin : 5 s après la prise, c'est fini.
+            float target = boostTime > cfg.StarBoostRamp ? cfg.StarBoostFactor : 1f;
             float rate = (cfg.StarBoostFactor - 1f) / cfg.StarBoostRamp * dt;
             speedFactor = speedFactor < target ? Math.Min(target, speedFactor + rate) : Math.Max(target, speedFactor - rate);
         }

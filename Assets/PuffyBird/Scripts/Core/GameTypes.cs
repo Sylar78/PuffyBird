@@ -20,10 +20,15 @@ namespace PuffyBird.Core
         Blue,
     }
 
+    /// <summary>Décors tirés au hasard à chaque partie (§8.2, étendu).</summary>
     public enum Theme
     {
         Day,
         Night,
+        City,
+        Japan,
+        Storm,
+        Snow,
     }
 
     public enum Medal

@@ -17,6 +17,8 @@ namespace PuffyBird.Rendering
         const float WingAmplitude = 45f;
         const int PuffCount = 12;
         const int FeatherCount = 10;
+        const int SparkleCount = 14;
+        const float SparkleRate = 22f;
 
         struct Particle
         {
@@ -39,14 +41,21 @@ namespace PuffyBird.Rendering
         readonly MeshFilter _farWingFilter;
         readonly Material _bodyMaterial;
         readonly Material _wingMaterial;
+        readonly Material[] _plumage;
         readonly Mesh[] _bodyMeshes = new Mesh[3];
         readonly Mesh[] _wingMeshes = new Mesh[3];
+        readonly Mesh _goldBody;
+        readonly Mesh _goldWing;
+        readonly Particle[] _sparkles = new Particle[SparkleCount];
         readonly Particle[] _puffs = new Particle[PuffCount];
         readonly Particle[] _feathers = new Particle[FeatherCount];
         readonly Material _featherMaterial;
         int _nextPuff;
+        int _nextSparkle;
+        float _sparkleAccumulator;
         float _squash;
-        bool _shimmering;
+        bool _golden;
+        BirdColor _color;
 
         public BirdView(Transform parent, MaterialLibrary materials, WorldSpace space)
         {
@@ -61,15 +70,20 @@ namespace PuffyBird.Rendering
             {
                 var colors = Palette.Bird((BirdColor)c);
                 _bodyMeshes[c] = BuildBody(colors).Build("Oiseau " + (BirdColor)c);
-                _wingMeshes[c] = new MeshBuilder()
-                    .AddEllipsoid(new Vector3(-0.02f, 0f, -0.075f), new Vector3(0.095f, 0.028f, 0.075f), Color.Lerp(colors.Body, Color.white, 0.55f), 14, 8)
-                    .AddEllipsoid(new Vector3(-0.05f, -0.005f, -0.095f), new Vector3(0.06f, 0.022f, 0.05f), colors.Body, 12, 8)
-                    .Build("Aile " + (BirdColor)c);
+                _wingMeshes[c] = BuildWing(colors).Build("Aile " + (BirdColor)c);
             }
+            _goldBody = BuildBody(Palette.GoldBird).Build("Oiseau doré");
+            _goldWing = BuildWing(Palette.GoldBird).Build("Aile dorée");
 
             _bodyMaterial = materials.Lit("Oiseau", Color.white, 0.45f, 0f, 0.5f);
             _bodyMaterial.SetFloat(MaterialLibrary.BreathStrength, 0.004f);
             _wingMaterial = materials.Lit("Ailes", Color.white, 0.4f, 0f, 0.5f);
+            _plumage = new[] { _bodyMaterial, _wingMaterial };
+            foreach (var m in _plumage)
+            {
+                m.SetFloat(MaterialLibrary.GlitterScale, 70f);
+                m.SetColor(MaterialLibrary.GlitterColor, Palette.Glitter);
+            }
 
             _bodyFilter = CreatePart(_model, "Corps", _bodyMaterial, out _);
             _nearWing = CreatePart(_model, "Aile proche", _wingMaterial, out _nearWingFilter).transform;
@@ -87,7 +101,19 @@ namespace PuffyBird.Rendering
             _featherMaterial = materials.Lit("Plumes", Color.white, 0.3f, 0f, 0.4f);
             for (int i = 0; i < FeatherCount; i++) _feathers[i].Transform = CreateParticle(parent, "Plume", featherMesh, _featherMaterial);
 
-            SetColor(BirdColor.Yellow);
+            var sparkleMesh = new MeshBuilder().AddStar(Vector3.zero, 1f, 0.28f, 0.25f, Palette.Glitter, 4).Build("Éclat");
+            var sparkleMaterial = materials.Lit("Éclats", Color.white, 0.2f, 0f, 0f);
+            sparkleMaterial.SetFloat(MaterialLibrary.VertexEmission, 2.6f);
+            for (int i = 0; i < SparkleCount; i++) _sparkles[i].Transform = CreateParticle(parent, "Éclat", sparkleMesh, sparkleMaterial);
+
+            SetColor(space.Config.BirdColor);
+        }
+
+        static MeshBuilder BuildWing(Palette.BirdColors colors)
+        {
+            return new MeshBuilder()
+                .AddEllipsoid(new Vector3(-0.02f, 0f, -0.075f), new Vector3(0.095f, 0.028f, 0.075f), Color.Lerp(colors.Body, Color.white, 0.55f), 14, 8)
+                .AddEllipsoid(new Vector3(-0.05f, -0.005f, -0.095f), new Vector3(0.06f, 0.022f, 0.05f), colors.Body, 12, 8);
         }
 
         static MeshBuilder BuildBody(Palette.BirdColors c)
@@ -140,41 +166,100 @@ namespace PuffyBird.Rendering
 
         public void SetColor(BirdColor color)
         {
-            int c = (int)color;
-            _bodyFilter.sharedMesh = _bodyMeshes[c];
-            _nearWingFilter.sharedMesh = _wingMeshes[c];
-            _farWingFilter.sharedMesh = _wingMeshes[c];
+            _color = color;
+            _golden = false;
+            ApplyMeshes(_bodyMeshes[(int)color], _wingMeshes[(int)color]);
+            SetFinish(Color.black, 0f, 0.45f, 0f, Color.white, 0.5f);
             _featherMaterial.SetColor(MaterialLibrary.BaseColor, Palette.Bird(color).Body);
+        }
+
+        void ApplyMeshes(Mesh body, Mesh wing)
+        {
+            _bodyFilter.sharedMesh = body;
+            _nearWingFilter.sharedMesh = wing;
+            _farWingFilter.sharedMesh = wing;
         }
 
         public Vector3 Position => _root.position;
 
         /// <summary>
-        /// Scintillement léger pendant l'accélération d'une étoile : lueur irisée qui change
-        /// doucement de teinte, avec un frémissement rapide, et liseré renforcé.
+        /// Pendant l'accélération d'une étoile, l'oiseau devient jaune doré brillant et pailleté :
+        /// plumage or lustré, paillettes qui scintillent sur tout le corps (shader), lueur dorée
+        /// qui pulse et petits éclats en étoile autour de lui. Il reprend sa couleur à la fin.
         /// </summary>
-        public void SetBoost(float amount, float time)
+        public void SetBoost(float amount, float time, float deltaTime)
         {
-            if (amount <= 0f)
+            bool golden = amount > 0.02f;
+            if (golden != _golden)
             {
-                if (!_shimmering) return;
-                _shimmering = false;
-                SetGlow(Color.black, 0.5f);
-                return;
+                _golden = golden;
+                if (golden) ApplyMeshes(_goldBody, _goldWing);
+                else SetColor(_color);
             }
-            _shimmering = true;
-            float hue = time * 0.7f % 1f;
-            float flicker = 0.6f + 0.4f * Mathf.Sin(time * 30f) * Mathf.Sin(time * 11f);
-            var glow = Color.HSVToRGB(hue, 0.45f, 1f) * (0.3f * flicker * amount);
-            SetGlow(glow, 0.5f + 0.7f * amount);
+            if (golden)
+            {
+                float pulse = 0.75f + 0.25f * Mathf.Sin(time * 9f);
+                SetFinish(Palette.GoldGlow * (0.22f * pulse * amount), 1.4f * amount, 0.85f, 0.3f, Palette.Glitter, 0.5f + 0.8f * amount);
+                _featherMaterial.SetColor(MaterialLibrary.BaseColor, Palette.GoldBird.Body);
+
+                _sparkleAccumulator += SparkleRate * amount * deltaTime;
+                while (_sparkleAccumulator >= 1f)
+                {
+                    _sparkleAccumulator -= 1f;
+                    EmitSparkle();
+                }
+            }
+            else
+            {
+                _sparkleAccumulator = 0f;
+            }
+            UpdateSparkles(deltaTime);
         }
 
-        void SetGlow(Color emission, float rim)
+        void SetFinish(Color emission, float glitter, float smoothness, float metallic, Color rimColor, float rim)
         {
-            _bodyMaterial.SetColor(MaterialLibrary.EmissionColor, emission);
-            _wingMaterial.SetColor(MaterialLibrary.EmissionColor, emission);
-            _bodyMaterial.SetFloat(MaterialLibrary.RimStrength, rim);
-            _wingMaterial.SetFloat(MaterialLibrary.RimStrength, rim);
+            foreach (var m in _plumage)
+            {
+                m.SetColor(MaterialLibrary.EmissionColor, emission);
+                m.SetFloat(MaterialLibrary.Glitter, glitter);
+                m.SetFloat(MaterialLibrary.Smoothness, smoothness);
+                m.SetFloat(MaterialLibrary.Metallic, metallic);
+                m.SetColor(MaterialLibrary.RimColor, rimColor);
+                m.SetFloat(MaterialLibrary.RimStrength, rim);
+            }
+        }
+
+        void EmitSparkle()
+        {
+            ref var p = ref _sparkles[_nextSparkle];
+            _nextSparkle = (_nextSparkle + 1) % SparkleCount;
+            var offset = Random.insideUnitSphere * 0.17f;
+            offset.z = -Mathf.Abs(offset.z) - 0.05f; // devant l'oiseau, côté caméra
+            p.Age = 0f;
+            p.Life = Random.Range(0.3f, 0.45f);
+            p.Size = Random.Range(0.018f, 0.032f);
+            p.Velocity = new Vector3(Random.Range(-0.3f, 0f), Random.Range(-0.05f, 0.15f), 0f);
+            p.Transform.position = _root.position + offset;
+            p.Transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 90f));
+            p.Transform.gameObject.SetActive(true);
+        }
+
+        void UpdateSparkles(float dt)
+        {
+            for (int i = 0; i < SparkleCount; i++)
+            {
+                ref var p = ref _sparkles[i];
+                if (!p.Transform.gameObject.activeSelf) continue;
+                p.Age += dt;
+                if (p.Age >= p.Life)
+                {
+                    p.Transform.gameObject.SetActive(false);
+                    continue;
+                }
+                p.Transform.position += p.Velocity * dt;
+                float size = p.Size * Mathf.Sin(p.Age / p.Life * Mathf.PI);
+                p.Transform.localScale = new Vector3(size, size, size);
+            }
         }
 
         public void OnFlap()

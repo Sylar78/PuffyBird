@@ -13,6 +13,7 @@ namespace PuffyBird.Rendering
     public sealed class PostFxController
     {
         const float FlashExposure = 2.4f;
+        const float LightningExposure = 0.7f;
         const float FadeExposure = -10f;
 
         readonly Bloom _bloom;
@@ -56,23 +57,23 @@ namespace PuffyBird.Rendering
             volume.sharedProfile = profile;
         }
 
-        public void ApplyTheme(Theme theme)
+        public void ApplyTheme(Palette.ThemeColors colors)
         {
-            bool night = theme == Theme.Night;
-            _bloom.intensity.value = night ? 1.1f : 0.45f;
-            _bloom.threshold.value = night ? 0.8f : 1.05f;
-            _bloom.tint.value = night ? Palette.Hex("#FFE3A8") : Color.white;
-            _color.colorFilter.value = night ? Palette.Hex("#D6E4FF") : Palette.Hex("#FFF8EE");
-            _vignette.intensity.value = night ? 0.32f : 0.2f;
-            _baseExposure = night ? 0.15f : 0f;
+            _bloom.intensity.value = colors.BloomIntensity;
+            _bloom.threshold.value = colors.BloomThreshold;
+            _bloom.tint.value = colors.BloomTint;
+            _color.colorFilter.value = colors.ColorFilter;
+            _vignette.intensity.value = colors.Vignette;
+            _baseExposure = colors.Exposure;
         }
 
         /// <param name="flash">0..1, flash blanc d'impact.</param>
         /// <param name="fade">0..1, fondu au noir.</param>
-        public void Update(float flash, float fade, bool reduceFlash)
+        /// <param name="lightning">0..1, lueur d'un éclair (décor d'orage).</param>
+        public void Update(float flash, float fade, float lightning, bool reduceFlash)
         {
             float f = reduceFlash ? flash * 0.25f : flash;
-            _color.postExposure.value = _baseExposure + f * FlashExposure + fade * FadeExposure;
+            _color.postExposure.value = _baseExposure + f * FlashExposure + lightning * LightningExposure + fade * FadeExposure;
         }
     }
 }

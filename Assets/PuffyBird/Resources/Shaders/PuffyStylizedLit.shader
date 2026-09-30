@@ -3,6 +3,8 @@
 //   lumière ambiante, reflets de sonde, SSAO si activé, brouillard.
 // - Liseré lumineux (rim light) pour détacher les volumes du décor.
 // - Couleur = texture × couleur × couleur de sommet (un seul matériau pour un objet multicolore).
+//   L'alpha de la couleur de sommet sert de masque à l'émission des sommets (fenêtres, lanternes).
+// - Paillettes : points brillants qui scintillent, fixés à la surface de l'objet.
 // - Déformations de sommets partagées par toutes les passes (les ombres suivent) :
 //   vent (végétation), gonflement (nuages, oiseau), vibration d'impact (tuyaux),
 //   flexion (ailes).
@@ -22,11 +24,15 @@ Shader "PuffyBird/StylizedLit"
         _WindStrength ("Vent : amplitude", Float) = 0
         _WindFrequency ("Vent : fréquence", Float) = 1.5
         _WindHeight ("Vent : hauteur de référence", Float) = 1
+        _WindSpread ("Vent : décalage de phase dans l'objet", Float) = 0
         _BreathStrength ("Gonflement", Float) = 0
         _WobbleAmount ("Vibration d'impact", Float) = 0
         _WobbleFrequency ("Vibration : fréquence", Float) = 30
         _BendAmount ("Flexion", Float) = 0
         _ScrollOffset ("Défilement des UV", Vector) = (0, 0, 0, 0)
+        _Glitter ("Paillettes", Range(0, 4)) = 0
+        _GlitterScale ("Paillettes : densité", Float) = 60
+        _GlitterColor ("Paillettes : couleur", Color) = (1, 0.95, 0.7, 1)
     }
 
     SubShader
@@ -54,11 +60,15 @@ Shader "PuffyBird/StylizedLit"
             float _WindStrength;
             float _WindFrequency;
             float _WindHeight;
+            float _WindSpread;
             float _BreathStrength;
             float _WobbleAmount;
             float _WobbleFrequency;
             float _BendAmount;
             float4 _ScrollOffset;
+            half _Glitter;
+            float _GlitterScale;
+            half4 _GlitterColor;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap);
@@ -71,12 +81,14 @@ Shader "PuffyBird/StylizedLit"
             float3 origin = TransformObjectToWorld(float3(0.0, 0.0, 0.0));
             float phase = origin.x * 0.7 + origin.z * 0.31;
             float3 p = positionOS;
+            // Objets faits de nombreux éléments (touffes d'herbe) : chacun ondule à son rythme.
+            float windPhase = phase + (positionOS.x * 1.7 + positionOS.z * 2.3) * _WindSpread;
 
             // Vent : balancement plus fort vers le haut de l'objet.
             float h = saturate(positionOS.y / max(_WindHeight, 1e-3));
             float sway = h * h * _WindStrength;
-            p.x += sin(t * _WindFrequency + phase) * sway;
-            p.z += cos(t * _WindFrequency * 0.73 + phase) * sway * 0.4;
+            p.x += sin(t * _WindFrequency + windPhase) * sway;
+            p.z += cos(t * _WindFrequency * 0.73 + windPhase) * sway * 0.4;
 
             // Gonflement : respiration le long de la normale.
             p += normalOS * (sin(t * 2.7 + phase + positionOS.y * 7.0) * 0.5 + 0.5) * _BreathStrength;
@@ -129,8 +141,9 @@ Shader "PuffyBird/StylizedLit"
                 half3 normalWS : TEXCOORD2;
                 half4 color : TEXCOORD3;
                 half4 fogAndVertexLight : TEXCOORD4;
+                float3 positionOS : TEXCOORD5;
             #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
-                float4 shadowCoord : TEXCOORD5;
+                float4 shadowCoord : TEXCOORD6;
             #endif
             };
 
@@ -146,6 +159,7 @@ Shader "PuffyBird/StylizedLit"
                 output.normalWS = normal.normalWS;
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap) + _ScrollOffset.xy;
                 output.color = input.color;
+                output.positionOS = input.positionOS.xyz;
 
                 half3 vertexLight = VertexLighting(position.positionWS, normal.normalWS);
                 half fogFactor = ComputeFogFactor(position.positionCS.z);
@@ -186,7 +200,20 @@ Shader "PuffyBird/StylizedLit"
                 surface.specular = half3(0, 0, 0);
                 surface.normalTS = half3(0, 0, 1);
                 surface.occlusion = 1.0;
-                surface.emission = _EmissionColor.rgb + albedo * _VertexEmission;
+                surface.emission = _EmissionColor.rgb + albedo * (_VertexEmission * input.color.a);
+
+                // Paillettes : une cellule sur six environ porte un éclat qui s'allume et s'éteint
+                // à son propre rythme ; les cellules sont fixes sur l'objet (elles suivent l'oiseau).
+                if (_Glitter > 0.0)
+                {
+                    float3 cell = floor(input.positionOS * _GlitterScale);
+                    float h = frac(sin(dot(cell, float3(12.9898, 78.233, 37.719))) * 43758.5453);
+                    float speed = 5.0 + frac(h * 17.13) * 9.0;
+                    float twinkle = pow(saturate(sin(_Time.y * speed + h * 40.0)), 10.0);
+                    float3 local = frac(input.positionOS * _GlitterScale) - 0.5;
+                    float dotShape = saturate(1.0 - length(local) * 2.4);
+                    surface.emission += _GlitterColor.rgb * (step(0.83, h) * twinkle * dotShape * _Glitter * 6.0);
+                }
 
                 half4 color = UniversalFragmentPBR(inputData, surface);
 

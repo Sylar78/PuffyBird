@@ -63,13 +63,18 @@ namespace PuffyBird.Core
         // Tuyaux mobiles (extension) : à partir de ce score, les nouvelles paires montent et
         // descendent d'un bloc ; l'ouverture garde sa hauteur. Amplitude = 30 % de l'ouverture.
         public int MovingPipesFromScore = 15;
+
+        /// <summary>Couleur de l'oiseau, fixe (demande du 30/09/2026) au lieu du tirage de §6.8.</summary>
+        public BirdColor BirdColor = BirdColor.Blue;
+        /// <summary>Nombre de décors tirés au hasard à chaque partie (<see cref="Theme"/>).</summary>
+        public int ThemeCount = 6;
         public float PipeMoveAmplitude = 30f;
         public float PipeMovePeriod = 2.6f;
 
         // Étoiles de vitesse (extension) : placées entre deux paires, elles accélèrent le
-        // défilement de 30 % pendant quelques secondes.
+        // défilement de 30 % pendant 5 s en tout (montée et retour compris).
         public int StarFirstPair = 3;
-        public float StarChance = 0.3f;
+        public float StarChance = 0.15f;
         public float StarRadius = 10f;
         public float StarJitter = 18f;
         public float StarBoostFactor = 1.3f;

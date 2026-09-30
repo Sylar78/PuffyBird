@@ -20,11 +20,15 @@ namespace PuffyBird.Rendering
         public static readonly int WindStrength = Shader.PropertyToID("_WindStrength");
         public static readonly int WindFrequency = Shader.PropertyToID("_WindFrequency");
         public static readonly int WindHeight = Shader.PropertyToID("_WindHeight");
+        public static readonly int WindSpread = Shader.PropertyToID("_WindSpread");
         public static readonly int BreathStrength = Shader.PropertyToID("_BreathStrength");
         public static readonly int WobbleAmount = Shader.PropertyToID("_WobbleAmount");
         public static readonly int WobbleFrequency = Shader.PropertyToID("_WobbleFrequency");
         public static readonly int BendAmount = Shader.PropertyToID("_BendAmount");
         public static readonly int ScrollOffset = Shader.PropertyToID("_ScrollOffset");
+        public static readonly int Glitter = Shader.PropertyToID("_Glitter");
+        public static readonly int GlitterScale = Shader.PropertyToID("_GlitterScale");
+        public static readonly int GlitterColor = Shader.PropertyToID("_GlitterColor");
 
         public static readonly int SkyTop = Shader.PropertyToID("_TopColor");
         public static readonly int SkyHorizon = Shader.PropertyToID("_HorizonColor");
@@ -62,13 +66,29 @@ namespace PuffyBird.Rendering
             return m;
         }
 
+        /// <summary>Bruit de Perlin qui se raccorde sur les bords (la texture se répète sans couture).</summary>
+        static float TileableNoise(int x, int y, int size, float fx, float fy)
+        {
+            float u = (float)x / size;
+            float v = (float)y / size;
+            float a = Mathf.PerlinNoise(x * fx, y * fy);
+            float b = Mathf.PerlinNoise((x - size) * fx, y * fy);
+            float c = Mathf.PerlinNoise(x * fx, (y - size) * fy);
+            float d = Mathf.PerlinNoise((x - size) * fx, (y - size) * fy);
+            return Mathf.Lerp(Mathf.Lerp(a, b, u), Mathf.Lerp(c, d, u), v);
+        }
+
         public Material Sky(string name)
         {
             return new Material(_sky) { name = name };
         }
 
-        /// <summary>Texture de rayures diagonales pour le gazon (§8.1).</summary>
-        public static Texture2D StripeTexture(Color light, Color dark, int size = 64)
+        /// <summary>
+        /// Texture de rayures diagonales du gazon (§8.1), en niveaux de gris : la couleur vient du
+        /// matériau, pour la teinter selon le décor (vert, vert sombre, neige…). Rayures douces
+        /// (bords adoucis) et léger grain façon brins d'herbe.
+        /// </summary>
+        public static Texture2D StripeTexture(int size = 128)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, true)
             {
@@ -82,11 +102,14 @@ namespace PuffyBird.Rendering
             {
                 for (int x = 0; x < size; x++)
                 {
-                    bool stripe = ((x + y) % size) < size / 2;
-                    float grain = Mathf.PerlinNoise(x * 0.35f, y * 0.35f) * 0.08f - 0.04f;
-                    var c = stripe ? light : dark;
-                    c = new Color(c.r + grain, c.g + grain, c.b + grain, 1f);
-                    pixels[y * size + x] = c;
+                    // Position dans la période de rayure (diagonale), fondue sur les bords.
+                    float p = ((x + y) % size) / (float)size;
+                    float stripe = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((Mathf.Abs(p - 0.5f) - 0.2f) / 0.1f));
+                    float shade = Mathf.Lerp(1f, 0.86f, stripe);
+                    float grain = TileableNoise(x, y, size, 0.09f, 0.3f) * 0.1f - 0.05f;
+                    float blade = TileableNoise(x, y, size, 0.4f, 0.8f) > 0.68f ? 0.05f : 0f;
+                    float v = Mathf.Clamp01(shade + grain + blade);
+                    pixels[y * size + x] = new Color(v, v, v, 1f);
                 }
             }
             tex.SetPixels32(pixels);

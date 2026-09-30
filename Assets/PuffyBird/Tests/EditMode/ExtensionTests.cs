@@ -86,13 +86,37 @@ namespace PuffyBird.Tests
             sim.Step();
             Assert.AreEqual(_cfg.ScrollSpeed * 1.3f * _cfg.Step, sim.ScrollDistance - before, 1e-4);
 
-            for (int i = 0; i < (int)((_cfg.StarBoostDuration + _cfg.StarBoostRamp) / _cfg.Step) + 2; i++)
+            // 5 s après la prise (montée et retour compris), la vitesse est redevenue normale.
+            int elapsed = (int)(_cfg.StarBoostRamp / _cfg.Step) + 3;
+            int total = (int)System.Math.Round(_cfg.StarBoostDuration / _cfg.Step);
+            for (int i = elapsed; i < total - (int)(_cfg.StarBoostRamp / _cfg.Step) - 1; i++)
             {
                 if (sim.Bird.Y > 200f) sim.Press();
                 sim.Step();
             }
-            Assert.AreEqual(1f, sim.SpeedFactor, 1e-5f);
-            Assert.AreEqual(0f, sim.BoostTime);
+            Assert.AreEqual(_cfg.StarBoostFactor, sim.SpeedFactor, 1e-5f, "pleine vitesse jusqu'au retour");
+            for (int i = total - (int)(_cfg.StarBoostRamp / _cfg.Step) - 1; i < total; i++)
+            {
+                if (sim.Bird.Y > 200f) sim.Press();
+                sim.Step();
+            }
+            Assert.AreEqual(1f, sim.SpeedFactor, 1e-5f, "vitesse normale 5 s après la prise");
+            Assert.AreEqual(0f, sim.BoostTime, 1e-4f);
+        }
+
+        [Test]
+        public void BirdIsBlueAndEveryThemeShowsUp()
+        {
+            var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), 11, startOnTitle: false);
+            var seen = new bool[_cfg.ThemeCount];
+            for (int run = 0; run < 200; run++)
+            {
+                Assert.AreEqual(BirdColor.Blue, sim.BirdColor);
+                Assert.Less((int)sim.Theme, _cfg.ThemeCount);
+                seen[(int)sim.Theme] = true;
+                sim.ResetRun();
+            }
+            CollectionAssert.DoesNotContain(seen, false, "chaque décor finit par sortir");
         }
 
         [Test]
@@ -176,7 +200,8 @@ namespace PuffyBird.Tests
                 });
                 total += spawned;
             }
-            Assert.Greater(total, 20, "environ 30 % des paires ont une étoile");
+            Assert.Greater(total, 8, "environ 15 % des paires ont une étoile");
+            Assert.Less(total, 35, "moitié moins d'étoiles qu'avant (30 %)");
         }
     }
 }
