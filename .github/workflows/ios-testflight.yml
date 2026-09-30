@@ -20,6 +20,22 @@ jobs:
     name: Projet Xcode (Unity)
     runs-on: ubuntu-latest
     steps:
+      - name: Vérifier les secrets Apple (échec immédiat s'il en manque)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
+        run: |
+          missing=0
+          for name in APPLE_TEAM_ID APPSTORE_KEY_ID APPSTORE_ISSUER_ID APPSTORE_P8; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name absent ou vide (Settings > Secrets and variables > Actions)."
+              missing=1
+            fi
+          done
+          exit $missing
+
       - name: Libérer de l'espace disque (image Unity volumineuse)
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
