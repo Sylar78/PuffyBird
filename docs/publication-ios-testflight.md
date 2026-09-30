@@ -36,7 +36,7 @@ Dans [App Store Connect > Utilisateurs et accès > Intégrations > App Store Con
 
 GameCI doit activer Unity sur la machine de build.
 
-- **Licence Personal** : dans Unity Hub, être connecté avec une licence Personal active. Le fichier de licence se trouve sous Windows dans `C:\ProgramData\Unity\Unity_lic.ulf` (macOS : `/Library/Application Support/Unity/Unity_lic.ulf`). Son contenu complet va dans le secret `UNITY_LICENSE`.
+- **Licence Personal** : dans Unity Hub, être connecté avec une licence Personal active. Le fichier de licence se trouve sous Windows dans `C:\ProgramData\Unity\Unity_lic.ulf` (macOS : `/Library/Application Support/Unity/Unity_lic.ulf`). Son contenu complet va dans le secret `UNITY_LICENSE`. Si les deux secrets sont définis, le workflow privilégie cette licence et ignore `UNITY_SERIAL`.
 - **Licence Personal, fichier `.ulf` absent** : une licence affichée dans Unity Hub ne suffit pas, le fichier n'est créé que lors d'une activation. Dans Unity Hub, ouvrir *Paramètres > Licences*, cliquer sur **Ajouter une licence** et choisir **Obtenir une licence Personal gratuite**, puis aller au bout des étapes. Le fichier apparaît ensuite dans `C:\ProgramData\Unity\` (dossier masqué : coller le chemin dans la barre d'adresse de l'Explorateur). Source : [documentation GameCI](https://game.ci/docs/github/activation). L'ancienne méthode par fichier `.alf` n'est plus prise en charge.
 - **Licence Pro** : mettre le numéro de série dans `UNITY_SERIAL` ; `UNITY_LICENSE` est alors inutile.
 
@@ -75,7 +75,7 @@ Les minutes des Mac GitHub comptent dix fois plus que celles de Linux pour un d�
 
 | Symptôme | Cause probable |
 |---|---|
-| Échec à l'étape « Build Unity iOS », message de licence | Secret `UNITY_LICENSE` incomplet, ou licence expirée : réactiver dans Unity Hub et recopier le fichier. |
+| Échec à l'étape « Build Unity iOS », message de licence ou `Code 20110 (serial invalid)` | Licence Personal : secret `UNITY_LICENSE` incomplet ou expiré, réactiver dans Unity Hub et recopier le fichier. Licence Pro : vérifier le secret `UNITY_SERIAL`. |
 | « No Account for Team » ou « No profiles for 'com.sylar78.puffybird' » | Clé API sans le rôle Admin, Team ID erroné, ou identifiant d'app non créé (étape 2). |
 | « Invalid Bundle » ou refus à l'envoi | Fiche App Store Connect absente ou identifiant de lot différent de `com.sylar78.puffybird`. |
 | « The bundle version must be higher » | Numéro de build déjà envoyé : relancer le workflow, qui prend un nouveau numéro. |
