@@ -24,6 +24,7 @@ namespace PuffyBird.Rendering
         readonly Camera _bars;
         readonly WorldSpace _space;
         float _lastScreenAspect = -1f;
+        Rect _lastSafeArea;
         float _shakeTime;
         float _shakeDuration;
         float _shakeAmplitude;
@@ -67,14 +68,22 @@ namespace PuffyBird.Rendering
         public float SideMarginPx { get; private set; }
 
         /// <summary>
+        /// Haut de la zone sûre de l'écran (sous l'encoche ou la barre d'état), en y logique dans le
+        /// plan de jeu. Négatif sur un téléphone plus haut que 9:16, qui montre plus de ciel.
+        /// </summary>
+        public float SafeTopPx { get; private set; }
+
+        /// <summary>
         /// Adapte le viewport (bandes au-delà du 3:4) et le champ de vision au format de l'écran.
         /// À appeler avant d'avancer la simulation, qui a besoin de <see cref="SideMarginPx"/>.
         /// </summary>
         public void UpdateViewport()
         {
             float screenAspect = Screen.height > 0 ? (float)Screen.width / Screen.height : MaxAspect;
-            if (Mathf.Approximately(screenAspect, _lastScreenAspect)) return;
+            var safeArea = Screen.safeArea;
+            if (Mathf.Approximately(screenAspect, _lastScreenAspect) && safeArea == _lastSafeArea) return;
             _lastScreenAspect = screenAspect;
+            _lastSafeArea = safeArea;
 
             float aspect = Mathf.Min(screenAspect, MaxAspect);
             bool bars = screenAspect > MaxAspect;
@@ -86,6 +95,10 @@ namespace PuffyBird.Rendering
             _camera.fieldOfView = 2f * Mathf.Atan(halfHeight / WorldSpace.CameraDistance) * Mathf.Rad2Deg;
             float visibleHalfWidth = halfHeight * aspect;
             SideMarginPx = Mathf.Max(0f, visibleHalfWidth - _space.HalfWidth) * WorldSpace.PixelsPerUnit + SafetyMarginPx;
+
+            float visibleHeightPx = halfHeight * 2f * WorldSpace.PixelsPerUnit;
+            float topInset = Screen.height > 0 ? Mathf.Clamp01((Screen.height - safeArea.yMax) / Screen.height) : 0f;
+            SafeTopPx = _space.Config.Height * 0.5f - visibleHeightPx * 0.5f + topInset * visibleHeightPx;
         }
 
         /// <summary>Demi-largeur visible à la profondeur z, pour le format le plus large géré.</summary>

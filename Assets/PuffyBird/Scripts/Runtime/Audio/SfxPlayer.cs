@@ -4,7 +4,7 @@ using UnityEngine;
 namespace PuffyBird.Audio
 {
     /// <summary>
-    /// Joue les 5 sons de la spec, synthétisés au démarrage (aucun fichier audio). Plusieurs
+    /// Joue les 5 sons de la spec et celui de l'étoile, synthétisés au démarrage (aucun fichier audio). Plusieurs
     /// sources permettent aux sons de se superposer (taps rapides, §13.2).
     /// </summary>
     public sealed class SfxPlayer
@@ -60,6 +60,7 @@ namespace PuffyBird.Audio
             if ((events & GameEvents.Hit) != 0) Play(SoundId.Hit);
             if ((events & GameEvents.Die) != 0) Play(SoundId.Die);
             if ((events & GameEvents.Swoosh) != 0) Play(SoundId.Swoosh);
+            if ((events & GameEvents.Star) != 0) Play(SoundId.Star);
         }
     }
 }

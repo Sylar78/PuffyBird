@@ -46,6 +46,7 @@ namespace PuffyBird.Rendering
         readonly Material _featherMaterial;
         int _nextPuff;
         float _squash;
+        bool _shimmering;
 
         public BirdView(Transform parent, MaterialLibrary materials, WorldSpace space)
         {
@@ -147,6 +148,34 @@ namespace PuffyBird.Rendering
         }
 
         public Vector3 Position => _root.position;
+
+        /// <summary>
+        /// Scintillement léger pendant l'accélération d'une étoile : lueur irisée qui change
+        /// doucement de teinte, avec un frémissement rapide, et liseré renforcé.
+        /// </summary>
+        public void SetBoost(float amount, float time)
+        {
+            if (amount <= 0f)
+            {
+                if (!_shimmering) return;
+                _shimmering = false;
+                SetGlow(Color.black, 0.5f);
+                return;
+            }
+            _shimmering = true;
+            float hue = time * 0.7f % 1f;
+            float flicker = 0.6f + 0.4f * Mathf.Sin(time * 30f) * Mathf.Sin(time * 11f);
+            var glow = Color.HSVToRGB(hue, 0.45f, 1f) * (0.3f * flicker * amount);
+            SetGlow(glow, 0.5f + 0.7f * amount);
+        }
+
+        void SetGlow(Color emission, float rim)
+        {
+            _bodyMaterial.SetColor(MaterialLibrary.EmissionColor, emission);
+            _wingMaterial.SetColor(MaterialLibrary.EmissionColor, emission);
+            _bodyMaterial.SetFloat(MaterialLibrary.RimStrength, rim);
+            _wingMaterial.SetFloat(MaterialLibrary.RimStrength, rim);
+        }
 
         public void OnFlap()
         {

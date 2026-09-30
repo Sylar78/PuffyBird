@@ -14,7 +14,11 @@ namespace PuffyBird.Core
         readonly GameConfig _cfg;
         readonly IScoreStorage _storage;
         readonly Rng _rng;
+        // Tirages des extensions (tuyaux mobiles, étoiles) : séparés, pour que la suite des
+        // ouvertures reste celle de la spec à graine égale.
+        readonly Rng _bonusRng;
         readonly PipeField _pipes = new PipeField(4);
+        readonly StarField _stars = new StarField(4);
         readonly Bird _bird = new Bird();
         readonly bool _bestReadable;
 
@@ -22,6 +26,9 @@ namespace PuffyBird.Core
         float _dieSoundTimer;
         float _fadeOut;
         float _fadeIn;
+        int _pairsSpawned;
+        float _boostTime;
+        float _speedFactor = 1f;
         GameEvents _events;
 
         public GameSimulation(GameConfig cfg, IScoreStorage storage, uint seed, bool startOnTitle = true)
@@ -29,6 +36,7 @@ namespace PuffyBird.Core
             _cfg = cfg ?? throw new ArgumentNullException(nameof(cfg));
             _storage = storage ?? new MemoryScoreStorage();
             _rng = new Rng(seed);
+            _bonusRng = new Rng(seed ^ 0x9E3779B9u);
             _bestReadable = _storage.TryReadBest(out int best);
             Best = _bestReadable ? Math.Max(0, best) : 0;
             ResetRun();
@@ -47,6 +55,13 @@ namespace PuffyBird.Core
         public bool NewBest { get; private set; }
         public Bird Bird => _bird;
         public PipeField Pipes => _pipes;
+        public StarField Stars => _stars;
+        /// <summary>Multiplicateur du défilement : 1, ou jusqu'à <see cref="GameConfig.StarBoostFactor"/> après une étoile.</summary>
+        public float SpeedFactor => _speedFactor;
+        /// <summary>Secondes d'accélération restantes (0 sans étoile).</summary>
+        public float BoostTime => _boostTime;
+        /// <summary>Intensité de l'accélération dans [0, 1], pour les effets visuels.</summary>
+        public float BoostAmount => (_speedFactor - 1f) / (_cfg.StarBoostFactor - 1f);
 
         float _viewMargin;
 
@@ -125,6 +140,7 @@ namespace PuffyBird.Core
             PrevScrollDistance = ScrollDistance;
             _bird.PrevY = _bird.Y;
             _pipes.SavePrevious();
+            _stars.SavePrevious();
 
             if (State == GameState.Paused) return;
 
@@ -137,8 +153,10 @@ namespace PuffyBird.Core
             bool scrolling = State == GameState.Title || State == GameState.Ready || State == GameState.Playing;
             if (scrolling)
             {
-                ScrollDistance += _cfg.ScrollSpeed * dt;
-                GroundOffset = (GroundOffset + _cfg.ScrollSpeed * dt) % _cfg.GroundPattern;
+                if (State == GameState.Playing) StepBoost(ref _boostTime, ref _speedFactor, dt, _cfg);
+                float dx = _cfg.ScrollSpeed * _speedFactor * dt;
+                ScrollDistance += dx;
+                GroundOffset = (GroundOffset + dx) % _cfg.GroundPattern;
                 _bird.AnimateWings(dt, _cfg);
             }
 
@@ -163,10 +181,20 @@ namespace PuffyBird.Core
 
             if (State != GameState.Playing) return;
 
-            _pipes.Advance(dt, _rng, _cfg, _viewMargin);
+            if (_pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor)) OnPairSpawned();
+            _pipes.UpdateMotion(Time, _cfg);
+            _stars.Advance(_cfg.ScrollSpeed * _speedFactor * dt, _cfg, _viewMargin);
 
             float cx = _cfg.BirdCenterX;
             float cy = _bird.CenterY(_cfg);
+            for (int i = 0; i < _stars.Capacity; i++)
+            {
+                ref var star = ref _stars[i];
+                if (!star.Active || !Collision.CircleCircle(cx, cy, _cfg.BirdRadius, star.X, star.Y, _cfg.StarRadius)) continue;
+                star.Active = false;
+                _boostTime = _cfg.StarBoostDuration;
+                _events |= GameEvents.Star;
+            }
             for (int i = 0; i < _pipes.Count; i++)
             {
                 ref var p = ref _pipes[i];
@@ -177,7 +205,7 @@ namespace PuffyBird.Core
                     Score++;
                     _events |= GameEvents.Point;
                 }
-                if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.GapTop, p.X, _cfg))
+                if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg))
                 {
                     HitPipeId = p.Id;
                     Die(false);
@@ -193,6 +221,10 @@ namespace PuffyBird.Core
             Theme = (Theme)_rng.Range(0, 1);
             _bird.Reset(_cfg.BirdStartY);
             _pipes.Clear();
+            _stars.Clear();
+            _pairsSpawned = 0;
+            _boostTime = 0f;
+            _speedFactor = 1f;
             Score = 0;
             NewBest = false;
             Flash = 0f;
@@ -224,6 +256,7 @@ namespace PuffyBird.Core
                 case GameState.Ready:
                     SetState(GameState.Playing);
                     _pipes.SpawnRandom(_cfg.FirstPipeX, _rng, _cfg);
+                    OnPairSpawned();
                     Flap();
                     break;
                 case GameState.Playing:
@@ -236,6 +269,43 @@ namespace PuffyBird.Core
                     if (StateTime > _cfg.OverInputDelay) BeginTransition();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Extensions appliquées à la paire qui vient d'apparaître : mouvement vertical à partir de
+        /// <see cref="GameConfig.MovingPipesFromScore"/> paires franchies, et parfois une étoile de
+        /// vitesse à mi-chemin de la paire précédente, à la hauteur moyenne des deux ouvertures.
+        /// </summary>
+        void OnPairSpawned()
+        {
+            int index = _pairsSpawned++;
+            ref var last = ref _pipes.Last;
+            if (index >= _cfg.MovingPipesFromScore)
+            {
+                last.MoveAmplitude = _cfg.PipeMoveAmplitude;
+                last.MovePhase = (float)(_bonusRng.NextFloat() * 2.0 * Math.PI);
+                last.Shift = last.ShiftAt(Time, _cfg);
+                last.PrevShift = last.Shift;
+            }
+            if (index >= _cfg.StarFirstPair && _pipes.Count >= 2 && _bonusRng.NextFloat() < _cfg.StarChance)
+            {
+                ref var prev = ref _pipes[_pipes.Count - 2];
+                float x = (prev.X + _cfg.PipeWidth + last.X) * 0.5f;
+                float y = (prev.GapTop + last.GapTop + _cfg.PipeGap) * 0.5f + (_bonusRng.NextFloat() * 2f - 1f) * _cfg.StarJitter;
+                _stars.Spawn(x, y);
+            }
+        }
+
+        /// <summary>
+        /// Un pas de l'accélération : le minuteur décroît, le multiplicateur rejoint sa cible en
+        /// <see cref="GameConfig.StarBoostRamp"/> secondes. Fonction pure, rejouée par le pilote automatique.
+        /// </summary>
+        public static void StepBoost(ref float boostTime, ref float speedFactor, float dt, GameConfig cfg)
+        {
+            if (boostTime > 0f) boostTime = Math.Max(0f, boostTime - dt);
+            float target = boostTime > 0f ? cfg.StarBoostFactor : 1f;
+            float rate = (cfg.StarBoostFactor - 1f) / cfg.StarBoostRamp * dt;
+            speedFactor = speedFactor < target ? Math.Min(target, speedFactor + rate) : Math.Max(target, speedFactor - rate);
         }
 
         void Flap()
@@ -320,6 +390,11 @@ namespace PuffyBird.Core
         internal void ForcePlaying()
         {
             SetState(GameState.Playing);
+        }
+
+        internal void ForceBoost(float seconds)
+        {
+            _boostTime = seconds;
         }
     }
 }

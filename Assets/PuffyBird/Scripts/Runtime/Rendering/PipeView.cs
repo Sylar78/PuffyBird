@@ -109,8 +109,10 @@ namespace PuffyBird.Rendering
                 pair.Id = p.Id;
 
                 float x = Mathf.LerpUnclamped(p.PrevX, p.X, alpha) + _cfg.PipeWidth * 0.5f;
-                float gapTopY = _space.Y(p.GapTop);
-                float gapBottomY = _space.Y(p.GapTop + _cfg.PipeGap);
+                // Paires mobiles : les deux tuyaux se décalent ensemble, l'ouverture garde sa hauteur.
+                float gapTop = p.GapTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha);
+                float gapTopY = _space.Y(gapTop);
+                float gapBottomY = _space.Y(gapTop + _cfg.PipeGap);
                 pair.Root.transform.localPosition = new Vector3(_space.X(x), 0f, 0f);
 
                 // Bas : du fond du sol jusqu'au bas de l'ouverture, chapeau en haut.

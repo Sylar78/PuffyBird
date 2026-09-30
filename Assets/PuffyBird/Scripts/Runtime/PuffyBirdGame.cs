@@ -34,7 +34,9 @@ namespace PuffyBird
         PostFxController _postFx;
         SceneryView _scenery;
         PipeView _pipes;
+        StarView _stars;
         BirdView _bird;
+        BoostTrailView _trail;
         HudView _hud;
         SfxPlayer _sfx;
         int _shownRun = -1;
@@ -68,7 +70,9 @@ namespace PuffyBird
             _postFx = new PostFxController(world);
             _scenery = new SceneryView(world, materials);
             _pipes = new PipeView(world, materials, _space);
+            _stars = new StarView(world, materials, _space, _sim.Stars.Capacity);
             _bird = new BirdView(world, materials, _space);
+            _trail = new BoostTrailView(world, materials, _space);
             _hud = new HudView(world, materials, _space);
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
@@ -115,6 +119,7 @@ namespace PuffyBird
         {
             _sfx.Play(events);
             if ((events & GameEvents.Flap) != 0) _bird.OnFlap();
+            if ((events & GameEvents.Star) != 0) _trail.OnStar(_bird.Position);
             if ((events & GameEvents.Hit) != 0)
             {
                 _bird.OnHit();
@@ -144,8 +149,11 @@ namespace PuffyBird
             _lighting.Update(_realTime);
             _scenery.Update(scroll, _realTime);
             _pipes.Update(_sim.Pipes, alpha, dt);
+            _stars.Update(_sim.Stars, alpha, _realTime);
             _bird.Update(_sim, alpha, dt);
-            _hud.Update(_sim, _realTime, dt);
+            _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime);
+            _trail.Update(_sim, _bird.Position, dt, _realTime);
+            _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx);
             _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, reduceFlash);
         }
 

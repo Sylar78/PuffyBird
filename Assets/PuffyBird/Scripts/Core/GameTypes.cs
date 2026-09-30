@@ -50,6 +50,7 @@ namespace PuffyBird.Core
         Swoosh = 1 << 4,
         NewRun = 1 << 5,
         StateChanged = 1 << 6,
+        Star = 1 << 7,
     }
 
     public static class Medals

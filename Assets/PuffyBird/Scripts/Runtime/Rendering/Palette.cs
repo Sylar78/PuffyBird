@@ -41,6 +41,15 @@ namespace PuffyBird.Rendering
         public static readonly Color PipeShade = Hex("#2B8C82");
         public static readonly Color PipeRim = Hex("#F2C35B");
 
+        // Étoiles de vitesse et traînée multicolore.
+        public static readonly Color Star = Hex("#FFD23F");
+        public static readonly Color StarRim = Hex("#FFF4B8");
+        public static readonly Color[] Rainbow =
+        {
+            Hex("#FF4D6D"), Hex("#FF9F1C"), Hex("#FFE14D"), Hex("#5BE37D"),
+            Hex("#3EC6FF"), Hex("#6C7BFF"), Hex("#C86BFF"),
+        };
+
         public static readonly Color GrassLight = Hex("#9CE659");
         public static readonly Color GrassDark = Hex("#73BF2E");
         public static readonly Color Sand = Hex("#DED895");

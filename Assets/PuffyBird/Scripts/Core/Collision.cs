@@ -19,10 +19,18 @@ namespace PuffyBird.Core
         /// Collision entre l'oiseau (cercle) et une paire : le tuyau du haut est infini, on ne
         /// peut donc pas passer au-dessus ; le tuyau du bas descend jusqu'au sol.
         /// </summary>
-        public static bool HitsPipe(float cx, float cy, float radius, int gapTop, float pipeX, GameConfig cfg)
+        public static bool HitsPipe(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg)
         {
             return CircleRect(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop)
                 || CircleRect(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
+        }
+
+        public static bool CircleCircle(float ax, float ay, float ar, float bx, float by, float br)
+        {
+            float dx = ax - bx;
+            float dy = ay - by;
+            float r = ar + br;
+            return dx * dx + dy * dy < r * r;
         }
     }
 }

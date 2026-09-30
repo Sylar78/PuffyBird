@@ -51,9 +51,9 @@ Points qui se trompent facilement :
 
 | Dossier | Assembly | Rôle |
 |---|---|---|
-| `Assets/PuffyBird/Scripts/Core/` | `PuffyBird.Core` (sans référence à Unity) | Simulation complète : `GameConfig` (toutes les constantes), `GameSimulation` (machine à états, §19), `Bird`, `PipeField` (pool circulaire de 4 paires), `Collision`, `FixedStepClock`, `Rng` (graine), `OverScreenTimeline`, `SfxRecipes` (synthèse des 5 sons), `AutoPilot` (bot §23.3) |
+| `Assets/PuffyBird/Scripts/Core/` | `PuffyBird.Core` (sans référence à Unity) | Simulation complète : `GameConfig` (toutes les constantes), `GameSimulation` (machine à états, §19), `Bird`, `PipeField` (pool circulaire de 4 paires, paires mobiles), `StarField` (étoiles de vitesse), `Collision`, `FixedStepClock`, `Rng` (graine), `OverScreenTimeline`, `SfxRecipes` (synthèse des 5 sons + celui de l'étoile), `AutoPilot` (bot §23.3) |
 | `Assets/PuffyBird/Scripts/Runtime/` | `PuffyBird.Runtime` | `PuffyBirdGame` (point d'entrée : boucle à pas fixe, entrées, synchronisation du rendu), `InputReader`, `PlayerPrefsScoreStorage` |
-| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView`, `PipeView`, `BirdView`, `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
+| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView`, `PipeView`, `StarView`, `BirdView` (dont le scintillement d'accélération), `BoostTrailView` (traînée arc-en-ciel), `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
 | `Scripts/Runtime/UI/`, `Audio/` | idem | `HudView` et `VoxelFont` (texte en volume, police 5 × 7), `SfxPlayer` |
 | `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes), `PuffySky` |
 | `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist) |
@@ -82,6 +82,13 @@ Principes :
 - Écran de fin : un tap n'importe où (après 0,8 s) relance la partie, au lieu d'un bouton Play dédié.
 - `AutoPilot` cherche une suite de battements sûre sur ≈ 1,7 s au lieu du bot trivial de §23.3, qui meurt sur certaines combinaisons d'ouvertures. Il survit sur toutes les graines testées : la difficulté reste juste.
 - Textes du jeu en anglais (GET READY, GAME OVER, TAP…) en attendant la localisation.
+- Score en jeu placé tout en haut de l'écran visible, sous l'encoche (`CameraRig.SafeTopPx` + `ScoreTopMargin`), au lieu de y = 50 : il gênait la visibilité.
+
+Extensions intégrées au mode principal (demandées le 30/09/2026, hors spec) :
+
+- **Tuyaux mobiles** : à partir de 15 points (`MovingPipesFromScore`), chaque nouvelle paire monte et descend de ± 30 px (30 % de l'ouverture, `PipeMoveAmplitude`, période 2,6 s). Les deux tuyaux bougent ensemble, l'ouverture garde 100 px ; `PipePair.GapTop` reste la valeur tirée, le haut réel est `OpeningTop`.
+- **Étoiles de vitesse** : environ 30 % des paires (à partir de la 4e) ont une étoile à mi-chemin de la précédente. La toucher accélère le défilement de 30 % pendant 5 s (montée et descente en 0,3 s). L'espacement des tuyaux reste exact. Effets : traînée arc-en-ciel, scintillement irisé de l'oiseau, gerbe d'étincelles, arpège.
+- Ces tirages utilisent un second `Rng` dérivé de la graine : la suite des ouvertures reste celle de la spec. `AutoPilot` rejoue les mouvements et les accélérations (étoiles comprises) et survit sur toutes les graines testées.
 
 ## Tests et validation
 
@@ -93,7 +100,7 @@ Les critères d'acceptation A1 à A15 (§23.1) et les tests unitaires suggérés
 - Éviter des tuyaux verts « style Mario » identiques à l'original.
 - Publicité : **jamais pendant une partie**, rien dans la zone de jeu, pas d'interstitiel lors de la première session, vidéo longue uniquement récompensée et choisie par le joueur.
 - Achats intégrés cosmétiques ou retrait des pubs uniquement, jamais « pay-to-win ».
-- Les extensions (skins, défi quotidien, tuyaux mobiles…) restent hors du mode principal.
+- Les autres extensions (skins, défi quotidien…) restent hors du mode principal ; tuyaux mobiles et étoiles de vitesse y ont été intégrés à la demande (voir « Architecture »).
 - Distribution prévue : web d'abord (GitHub Pages, itch.io), puis portails web, puis stores mobiles.
 
 ## Stack mobile et rendu (choix du 29/09/2026)

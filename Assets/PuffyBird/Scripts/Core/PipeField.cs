@@ -8,8 +8,25 @@ namespace PuffyBird.Core
         public int Id;
         public float X;
         public float PrevX;
+        /// <summary>Haut de l'ouverture au moment de l'apparition ; l'ouverture réelle est décalée de <see cref="Shift"/>.</summary>
         public int GapTop;
         public bool Scored;
+        /// <summary>Amplitude du mouvement vertical en px (0 = paire fixe).</summary>
+        public float MoveAmplitude;
+        public float MovePhase;
+        /// <summary>Décalage vertical courant des deux tuyaux, y vers le bas.</summary>
+        public float Shift;
+        public float PrevShift;
+
+        /// <summary>Haut de l'ouverture à cet instant.</summary>
+        public float OpeningTop => GapTop + Shift;
+
+        /// <summary>Décalage vertical au temps de simulation <paramref name="time"/> (paires mobiles).</summary>
+        public float ShiftAt(float time, GameConfig cfg)
+        {
+            if (MoveAmplitude == 0f) return 0f;
+            return MoveAmplitude * (float)Math.Sin(MovePhase + time * 2.0 * Math.PI / cfg.PipeMovePeriod);
+        }
     }
 
     /// <summary>
@@ -69,7 +86,22 @@ namespace PuffyBird.Core
 
         public void SavePrevious()
         {
-            for (int i = 0; i < _count; i++) this[i].PrevX = this[i].X;
+            for (int i = 0; i < _count; i++)
+            {
+                ref var p = ref this[i];
+                p.PrevX = p.X;
+                p.PrevShift = p.Shift;
+            }
+        }
+
+        /// <summary>Met à jour le décalage vertical des paires mobiles.</summary>
+        public void UpdateMotion(float time, GameConfig cfg)
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                ref var p = ref this[i];
+                p.Shift = p.ShiftAt(time, cfg);
+            }
         }
 
         /// <summary>
@@ -82,13 +114,19 @@ namespace PuffyBird.Core
         /// apparaissent et disparaissent d'autant plus loin, donc toujours hors champ. Les positions
         /// et l'ordre des tirages ne changent pas : seule l'apparition est plus précoce.
         /// </param>
-        public void Advance(float dt, Rng rng, GameConfig cfg, float viewMargin = 0f)
+        /// <param name="speedFactor">Multiplicateur du défilement (étoile de vitesse).</param>
+        /// <returns>Vrai si une nouvelle paire est apparue (c'est alors <see cref="Last"/>).</returns>
+        public bool Advance(float dt, Rng rng, GameConfig cfg, float viewMargin = 0f, float speedFactor = 1f)
         {
-            float dx = cfg.ScrollSpeed * dt;
+            float dx = cfg.ScrollSpeed * speedFactor * dt;
             for (int i = 0; i < _count; i++) this[i].X -= dx;
             if (_count > 0 && this[0].X + cfg.PipeWidth < -cfg.PipeDespawnMargin - viewMargin) RemoveFirst();
             if (_count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead + viewMargin - cfg.PipeSpacing)
+            {
                 SpawnRandom(Last.X + cfg.PipeSpacing, rng, cfg);
+                return true;
+            }
+            return false;
         }
     }
 }

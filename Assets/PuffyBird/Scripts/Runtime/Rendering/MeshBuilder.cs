@@ -173,6 +173,52 @@ namespace PuffyBird.Rendering
             _indices.Add(start); _indices.Add(start + 2); _indices.Add(start + 3);
         }
 
+        /// <summary>
+        /// Étoile bombée à facettes dans le plan XY : pointes alternant rayon extérieur et intérieur,
+        /// sommets en relief de ± <paramref name="depth"/>/2 sur z, une normale plate par facette.
+        /// </summary>
+        public MeshBuilder AddStar(Vector3 center, float outerRadius, float innerRadius, float depth, Color color, int points = 5)
+        {
+            int ring = points * 2;
+            var front = center + new Vector3(0f, 0f, -depth * 0.5f);
+            var back = center + new Vector3(0f, 0f, depth * 0.5f);
+            for (int i = 0; i < ring; i++)
+            {
+                var a = StarPoint(center, i, ring, outerRadius, innerRadius);
+                var b = StarPoint(center, i + 1, ring, outerRadius, innerRadius);
+                AddFacet(front, a, b, Vector3.back, color);
+                AddFacet(back, a, b, Vector3.forward, color);
+            }
+            return this;
+        }
+
+        static Vector3 StarPoint(Vector3 center, int i, int ring, float outer, float inner)
+        {
+            float angle = Mathf.PI * 0.5f + i * Mathf.PI * 2f / ring;
+            float r = i % 2 == 0 ? outer : inner;
+            return center + new Vector3(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r, 0f);
+        }
+
+        /// <summary>Triangle à normale plate, retourné si besoin pour faire face à <paramref name="side"/>.</summary>
+        void AddFacet(Vector3 a, Vector3 b, Vector3 c, Vector3 side, Color color)
+        {
+            var normal = Vector3.Cross(b - a, c - a).normalized;
+            if (Vector3.Dot(normal, side) < 0f)
+            {
+                (b, c) = (c, b);
+                normal = -normal;
+            }
+            int start = _vertices.Count;
+            _vertices.Add(a); _vertices.Add(b); _vertices.Add(c);
+            for (int i = 0; i < 3; i++)
+            {
+                _normals.Add(normal);
+                _colors.Add(color);
+                _uvs.Add(Vector2.zero);
+            }
+            _indices.Add(start); _indices.Add(start + 1); _indices.Add(start + 2);
+        }
+
         /// <summary>Ajoute un autre constructeur, transformé par <paramref name="matrix"/>.</summary>
         public MeshBuilder Append(MeshBuilder other, Matrix4x4 matrix)
         {

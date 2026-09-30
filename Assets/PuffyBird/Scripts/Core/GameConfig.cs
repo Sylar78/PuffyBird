@@ -60,13 +60,30 @@ namespace PuffyBird.Core
         /// </summary>
         public float MaxViewMargin = 64f;
 
+        // Tuyaux mobiles (extension) : à partir de ce score, les nouvelles paires montent et
+        // descendent d'un bloc ; l'ouverture garde sa hauteur. Amplitude = 30 % de l'ouverture.
+        public int MovingPipesFromScore = 15;
+        public float PipeMoveAmplitude = 30f;
+        public float PipeMovePeriod = 2.6f;
+
+        // Étoiles de vitesse (extension) : placées entre deux paires, elles accélèrent le
+        // défilement de 30 % pendant quelques secondes.
+        public int StarFirstPair = 3;
+        public float StarChance = 0.3f;
+        public float StarRadius = 10f;
+        public float StarJitter = 18f;
+        public float StarBoostFactor = 1.3f;
+        public float StarBoostDuration = 5f;
+        public float StarBoostRamp = 0.3f;
+
         // Séquence de mort, écrans (§11, §12)
         public float FlashTime = 0.12f;
         public float DieSoundDelay = 0.25f;
         public float OverInputDelay = 0.8f;
         public float ScoreCountRate = 30f;
         public float FadeTime = 0.25f;
-        public float ScoreY = 50f;
+        /// <summary>Distance entre le haut de la zone sûre de l'écran (sous l'encoche) et le score en jeu.</summary>
+        public float ScoreTopMargin = 10f;
 
         // Médailles (§10.3)
         public int MedalBronze = 10;

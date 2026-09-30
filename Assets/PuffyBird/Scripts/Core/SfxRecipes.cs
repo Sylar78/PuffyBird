@@ -9,6 +9,7 @@ namespace PuffyBird.Core
         Hit,
         Die,
         Swoosh,
+        Star,
     }
 
     /// <summary>
@@ -53,6 +54,15 @@ namespace PuffyBird.Core
                 {
                     var buf = Alloc(0.25f, sampleRate);
                     Noise(buf, sampleRate, 0f, 0.25f, 0.18f, 600f, 3000f, rng);
+                    return buf;
+                }
+                case SoundId.Star:
+                {
+                    // Arpège montant scintillant (extension, hors spec) : do, mi, sol, do.
+                    var buf = Alloc(0.42f, sampleRate);
+                    float[] notes = { 1046.5f, 1318.5f, 1568f, 2093f };
+                    for (int i = 0; i < notes.Length; i++)
+                        Tone(buf, sampleRate, i * 0.055f, 0.25f, Wave.Triangle, 0.22f, notes[i], notes[i] * 1.01f);
                     return buf;
                 }
                 default:

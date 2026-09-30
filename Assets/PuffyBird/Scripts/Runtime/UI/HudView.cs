@@ -236,7 +236,8 @@ namespace PuffyBird.UI
 
         // ───────── mise à jour ─────────
 
-        public void Update(GameSimulation sim, float realTime, float deltaTime)
+        /// <param name="safeTopPx">Haut de la zone sûre de l'écran, en y logique (voir <c>CameraRig.SafeTopPx</c>).</param>
+        public void Update(GameSimulation sim, float realTime, float deltaTime, float safeTopPx)
         {
             var state = sim.State;
             float t = sim.StateTime;
@@ -281,9 +282,9 @@ namespace PuffyBird.UI
                 Hide(_tapLabel);
             }
 
-            // Score en jeu
+            // Score en jeu : tout en haut de l'écran visible, sous l'encoche, pour dégager la vue.
             bool showScore = state == GameState.Ready || state == GameState.Playing || state == GameState.Dying || state == GameState.Paused;
-            if (showScore) PlaceNumber(_score, sim.Score, 144f, _cfg.ScoreY, 5f);
+            if (showScore) PlaceNumber(_score, sim.Score, 144f, safeTopPx + _cfg.ScoreTopMargin, 4f);
             else Hide(_score);
 
             // Pause
@@ -302,7 +303,7 @@ namespace PuffyBird.UI
             if (state == GameState.Over) UpdateOver(sim, t, deltaTime);
             else HideOver();
 
-            if (sim.Muted) Place(_mute, 280f, 10f, 1.4f);
+            if (sim.Muted) Place(_mute, 280f, safeTopPx + _cfg.ScoreTopMargin, 1.4f);
             else Hide(_mute);
         }
 
