@@ -80,3 +80,9 @@ Les minutes des Mac GitHub comptent dix fois plus que celles de Linux pour un d�
 | « Invalid Bundle » ou refus à l'envoi | Fiche App Store Connect absente ou identifiant de lot différent de `fr.puffybird.app`. |
 | « The bundle version must be higher » | Numéro de build déjà envoyé : relancer le workflow, qui prend un nouveau numéro. |
 | Refus lié au SDK iOS | Apple exige le dernier SDK : le workflow prend le dernier Xcode stable ; vérifier que l'image `macos-latest` le contient. |
+
+## Publicité (LevelPlay)
+
+Le jeu embarque le SDK LevelPlay (package Unity « Ads Mediation »). Sur iOS, ce SDK arrive par CocoaPods : le build Unity (Linux) écrit un `Podfile` dans le projet Xcode, puis le job Mac lance `pod install` et archive `Unity-iPhone.xcworkspace`. Si le journal affiche « Pas de Podfile », le résolveur de dépendances (dossier `Assets/MobileDependencyResolver` ou `Assets/ExternalDependencyManager`) manque dans le dépôt.
+
+Dans App Store Connect, la fiche de confidentialité de l'app doit déclarer les données collectées par la pub (identifiant de l'appareil, données d'usage, suivi publicitaire). Le premier lancement affiche la demande de suivi d'Apple (ATT) avant toute pub.

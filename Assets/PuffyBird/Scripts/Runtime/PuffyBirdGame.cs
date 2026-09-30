@@ -40,7 +40,7 @@ namespace PuffyBird
         BoostTrailView _trail;
         HudView _hud;
         SfxPlayer _sfx;
-        IBannerAds _banner = new NoBannerAds();
+        IBannerAds _banner;
         bool _bannerShown;
         int _shownRun = -1;
         float _realTime;
@@ -57,6 +57,7 @@ namespace PuffyBird
             _clock = new FixedStepClock(_cfg.Step, _cfg.MaxFrameDelta);
             _input = new InputReader();
             _space = new WorldSpace(_cfg);
+            _banner = AdServices.CreateBanner();
 
             var materials = new MaterialLibrary();
             var world = transform;

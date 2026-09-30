@@ -110,10 +110,26 @@ jobs:
       # Archive non signée : la signature automatique de l'archive demanderait un profil de
       # développement, impossible sans appareil enregistré. La signature Distribution se fait
       # à l'export (étape suivante), via la clé API.
+      # Le SDK pub (LevelPlay) arrive par CocoaPods : le résolveur de dépendances de Unity écrit
+      # le Podfile sous Linux, mais l'installation des pods ne peut se faire que sur macOS.
+      - name: Pods CocoaPods (SDK pub)
+        working-directory: build/PuffyBird
+        run: |
+          if [ -f Podfile ]; then
+            pod install --repo-update
+          else
+            echo "::warning::Pas de Podfile dans le projet Xcode : le SDK pub LevelPlay ne sera pas lié."
+          fi
+
       - name: Archive
         run: |
+          if [ -d build/PuffyBird/Unity-iPhone.xcworkspace ]; then
+            PROJECT_ARGS=(-workspace build/PuffyBird/Unity-iPhone.xcworkspace)
+          else
+            PROJECT_ARGS=(-project build/PuffyBird/Unity-iPhone.xcodeproj)
+          fi
           xcodebuild archive \
-            -project build/PuffyBird/Unity-iPhone.xcodeproj \
+            "${PROJECT_ARGS[@]}" \
             -scheme Unity-iPhone \
             -configuration Release \
             -destination 'generic/platform=iOS' \
