@@ -120,11 +120,23 @@ jobs:
       # à l'export (étape suivante), via la clé API.
       # Le SDK pub (LevelPlay) arrive par CocoaPods : le résolveur de dépendances de Unity écrit
       # le Podfile sous Linux, mais l'installation des pods ne peut se faire que sur macOS.
+      # Les minutes Mac coûtent environ 10 fois plus que les minutes Linux sur le
+      # quota GitHub : les pods (identiques d'un build à l'autre) sont mis en cache.
+      - name: Cache des pods
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/PuffyBird/Pods
+            build/PuffyBird/Podfile.lock
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ hashFiles('build/PuffyBird/Podfile') }}
+
       - name: Pods CocoaPods (SDK pub)
         working-directory: build/PuffyBird
         run: |
           if [ -f Podfile ]; then
-            pod install --repo-update
+            # Sans mise à jour de l'index d'abord (rapide avec le cache), avec sinon.
+            pod install || pod install --repo-update
           else
             echo "::warning::Pas de Podfile dans le projet Xcode : le SDK pub LevelPlay ne sera pas lié."
           fi
