@@ -20,7 +20,7 @@ Documents de référence (hors dépôt, dans les fichiers partagés du projet Cl
 | `puffybird-reference.html` | Implémentation de référence jouable, un seul fichier HTML5/JS, sprites et sons générés par le code (aucun asset externe). Couvre les étapes 2 à 9 de la feuille de route. |
 | `strategie-croissance.md` | Stratégie de croissance : modèle gratuit + pub, achats intégrés, acquisition digitale, distribution web puis stores. |
 
-La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt ne contient pour l'instant que `publication-ios-testflight.md`.
+La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt ne contient pour l'instant que `publication-ios-testflight.md` et `publication-app-store.md`.
 
 ## Règles de gameplay à respecter
 
