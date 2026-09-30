@@ -1,3 +1,4 @@
+using PuffyBird.Ads;
 using PuffyBird.Audio;
 using PuffyBird.Core;
 using PuffyBird.Rendering;
@@ -39,6 +40,8 @@ namespace PuffyBird
         BoostTrailView _trail;
         HudView _hud;
         SfxPlayer _sfx;
+        IBannerAds _banner = new NoBannerAds();
+        bool _bannerShown;
         int _shownRun = -1;
         float _realTime;
 
@@ -112,6 +115,7 @@ namespace PuffyBird
             var events = _sim.ConsumeEvents();
             if (_sim.RunId != _shownRun) ApplyRun();
             React(events);
+            UpdateBanner();
             Render(dt);
         }
 
@@ -126,6 +130,14 @@ namespace PuffyBird
                 _pipes.Hit(_sim.HitPipeId);
                 if (!reduceFlash) _cameraRig.Shake(0.05f, 0.25f);
             }
+        }
+
+        void UpdateBanner()
+        {
+            bool show = AdPolicy.BannerVisible(_sim, adsRemoved: false);
+            if (show == _bannerShown) return;
+            _bannerShown = show;
+            _banner.SetVisible(show);
         }
 
         /// <summary>Nouvelle partie : couleur de l'oiseau et thème jour/nuit (§6.8, §8.2).</summary>

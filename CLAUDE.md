@@ -99,6 +99,7 @@ Les critères d'acceptation A1 à A15 (§23.1) et les tests unitaires suggérés
 - Ne jamais utiliser le nom « Flappy » ni les sprites ou sons originaux de Flappy Bird. Assets générés par code, faits maison ou sous licence CC0 uniquement.
 - Éviter des tuyaux verts « style Mario » identiques à l'original.
 - Publicité : **jamais pendant une partie**, rien dans la zone de jeu, pas d'interstitiel lors de la première session, vidéo longue uniquement récompensée et choisie par le joueur.
+  - Bannière : la règle d'affichage vit dans `Core/AdPolicy.BannerVisible` (testée) : seulement sur l'écran titre et sur l'écran de fin une fois le score affiché, en bas de l'écran sous le sol, masquée dès le tap et jamais en `READY`, `PLAYING`, `DYING` ni en pause. Le SDK passe par l'interface `Runtime/Ads/IBannerAds` (`NoBannerAds` tant que le package LevelPlay « Ads Mediation » n'est pas installé).
 - Achats intégrés cosmétiques ou retrait des pubs uniquement, jamais « pay-to-win ».
 - Les autres extensions (skins, défi quotidien…) restent hors du mode principal ; tuyaux mobiles et étoiles de vitesse y ont été intégrés à la demande (voir « Architecture »).
 - Distribution prévue : web d'abord (GitHub Pages, itch.io), puis portails web, puis stores mobiles.
