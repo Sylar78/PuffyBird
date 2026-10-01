@@ -50,14 +50,17 @@ jobs:
           done
           exit $missing
 
+      # L'image Unity (une vingtaine de Go décompressée) et le cache Library ne tiennent pas
+      # ensemble sur le disque par défaut : run 2 arrêté par « no space left on device ».
+      # Unity tourne dans Docker, les outils préinstallés de la machine ne servent pas.
       - name: Libérer de l'espace disque (image Unity volumineuse)
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
           android: true
-          dotnet: false
+          dotnet: true
           haskell: true
-          large-packages: false
-          tool-cache: false
+          large-packages: true
+          tool-cache: true
 
       - uses: actions/checkout@v4
 
