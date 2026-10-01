@@ -95,7 +95,23 @@ Ensuite, **Run workflow** envoie directement sur la piste choisie (`internal` pa
 
 ## 7. Publicité sur Android
 
-Chez LevelPlay, chaque plateforme est une app distincte. Tant que `AdIds` (bloc `UNITY_ANDROID`) est vide, la version Android tourne **sans pub**. Créer l'app Android dans le tableau de bord LevelPlay (même nom, package `fr.puffybird.app`) et une unité de bannière, puis renseigner l'App Key et l'ID de bannière dans `Assets/PuffyBird/Monetization/AdIds.cs`. La permission `AD_ID` est ajoutée au manifeste par `Editor/AndroidPostBuild`.
+Chez LevelPlay, chaque plateforme est une app distincte. Tant que `AdIds` (bloc `UNITY_ANDROID`) est vide, la version Android tourne **sans pub** (et sans écran de consentement). Le code Android est prêt ; il ne manque que les deux identifiants.
+
+1. [Tableau de bord LevelPlay](https://platform.ironsrc.com/) > **Apps** > **Add app** :
+   - Plateforme **Android**, app pas encore publiée : nom `PuffyBird`, package `fr.puffybird.app` (on pourra lier la fiche Play plus tard).
+   - **Coppa** : « Not directed » (13 ans et plus), comme l'app iOS.
+   - Copier l'**App Key** (sous le nom de l'app).
+2. **Ad units** > app Android > **Banner** : rafraîchissement **30 s**, comme sur iOS. Copier l'**ID de l'unité**.
+3. Envoyer ces deux valeurs à Claude, ou les mettre dans `Assets/PuffyBird/Monetization/AdIds.cs`, bloc `#elif UNITY_ANDROID` :
+
+   ```csharp
+   public const string AppKey = "...";
+   public const string BannerAdUnitId = "...";
+   ```
+
+4. Relancer le workflow **Android Google Play**.
+
+Au premier lancement, le jeu demande le consentement aux pubs personnalisées (écran PRIVACY) ; la pub ne s'initialise qu'après la réponse. La permission `AD_ID` est ajoutée au manifeste par `Editor/AndroidPostBuild`, le SDK Android de LevelPlay par le résolveur de dépendances.
 
 ## 8. Mises à jour
 
