@@ -10,26 +10,43 @@ Le bundle Android (`.aab`) est construit par GitHub Actions (workflow **Android 
 
 ## 2. Clé d'envoi (une seule fois)
 
-Google signe l'app finale lui-même (« signature d'application par Play ») ; on signe seulement les envois avec une **clé d'envoi**.
+Google signe l'app finale lui-même (« signature d'application par Play ») ; on signe seulement les envois avec une **clé d'envoi**. Chaque bundle envoyé doit porter cette même clé. On la confie ensuite à GitHub sous forme de **secrets** pour qu'il signe les envois.
 
-1. Dans Unity : Edit > Project Settings > Player > onglet Android > **Publishing Settings** > **Keystore Manager**.
-2. Keystore… > **Create New** > Anywhere : enregistrer `puffybird-upload.keystore` **hors du dossier du projet**, choisir un mot de passe.
-3. Ajouter une clé : alias `puffybird`, mot de passe, validité 50 ans, nom ou organisation.
-4. **Sauvegarder** ce fichier et les mots de passe (gestionnaire de mots de passe) : sans eux, plus de mise à jour possible sans passer par le support Google.
-5. Convertir la clé en texte (PowerShell, en adaptant le chemin) :
-   ```powershell
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Cles\puffybird-upload.keystore")) | Set-Clipboard
-   ```
-6. Dans GitHub : Settings > Secrets and variables > Actions > **New repository secret**, créer :
+### A. Créer la clé dans Unity
+
+1. Ouvrir le projet, puis Edit > Project Settings > **Player** > onglet **Android** (icône robot) > déplier **Publishing Settings** > bouton **Keystore Manager**. Pas d'onglet Android : ajouter le module « Android Build Support » dans Unity Hub (Installs > roue dentée > Add modules).
+2. En haut de la fenêtre, menu **Keystore…** > **Create New** > **Anywhere…** : enregistrer `puffybird-upload.keystore` **hors du dossier du projet** (par exemple `C:\Cles\`).
+3. Choisir un **mot de passe du keystore** et le confirmer.
+4. Partie « New Key Values » :
+   - **Alias** : `puffybird` ;
+   - **mot de passe de la clé** (il peut être le même que celui du keystore) ;
+   - **Validity (years)** : 50 ;
+   - **First and Last Name** : son nom ; les autres champs sont facultatifs.
+5. Cliquer sur **Add Key**. Si Unity propose d'utiliser ce keystore pour le projet, répondre **Non** : c'est GitHub qui signe.
+6. **Sauvegarder** le fichier `.keystore` et les deux mots de passe (gestionnaire de mots de passe, copie sur une clé USB ou un cloud personnel). Sans eux, plus de mise à jour possible sans passer par le support Google. Ne jamais mettre le fichier dans le dépôt (`*.keystore` est dans `.gitignore`).
+
+### B. Convertir la clé en texte
+
+Dans PowerShell, en adaptant le chemin :
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Cles\puffybird-upload.keystore")) | Set-Clipboard
+```
+
+Le texte de la clé est alors dans le presse-papiers ; rien ne s'affiche, c'est normal.
+
+### C. Créer les 4 secrets dans GitHub
+
+Page du dépôt **puffybird** > **Settings** > **Secrets and variables** > **Actions** > **New repository secret**, un secret à la fois. Respecter exactement les noms, en majuscules :
 
 | Secret | Valeur |
 |---|---|
-| `ANDROID_KEYSTORE_BASE64` | le texte copié à l'étape 5 |
-| `ANDROID_KEYSTORE_PASS` | mot de passe du keystore |
+| `ANDROID_KEYSTORE_BASE64` | le texte copié à l'étape B (coller) |
+| `ANDROID_KEYSTORE_PASS` | mot de passe du keystore (A.3) |
 | `ANDROID_KEYALIAS_NAME` | `puffybird` (l'alias) |
-| `ANDROID_KEYALIAS_PASS` | mot de passe de l'alias |
+| `ANDROID_KEYALIAS_PASS` | mot de passe de la clé (A.4) |
 
-Les secrets Unity (`UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`) sont déjà ceux du build iOS.
+Les secrets Unity (`UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`) sont déjà ceux du build iOS. S'il manque un des 4 secrets, le workflow s'arrête dès sa première étape en disant lequel.
 
 ## 3. Construire le bundle
 
