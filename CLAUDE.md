@@ -20,7 +20,7 @@ Documents de référence (hors dépôt, dans les fichiers partagés du projet Cl
 | `puffybird-reference.html` | Implémentation de référence jouable, un seul fichier HTML5/JS, sprites et sons générés par le code (aucun asset externe). Couvre les étapes 2 à 9 de la feuille de route. |
 | `strategie-croissance.md` | Stratégie de croissance : modèle gratuit + pub, achats intégrés, acquisition digitale, distribution web puis stores. |
 
-La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt ne contient pour l'instant que `publication-ios-testflight.md`, `publication-app-store.md` et `publication-android-google-play.md`.
+La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt contient les guides `publication-ios-testflight.md`, `publication-app-store.md`, `publication-android-google-play.md`, `classement-en-ligne.md` (Game Center, Play Games) et `achats-integres.md`.
 
 ## Règles de gameplay à respecter
 
@@ -51,12 +51,14 @@ Points qui se trompent facilement :
 
 | Dossier | Assembly | Rôle |
 |---|---|---|
-| `Assets/PuffyBird/Scripts/Core/` | `PuffyBird.Core` (sans référence à Unity) | Simulation complète : `GameConfig` (toutes les constantes), `GameSimulation` (machine à états, §19), `Bird`, `PipeField` (pool circulaire de 4 paires, paires mobiles), `StarField` (étoiles de vitesse), `Collision`, `FixedStepClock`, `Rng` (graine), `OverScreenTimeline`, `SfxRecipes` (synthèse des 5 sons + celui de l'étoile), `AutoPilot` (bot §23.3) |
-| `Assets/PuffyBird/Scripts/Runtime/` | `PuffyBird.Runtime` | `PuffyBirdGame` (point d'entrée : boucle à pas fixe, entrées, synchronisation du rendu), `InputReader`, `PlayerPrefsScoreStorage` |
-| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView` (sol, collines, nuages et ensembles par décor), `WeatherView` (pluie, neige, pétales, éclairs), `PipeView`, `StarView`, `BirdView` (dont l'oiseau doré pailleté sous étoile), `BoostTrailView` (traînée arc-en-ciel), `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
-| `Scripts/Runtime/UI/`, `Audio/` | idem | `HudView` et `VoxelFont` (texte en volume, police 5 × 7), `SfxPlayer` |
+| `Assets/PuffyBird/Scripts/Core/` | `PuffyBird.Core` (sans référence à Unity) | Simulation complète : `GameConfig` (toutes les constantes), `GameSimulation` (machine à états, §19), `Bird`, `PipeField` (pool circulaire de 4 paires, paires mobiles), `StarField` (étoiles de vitesse), `Collision`, `FixedStepClock`, `Rng` (graine), `OverScreenTimeline`, `SfxRecipes` (synthèse des 5 sons + celui de l'étoile), `AutoPilot` (bot §23.3), `MusicThemes` + `MusicSynth` (une boucle par décor, synthèse temps réel sans allocation), `Skins` + `Products` (catalogue des oiseaux, IDs des achats) |
+| `Assets/PuffyBird/Scripts/Runtime/` | `PuffyBird.Runtime` | `PuffyBirdGame` (point d'entrée : boucle à pas fixe, entrées, synchronisation du rendu, actions des boutons), `InputReader` (taps positionnés), `PlayerPrefsScoreStorage`, `GamePrefs` (réglages du joueur) |
+| `Scripts/Runtime/Feedback/`, `Social/`, `Store/`, `Ads/` | idem | `Haptics` (vibrations iOS / Android par JNI) ; `Leaderboard` (Game Center, Play Games v2 par JNI), `ShareService`, `SocialIds` ; `IStore` + `StoreServices` (boutique branchée par Monetization) ; `IBannerAds` + `AdServices` (bannière, consentement) |
+| `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView` (sol, collines, nuages et ensembles par décor), `WeatherView` (pluie, neige, pétales, éclairs), `PipeView`, `StarView`, `BirdView` (oiseaux du catalogue avec accessoires, aperçu agrandi du menu, oiseau doré pailleté sous étoile), `BoostTrailView` (traînée arc-en-ciel), `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` (dont `Skin`), `GraphicsQuality` (LOW / MEDIUM / HIGH) |
+| `Scripts/Runtime/UI/`, `Audio/` | idem | `UiLayer` (textes, panneaux, boutons et test des taps), `HudView`, `MenuView` (boutons titre / fin, réglages), `SkinsView` (menu BIRDS), `ConsentView` (RGPD), `VoxelFont` (police 5 × 7 et icônes) ; `SfxPlayer` (bruitages), `MusicPlayer` (`OnAudioFilterRead`) |
+| `Assets/Plugins/iOS/` | — | Ponts natifs : `ATTRequester`, `HapticsBridge`, `GameCenterBridge`, `ShareBridge` |
 | `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes + paillettes ; l'alpha des couleurs de sommet masque `_VertexEmission`), `PuffySky` |
-| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist), `AndroidPostBuild` (permission `AD_ID`) ; signature Android par les options GameCI `-androidKeystoreName`… |
+| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist, GameKit et droit Game Center), `AndroidPostBuild` (permissions `AD_ID` et `VIBRATE`, Play Games si `SocialIds` est rempli), `PurchasingDefine` (symbole `PUFFYBIRD_IAP` si le package Unity IAP est installé) ; signature Android par les options GameCI `-androidKeystoreName`… |
 | `Assets/PuffyBird/Icons/` | — | `AppIcon.png`, générée par `tools/icon/make_icon.py` (Python sans dépendance) |
 | `Assets/PuffyBird/Tests/EditMode/` | `PuffyBird.Tests.EditMode` | Tests NUnit de la simulation (critères A1 à A13) |
 | `tools/CoreTests/` | — | Projet .NET qui compile `Core` et les tests EditMode hors de Unity |
@@ -75,7 +77,8 @@ Principes :
 - **Aucune allocation en jeu** : tout est créé au chargement (tuyaux, particules, textes, chiffres), puis seulement déplacé, affiché ou masqué. `MeshBuilder` et `VoxelFont.Build` ne s'appellent qu'au chargement.
 - Les shaders vivent dans un dossier `Resources` pour être inclus dans les builds sans matériau sur disque ; les matériaux sont créés par `MaterialLibrary`.
 - Rendu : le prototype HTML est en pixel art ; la version mobile est un rendu éclairé 2.5D, qui remplace le style pixel art.
-- Persistance sous les clés `puffybird.best`, `puffybird.muted` (PlayerPrefs).
+- Persistance sous les clés `puffybird.best`, `puffybird.muted` (bruitages), `puffybird.music`, `puffybird.haptics`, `puffybird.quality`, `puffybird.consent`, `puffybird.skin`, `puffybird.owned` (achats) (PlayerPrefs).
+- Interface : chaque image, les vues redéclarent leurs boutons (`UiLayer.BeginFrame` / `PlaceButton`) ; un tap sur un bouton déclenche une `UiAction`, sinon il va à la simulation. Un menu ouvert bloque le lancement de la partie. Seule exception à « VoxelFont au chargement » : les prix localisés, construits une fois à leur arrivée.
 
 Écarts assumés par rapport à la spec :
 
@@ -84,7 +87,8 @@ Principes :
 - `AutoPilot` cherche une suite de battements sûre sur ≈ 1,7 s au lieu du bot trivial de §23.3, qui meurt sur certaines combinaisons d'ouvertures. Il survit sur toutes les graines testées : la difficulté reste juste.
 - Textes du jeu en anglais (GET READY, GAME OVER, TAP…) en attendant la localisation.
 - Score en jeu placé tout en haut de l'écran visible, sous l'encoche (`CameraRig.SafeTopPx` + `ScoreTopMargin`), au lieu de y = 50 : il gênait la visibilité.
-- Oiseau toujours bleu (`GameConfig.BirdColor`) au lieu du tirage de couleur de §6.8 ; le tirage reste consommé pour garder la suite des ouvertures de la spec.
+- Apparence de l'oiseau choisie par le joueur (menu BIRDS, `Core/Skins`) au lieu du tirage de couleur de §6.8 ; le tirage reste consommé par la simulation pour garder la suite des ouvertures de la spec.
+- Pas d'indicateur « SOUND OFF » à l'écran : réglages MUSIC et SOUND séparés dans SETTINGS (la touche M coupe les bruitages).
 - Six décors au lieu de deux (`Theme` : jour, nuit, ville au crépuscule, Japon médiéval, orage, neige), tirés au hasard à chaque partie (`ThemeCount`). Ensembles de décor (`Palette.SetPiece`) et météo (`Palette.Weather`) dans `Palette.Theme`. La pluie, la neige et les pétales tombent derrière le plan de jeu ; les éclairs sont atténués avec `reduceFlash`.
 - Sol : gazon rayé doux en niveaux de gris teinté par le décor, bordure festonnée, touffes d'herbe au vent (courtes devant le plan de jeu) et fleurs.
 
@@ -104,10 +108,11 @@ Les critères d'acceptation A1 à A15 (§23.1) et les tests unitaires suggérés
 - Éviter des tuyaux verts « style Mario » identiques à l'original.
 - Publicité : **jamais pendant une partie**, rien dans la zone de jeu, pas d'interstitiel lors de la première session, vidéo longue uniquement récompensée et choisie par le joueur.
   - Bannière : la règle d'affichage vit dans `Core/AdPolicy.BannerVisible` (testée) : seulement sur l'écran titre et sur l'écran de fin une fois le score affiché, en bas de l'écran sous le sol, masquée dès le tap et jamais en `READY`, `PLAYING`, `DYING` ni en pause. Le SDK passe par l'interface `Runtime/Ads/IBannerAds` et `AdServices.BannerFactory`.
-  - Intégration LevelPlay (package « Ads Mediation » 9.5.1) dans `Assets/PuffyBird/Monetization/`, **hors asmdef** (Assembly-CSharp référence le package automatiquement) : `AdIds` (App Key et ID de bannière par plateforme ; vides = pas de pub), `LevelPlayAds` (ATT iOS, puis `SetGDPRConsent(false)` faute d'écran de consentement, puis `LevelPlay.Init`, bannière 320 × 50 en bas, rafraîchissement suspendu quand elle est cachée). Pont ATT natif : `Assets/Plugins/iOS/ATTRequester.mm` ; `IosPostBuild` ajoute le texte ATT, HTTP autorisé et le framework. Unité de bannière réglée à 30 s de rafraîchissement, app déclarée COPPA « Not directed » (13 ans et plus).
+  - Intégration LevelPlay (package « Ads Mediation » 9.5.1) dans `Assets/PuffyBird/Monetization/`, **hors asmdef** (Assembly-CSharp référence le package automatiquement) : `AdIds` (App Key et ID de bannière par plateforme ; vides = pas de pub ; Android encore vide), `LevelPlayAds` (attend la réponse à l'écran de consentement RGPD du premier lancement, puis ATT iOS si accord, `SetGDPRConsent` / `SetCCPA`, puis `LevelPlay.Init`, bannière 320 × 50 en bas, rafraîchissement suspendu quand elle est cachée). Pont ATT natif : `Assets/Plugins/iOS/ATTRequester.mm` ; `IosPostBuild` ajoute le texte ATT, HTTP autorisé et le framework. Unité de bannière réglée à 30 s de rafraîchissement, app déclarée COPPA « Not directed » (13 ans et plus).
   - CI iOS : le résolveur de dépendances écrit un `Podfile` ; le job Mac lance `pod install` et archive le `.xcworkspace`.
-- Achats intégrés cosmétiques ou retrait des pubs uniquement, jamais « pay-to-win ».
-- Les autres extensions (skins, défi quotidien…) restent hors du mode principal ; tuyaux mobiles et étoiles de vitesse y ont été intégrés à la demande (voir « Architecture »).
+- Achats intégrés cosmétiques ou retrait des pubs uniquement, jamais « pay-to-win ». Unity IAP 5 dans `Monetization/UnityIapStore` (non consommables `fr.puffybird.app.noads` et `fr.puffybird.app.skin.*`), compilé seulement avec le symbole `PUFFYBIRD_IAP` : le package `com.unity.purchasing` n'est pas encore installé (à faire par Package Manager, voir `docs/achats-integres.md`).
+- Classement : Game Center (`puffybird.best`) ; Play Games tant que `SocialIds` est vide n'est pas inclus dans le build.
+- Les autres extensions (défi quotidien…) restent hors du mode principal ; tuyaux mobiles et étoiles de vitesse y ont été intégrés à la demande (voir « Architecture »). Les oiseaux (débloqués par médaille ou achetés) sont purement cosmétiques.
 - Distribution prévue : web d'abord (GitHub Pages, itch.io), puis portails web, puis stores mobiles.
 
 ## Stack mobile et rendu (choix du 29/09/2026)
@@ -177,7 +182,7 @@ Skills de projet à créer plus tard dans `.claude/skills/` : un contrôle de co
 
 - **Tests de la simulation sans Unity** (possible dans une session cloud) : `dotnet test tools/CoreTests` (.NET 8).
 - **Ouvrir le projet** : Unity Hub > Add > Add project from disk, avec Unity 6 LTS (6000.0 ou plus récent) et les modules iOS / Android. À la première ouverture, `ProjectSetup` configure URP et crée `Assets/PuffyBird/Scenes/Main.unity` ; relançable via le menu **PuffyBird > Configurer le projet**. Si Unity propose d'activer le nouvel Input System, accepter.
-- **Jouer** : ouvrir la scène `Main`, Play. Touches : Espace / clic = tap, Échap ou P = pause, M = muet, B = pilote automatique, C = capture d'écran dans `Captures/` (éditeur seulement, à la résolution de la vue Game : régler celle-ci sur la taille demandée par l'App Store).
+- **Jouer** : ouvrir la scène `Main`, Play. Touches : Espace / clic = tap, Échap ou P = pause (ou ferme le menu), M = bruitages, B = pilote automatique, C = capture d'écran dans `Captures/` (éditeur seulement, à la résolution de la vue Game : régler celle-ci sur la taille demandée par l'App Store).
 - **Tests EditMode dans Unity** : Window > General > Test Runner, ou `Unity -batchmode -projectPath . -runTests -testPlatform EditMode -testResults results.xml`.
 - **Builds** : menu **PuffyBird > Build Android (APK)** / **Build iOS (projet Xcode)**, ou `Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildAndroid` (ajouter `-release` pour un `.aab`) et `...BuildScript.BuildIOS`.
 - **TestFlight** : GitHub, onglet Actions > **iOS TestFlight** > Run workflow. Prérequis (compte Apple, clé API, licence Unity, secrets) : `docs/publication-ios-testflight.md`. La version Unity de la CI est fixée dans le workflow (`UNITY_VERSION`) : la garder alignée sur `ProjectSettings/ProjectVersion.txt`.
