@@ -62,7 +62,6 @@ namespace PuffyBird.UI
         readonly Element _retry;
         readonly Element _pause;
         readonly Element _pauseTap;
-        readonly Element _mute;
         readonly UiLayer.Button _pauseButton;
 
         Medal _shownMedal = (Medal)(-1);
@@ -119,7 +118,6 @@ namespace PuffyBird.UI
             _retry = Text("TAP TO RETRY", TextAlign.Center, Color.white, outline);
             _pause = Text("PAUSE", TextAlign.Center, Color.white, outline);
             _pauseTap = Text("TAP", TextAlign.Center, Color.white, outline);
-            _mute = Text("SOUND OFF", TextAlign.Right, Color.white, outline);
             _pauseButton = ui.CreateButton(VoxelFont.PauseIcon, Palette.GameOver, Color.white);
         }
 
@@ -274,9 +272,6 @@ namespace PuffyBird.UI
             // Fin de partie
             if (state == GameState.Over) UpdateOver(sim, t, deltaTime);
             else HideOver();
-
-            if (sim.Muted) Place(_mute, 280f, safeTopPx + _cfg.ScoreTopMargin, 1.4f);
-            else Hide(_mute);
         }
 
         void UpdateOver(GameSimulation sim, float t, float deltaTime)

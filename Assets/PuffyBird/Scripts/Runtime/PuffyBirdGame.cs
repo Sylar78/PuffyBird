@@ -44,6 +44,7 @@ namespace PuffyBird
         HudView _hud;
         MenuView _menu;
         SfxPlayer _sfx;
+        MusicPlayer _music;
         GamePrefs _prefs;
         Haptics _haptics;
         IBannerAds _banner;
@@ -89,10 +90,12 @@ namespace PuffyBird
             _ui = new UiLayer(world, materials, _space);
             _hud = new HudView(_ui, materials);
             _menu = new MenuView(_ui);
+            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
             _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
+            _music = MusicPlayer.Create(world);
 
             ApplyRun();
         }
@@ -147,6 +150,8 @@ namespace PuffyBird
             if (_sim.RunId != _shownRun) ApplyRun();
             React(events);
             UpdateBanner();
+            // Musique baissée pendant la pause.
+            _music.SetVolume(!_prefs.Music ? 0f : (_sim.State == GameState.Paused ? 0.4f : 1f));
             Render(dt);
         }
 
@@ -162,6 +167,9 @@ namespace PuffyBird
                     break;
                 case UiAction.CloseMenu:
                     _menu.Close();
+                    break;
+                case UiAction.ToggleMusic:
+                    _prefs.Music = !_prefs.Music;
                     break;
                 case UiAction.ToggleSound:
                     ToggleSound();
@@ -221,6 +229,7 @@ namespace PuffyBird
             _postFx.ApplyTheme(theme);
             _cameraRig.Camera.backgroundColor = theme.SkyHorizon;
             _bird.SetColor(_sim.BirdColor);
+            _music.SetTheme(_sim.Theme);
         }
 
         void Render(float dt)

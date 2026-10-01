@@ -40,9 +40,13 @@ namespace PuffyBird.Audio
             }
         }
 
+        /// <summary>Coupe les bruitages seulement : la musique a son propre réglage.</summary>
         public bool Muted
         {
-            set => AudioListener.volume = value ? 0f : 1f;
+            set
+            {
+                foreach (var source in _sources) source.mute = value;
+            }
         }
 
         public void Play(SoundId id)
