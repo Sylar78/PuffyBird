@@ -20,7 +20,7 @@ Documents de référence (hors dépôt, dans les fichiers partagés du projet Cl
 | `puffybird-reference.html` | Implémentation de référence jouable, un seul fichier HTML5/JS, sprites et sons générés par le code (aucun asset externe). Couvre les étapes 2 à 9 de la feuille de route. |
 | `strategie-croissance.md` | Stratégie de croissance : modèle gratuit + pub, achats intégrés, acquisition digitale, distribution web puis stores. |
 
-La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt ne contient pour l'instant que `publication-ios-testflight.md` et `publication-app-store.md`.
+La spec prévoit de placer ces documents sous `docs/` dans le dépôt ; tant que ce n'est pas fait, ne pas supposer qu'ils y sont. Le `docs/` du dépôt ne contient pour l'instant que `publication-ios-testflight.md`, `publication-app-store.md` et `publication-android-google-play.md`.
 
 ## Règles de gameplay à respecter
 
@@ -56,11 +56,12 @@ Points qui se trompent facilement :
 | `Scripts/Runtime/Rendering/` | idem | `WorldSpace` (px logiques → monde), `CameraRig`, `LightingRig`, `PostFxController`, `SceneryView` (sol, collines, nuages et ensembles par décor), `WeatherView` (pluie, neige, pétales, éclairs), `PipeView`, `StarView`, `BirdView` (dont l'oiseau doré pailleté sous étoile), `BoostTrailView` (traînée arc-en-ciel), `MeshBuilder` (maillages procéduraux), `MaterialLibrary`, `Palette` |
 | `Scripts/Runtime/UI/`, `Audio/` | idem | `HudView` et `VoxelFont` (texte en volume, police 5 × 7), `SfxPlayer` |
 | `Assets/PuffyBird/Resources/Shaders/` | — | `PuffyStylizedLit` (éclairage URP complet + liseré + déformations de sommets partagées par toutes les passes + paillettes ; l'alpha des couleurs de sommet masque `_VertexEmission`), `PuffySky` |
-| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist) |
+| `Assets/PuffyBird/Scripts/Editor/` | `PuffyBird.Editor` | `ProjectSetup` (URP mobile, réglages iOS / Android, icône, scène `Main`), `BuildScript` (options `-buildNumber`, `-appleTeamId`, `-customBuildPath`), `IconImportSettings` (icône sans alpha), `IosPostBuild` (Info.plist), `AndroidPostBuild` (permission `AD_ID`) ; signature Android par les options GameCI `-androidKeystoreName`… |
 | `Assets/PuffyBird/Icons/` | — | `AppIcon.png`, générée par `tools/icon/make_icon.py` (Python sans dépendance) |
 | `Assets/PuffyBird/Tests/EditMode/` | `PuffyBird.Tests.EditMode` | Tests NUnit de la simulation (critères A1 à A13) |
 | `tools/CoreTests/` | — | Projet .NET qui compile `Core` et les tests EditMode hors de Unity |
 | `.github/workflows/ios-testflight.yml`, `ci/ios/` | — | Build iOS (GameCI sous Linux) puis archive, signature et envoi TestFlight sur un Mac GitHub |
+| `.github/workflows/android-play.yml` | — | Bundle Android signé (GameCI sous Linux), envoi Google Play si le compte de service est configuré |
 
 Repère monde : 1 unité = 100 px, y vers le haut, le sol (y logique 400) à y = 0, le plan de jeu à z = 0, la caméra à z = −8 regardant vers +z. Toujours convertir via `WorldSpace`.
 
@@ -180,4 +181,5 @@ Skills de projet à créer plus tard dans `.claude/skills/` : un contrôle de co
 - **Tests EditMode dans Unity** : Window > General > Test Runner, ou `Unity -batchmode -projectPath . -runTests -testPlatform EditMode -testResults results.xml`.
 - **Builds** : menu **PuffyBird > Build Android (APK)** / **Build iOS (projet Xcode)**, ou `Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildAndroid` (ajouter `-release` pour un `.aab`) et `...BuildScript.BuildIOS`.
 - **TestFlight** : GitHub, onglet Actions > **iOS TestFlight** > Run workflow. Prérequis (compte Apple, clé API, licence Unity, secrets) : `docs/publication-ios-testflight.md`. La version Unity de la CI est fixée dans le workflow (`UNITY_VERSION`) : la garder alignée sur `ProjectSettings/ProjectVersion.txt`.
+- **Google Play** : onglet Actions > **Android Google Play** > Run workflow (piste et statut au choix). Prérequis (clé d'envoi, secrets, premier envoi à la main) : `docs/publication-android-google-play.md`.
 - **Icône** : `python3 tools/icon/make_icon.py`, puis menu **PuffyBird > Configurer le projet** pour l'appliquer.

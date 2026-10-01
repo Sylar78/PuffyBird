@@ -1,0 +1,146 @@
+# Build Android (bundle .aab signé) et envoi sur Google Play, lancé à la main
+# (onglet Actions > Android Google Play > Run workflow).
+# 1. Unity (image GameCI, Linux) produit le bundle, signé avec la clé d'envoi.
+# 2. Si le secret PLAY_SERVICE_ACCOUNT_JSON existe, le bundle part sur la piste choisie ;
+#    sinon il reste téléchargeable dans les artefacts du run (premier envoi : à la main).
+# Secrets à créer dans le dépôt : voir docs/publication-android-google-play.md.
+name: Android Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Piste Google Play (internal, alpha = test fermé, beta = test ouvert, production)"
+        default: internal
+        type: choice
+        options: [internal, alpha, beta, production]
+      status:
+        description: "Statut de la version (draft tant que l'app n'a jamais été publiée)"
+        default: draft
+        type: choice
+        options: [draft, completed]
+
+concurrency:
+  group: android-play
+  cancel-in-progress: false
+
+env:
+  # Même version que l'éditeur utilisé en local et que le workflow iOS.
+  UNITY_VERSION: 6000.6.3f1
+  PACKAGE_NAME: fr.puffybird.app
+
+jobs:
+  unity:
+    name: Bundle Android (Unity)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier les secrets de signature (échec immédiat s'il en manque)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          ANDROID_KEYALIAS_NAME: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          ANDROID_KEYALIAS_PASS: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+        run: |
+          missing=0
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASS ANDROID_KEYALIAS_NAME ANDROID_KEYALIAS_PASS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name absent ou vide (Settings > Secrets and variables > Actions)."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Libérer de l'espace disque (image Unity volumineuse)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: false
+          haskell: true
+          large-packages: false
+          tool-cache: false
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-Android-
+
+      # GameCI décode la clé dans le projet sous le nom androidKeystoreName et transmet les
+      # mots de passe à BuildScript.BuildAndroid, qui signe le bundle avec.
+      - name: Build Unity Android
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: Android
+          buildName: PuffyBird
+          buildMethod: PuffyBird.Editor.BuildScript.BuildAndroid
+          versioning: None
+          androidExportType: androidAppBundle
+          androidKeystoreName: puffybird-upload.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+          customParameters: -release -buildNumber ${{ github.run_number }}
+
+      # Code 137 = Unity tué par le système : dire si c'est la mémoire ou le disque.
+      - name: Diagnostic machine (en cas d'échec)
+        if: failure()
+        run: |
+          free -m
+          df -h / /home/runner/work
+          sudo dmesg | grep -iE 'out of memory|killed process|oom' | tail -n 20 || true
+
+      - name: Trouver le bundle
+        id: aab
+        run: |
+          aab=$(sudo find build/Android -name '*.aab' | head -n 1)
+          if [ -z "$aab" ]; then echo "::error::Aucun .aab produit."; exit 1; fi
+          sudo cp "$aab" "PuffyBird-${{ github.run_number }}.aab"
+          sudo chown "$(id -u)" "PuffyBird-${{ github.run_number }}.aab"
+          echo "file=PuffyBird-${{ github.run_number }}.aab" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: ${{ steps.aab.outputs.file }}
+          retention-days: 14
+
+  play:
+    name: Envoi sur Google Play
+    needs: unity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compte de service Google Play présent ?
+        id: account
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::notice::Pas de secret PLAY_SERVICE_ACCOUNT_JSON : le bundle reste dans les artefacts du run, à envoyer à la main dans la Play Console."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v4
+        if: steps.account.outputs.ready == 'true'
+        with:
+          name: android-aab
+
+      - name: Envoi (piste ${{ inputs.track }}, statut ${{ inputs.status }})
+        if: steps.account.outputs.ready == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: PuffyBird-*.aab
+          track: ${{ inputs.track }}
+          status: ${{ inputs.status }}

@@ -46,3 +46,7 @@ Thumbs.db
 
 # Captures d'écran faites dans l'éditeur (touche C)
 /[Cc]aptures/
+
+# Clés de signature Android : jamais dans le dépôt
+*.keystore
+*.jks

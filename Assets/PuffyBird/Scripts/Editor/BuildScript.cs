@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -13,13 +14,16 @@ namespace PuffyBird.Editor
     /// « -buildNumber N » (numéro de build, unique par envoi sur les stores),
     /// « -appleTeamId ID » (équipe Apple pour la signature automatique, ou variable APPLE_TEAM_ID),
     /// « -customBuildPath chemin » (dossier de sortie, fourni par GameCI dans GitHub Actions).
+    /// Signature Android (fournie par GameCI, voir docs/publication-android-google-play.md) :
+    /// « -androidKeystoreName », « -androidKeystorePass », « -androidKeyaliasName »,
+    /// « -androidKeyaliasPass » ; « -androidExportType androidAppBundle » équivaut à « -release ».
     /// </summary>
     public static class BuildScript
     {
         [MenuItem("PuffyBird/Build Android (APK)", priority = 20)]
         public static void BuildAndroid()
         {
-            bool release = HasArg("-release");
+            bool release = HasArg("-release") || Arg("-androidExportType") == "androidAppBundle";
             EditorUserBuildSettings.buildAppBundle = release;
             string path = release ? "Builds/Android/PuffyBird.aab" : "Builds/Android/PuffyBird.apk";
             Build(BuildTarget.Android, Arg("-customBuildPath") ?? path);
@@ -69,6 +73,17 @@ namespace PuffyBird.Editor
             {
                 PlayerSettings.iOS.appleDeveloperTeamID = team;
                 PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+            }
+
+            // Clé d'envoi Google Play. Sans elle, l'APK reste signé avec la clé de débogage.
+            string keystore = Arg("-androidKeystoreName");
+            if (!string.IsNullOrEmpty(keystore) && File.Exists(keystore))
+            {
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = Path.GetFullPath(keystore);
+                PlayerSettings.Android.keystorePass = Arg("-androidKeystorePass");
+                PlayerSettings.Android.keyaliasName = Arg("-androidKeyaliasName");
+                PlayerSettings.Android.keyaliasPass = Arg("-androidKeyaliasPass");
             }
         }
 
