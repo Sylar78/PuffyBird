@@ -75,6 +75,104 @@ namespace PuffyBird.Rendering
             }
         }
 
+        /// <summary>Accessoire modelé sur le corps d'un oiseau (<see cref="Skins"/>).</summary>
+        public enum Accessory
+        {
+            None,
+            Sunglasses,
+            Crown,
+            Headband,
+            Antenna,
+            FlameCrest,
+        }
+
+        /// <summary>Apparence d'un oiseau du catalogue : couleurs, accessoire et finition du plumage.</summary>
+        public struct SkinLook
+        {
+            public BirdColors Colors;
+            public Accessory Accessory;
+            public float Smoothness;
+            public float Metallic;
+            public float Glitter;
+            public Color Emission;
+            public Color Rim;
+            public float RimStrength;
+        }
+
+        static SkinLook Look(string body, string belly, string shade, Accessory accessory = Accessory.None)
+        {
+            return new SkinLook
+            {
+                Colors = new BirdColors { Body = Hex(body), Belly = Hex(belly), Shade = Hex(shade) },
+                Accessory = accessory,
+                Smoothness = 0.45f,
+                Metallic = 0f,
+                Glitter = 0f,
+                Emission = Color.black,
+                Rim = Color.white,
+                RimStrength = 0.5f,
+            };
+        }
+
+        /// <summary>Apparence de l'oiseau <paramref name="id"/> (identifiants de <see cref="Skins"/>).</summary>
+        public static SkinLook Skin(string id)
+        {
+            switch (id)
+            {
+                case "cherry":
+                    return Look("#E5452C", "#F38A6A", "#B0271B");
+                case "mint":
+                    return Look("#4FCF94", "#B5F0D0", "#2E9C6A");
+                case "cool":
+                    return Look("#FF7EB6", "#FFC4DD", "#D94A8C", Accessory.Sunglasses);
+                case "pearl":
+                {
+                    var look = Look("#F4F1EA", "#FFFFFF", "#C9C2D6", Accessory.Crown);
+                    look.Smoothness = 0.85f;
+                    look.Glitter = 0.6f;
+                    look.Rim = Hex("#CFE8FF");
+                    look.RimStrength = 0.9f;
+                    return look;
+                }
+                case "ninja":
+                {
+                    var look = Look("#2E2E3E", "#55556A", "#1A1A24", Accessory.Headband);
+                    look.Rim = Hex("#FF5A5A");
+                    look.RimStrength = 0.6f;
+                    return look;
+                }
+                case "robot":
+                {
+                    var look = Look("#AEBBC6", "#DCE4EA", "#6E7D8A", Accessory.Antenna);
+                    look.Smoothness = 0.82f;
+                    look.Metallic = 0.75f;
+                    look.Rim = Hex("#9FE8FF");
+                    return look;
+                }
+                case "phoenix":
+                {
+                    var look = Look("#FF5A1F", "#FFC23A", "#D11F1F", Accessory.FlameCrest);
+                    look.Emission = Hex("#FF6A00") * 0.35f;
+                    look.Glitter = 0.5f;
+                    look.Rim = Hex("#FFD27A");
+                    look.RimStrength = 1f;
+                    return look;
+                }
+                case "galaxy":
+                {
+                    var look = Look("#3B2A7A", "#6C4FD8", "#1E1546");
+                    look.Emission = Hex("#5B3BFF") * 0.18f;
+                    look.Glitter = 1.2f;
+                    look.Smoothness = 0.7f;
+                    look.Rim = Hex("#B9A7FF");
+                    look.RimStrength = 0.9f;
+                    return look;
+                }
+                default:
+                    return Look("#4EA6D8", "#9BD4F0", "#2C6FA0");
+            }
+        }
+
         /// <summary>Oiseau doré pailleté pendant l'accélération d'une étoile.</summary>
         public static readonly BirdColors GoldBird = new BirdColors
         {

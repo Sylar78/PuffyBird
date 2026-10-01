@@ -19,6 +19,10 @@ namespace PuffyBird.Rendering
         const int FeatherCount = 10;
         const int SparkleCount = 14;
         const float SparkleRate = 22f;
+        /// <summary>Aperçu du menu des oiseaux : centre (px logiques) et agrandissement.</summary>
+        const float PreviewX = 144f;
+        const float PreviewY = 182f;
+        const float PreviewScale = 2.6f;
 
         struct Particle
         {
@@ -42,8 +46,9 @@ namespace PuffyBird.Rendering
         readonly Material _bodyMaterial;
         readonly Material _wingMaterial;
         readonly Material[] _plumage;
-        readonly Mesh[] _bodyMeshes = new Mesh[3];
-        readonly Mesh[] _wingMeshes = new Mesh[3];
+        readonly Mesh[] _bodyMeshes = new Mesh[Skins.Count];
+        readonly Mesh[] _wingMeshes = new Mesh[Skins.Count];
+        readonly Palette.SkinLook[] _looks = new Palette.SkinLook[Skins.Count];
         readonly Mesh _goldBody;
         readonly Mesh _goldWing;
         readonly Particle[] _sparkles = new Particle[SparkleCount];
@@ -55,7 +60,9 @@ namespace PuffyBird.Rendering
         float _sparkleAccumulator;
         float _squash;
         bool _golden;
-        BirdColor _color;
+        int _skin;
+        bool _previewing;
+        float _preview;
 
         public BirdView(Transform parent, MaterialLibrary materials, WorldSpace space)
         {
@@ -66,13 +73,14 @@ namespace PuffyBird.Rendering
             _model = new GameObject("Modèle").transform;
             _model.SetParent(_root, false);
 
-            for (int c = 0; c < 3; c++)
+            for (int i = 0; i < Skins.Count; i++)
             {
-                var colors = Palette.Bird((BirdColor)c);
-                _bodyMeshes[c] = BuildBody(colors).Build("Oiseau " + (BirdColor)c);
-                _wingMeshes[c] = BuildWing(colors).Build("Aile " + (BirdColor)c);
+                var skin = Skins.Get(i);
+                _looks[i] = Palette.Skin(skin.Id);
+                _bodyMeshes[i] = BuildBody(_looks[i].Colors, _looks[i].Accessory).Build("Oiseau " + skin.Id);
+                _wingMeshes[i] = BuildWing(_looks[i].Colors).Build("Aile " + skin.Id);
             }
-            _goldBody = BuildBody(Palette.GoldBird).Build("Oiseau doré");
+            _goldBody = BuildBody(Palette.GoldBird, Palette.Accessory.None).Build("Oiseau doré");
             _goldWing = BuildWing(Palette.GoldBird).Build("Aile dorée");
 
             _bodyMaterial = materials.Lit("Oiseau", Color.white, 0.45f, 0f, 0.5f);
@@ -106,7 +114,7 @@ namespace PuffyBird.Rendering
             sparkleMaterial.SetFloat(MaterialLibrary.VertexEmission, 2.6f);
             for (int i = 0; i < SparkleCount; i++) _sparkles[i].Transform = CreateParticle(parent, "Éclat", sparkleMesh, sparkleMaterial);
 
-            SetColor(space.Config.BirdColor);
+            SetSkin(0);
         }
 
         static MeshBuilder BuildWing(Palette.BirdColors colors)
@@ -116,7 +124,7 @@ namespace PuffyBird.Rendering
                 .AddEllipsoid(new Vector3(-0.05f, -0.005f, -0.095f), new Vector3(0.06f, 0.022f, 0.05f), colors.Body, 12, 8);
         }
 
-        static MeshBuilder BuildBody(Palette.BirdColors c)
+        static MeshBuilder BuildBody(Palette.BirdColors c, Palette.Accessory accessory)
         {
             var b = new MeshBuilder();
             b.AddEllipsoid(Vector3.zero, new Vector3(0.17f, 0.13f, 0.14f), c.Body, 24, 16);
@@ -138,7 +146,71 @@ namespace PuffyBird.Rendering
                 Matrix4x4.TRS(new Vector3(0.14f, 0.005f, 0f), Quaternion.Euler(0f, 0f, -90f), new Vector3(1f, 1f, 0.9f)));
             b.Append(new MeshBuilder().AddCone(Vector3.zero, 0.03f, 0.075f, Palette.Hex("#D9452B"), 12),
                 Matrix4x4.TRS(new Vector3(0.135f, -0.03f, 0f), Quaternion.Euler(0f, 0f, -98f), new Vector3(1f, 1f, 0.8f)));
+            AddAccessory(b, accessory, c);
             return b;
+        }
+
+        static void AddAccessory(MeshBuilder b, Palette.Accessory accessory, Palette.BirdColors c)
+        {
+            switch (accessory)
+            {
+                case Palette.Accessory.Sunglasses:
+                {
+                    var lens = Palette.Hex("#1B1B26");
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        b.AddEllipsoid(new Vector3(0.105f, 0.058f, 0.128f * side), new Vector3(0.05f, 0.036f, 0.016f), lens, 14, 8);
+                        // Reflet sur le verre.
+                        b.AddEllipsoid(new Vector3(0.118f, 0.07f, 0.142f * side), new Vector3(0.016f, 0.008f, 0.004f), Palette.White, 8, 4);
+                    }
+                    // Monture : barre sur le haut de la tête.
+                    b.AddEllipsoid(new Vector3(0.07f, 0.085f, 0f), new Vector3(0.09f, 0.012f, 0.148f), lens, 16, 6);
+                    break;
+                }
+                case Palette.Accessory.Crown:
+                {
+                    var gold = Palette.Hex("#F3C22B");
+                    var origin = new Vector3(0f, 0.125f, 0f);
+                    b.AddFrustum(origin, 0.05f, 0.058f, 0.04f, gold, 16);
+                    for (int k = 0; k < 5; k++)
+                    {
+                        float a = k * Mathf.PI * 2f / 5f;
+                        var tip = origin + new Vector3(Mathf.Cos(a) * 0.052f, 0.052f, Mathf.Sin(a) * 0.052f);
+                        b.AddSphere(tip, 0.011f, gold, 8, 6);
+                    }
+                    b.AddSphere(origin + new Vector3(0.056f, 0.02f, 0f), 0.012f, Palette.Hex("#E2457A"), 8, 6);
+                    break;
+                }
+                case Palette.Accessory.Headband:
+                {
+                    var red = Palette.Hex("#E23E3E");
+                    b.AddEllipsoid(new Vector3(0f, 0.065f, 0f), new Vector3(0.158f, 0.026f, 0.132f), red, 24, 8);
+                    // Pans du bandeau qui flottent derrière la tête.
+                    b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.06f, 0.012f, 0.02f), red, 10, 6),
+                        Matrix4x4.TRS(new Vector3(-0.19f, 0.08f, 0.02f), Quaternion.Euler(0f, 0f, 18f), Vector3.one));
+                    b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.05f, 0.011f, 0.018f), red, 10, 6),
+                        Matrix4x4.TRS(new Vector3(-0.18f, 0.05f, -0.02f), Quaternion.Euler(0f, 0f, -12f), Vector3.one));
+                    break;
+                }
+                case Palette.Accessory.Antenna:
+                    b.AddCylinder(new Vector3(0.01f, 0.12f, 0f), 0.008f, 0.075f, c.Shade, 8);
+                    b.AddSphere(new Vector3(0.01f, 0.2f, 0f), 0.018f, Palette.Hex("#FF4D6D"), 10, 8);
+                    // Rivets sur les joues.
+                    for (int side = -1; side <= 1; side += 2) b.AddSphere(new Vector3(0.02f, -0.01f, 0.136f * side), 0.012f, c.Shade, 8, 6);
+                    break;
+                case Palette.Accessory.FlameCrest:
+                {
+                    var flame = Palette.Hex("#FFD23F");
+                    for (int k = 0; k < 3; k++)
+                    {
+                        float x = 0.03f - k * 0.04f;
+                        float h = 0.09f - k * 0.015f;
+                        b.Append(new MeshBuilder().AddCone(Vector3.zero, 0.028f, h, k == 1 ? c.Belly : flame, 10),
+                            Matrix4x4.TRS(new Vector3(x, 0.115f, 0f), Quaternion.Euler(0f, 0f, 20f + k * 12f), Vector3.one));
+                    }
+                    break;
+                }
+            }
         }
 
         static MeshFilter CreatePart(Transform parent, string name, Material material, out MeshFilter filter)
@@ -164,14 +236,19 @@ namespace PuffyBird.Rendering
             return go.transform;
         }
 
-        public void SetColor(BirdColor color)
+        /// <summary>Oiseau du catalogue (<see cref="Skins"/>) : purement visuel, la hitbox ne change pas.</summary>
+        public void SetSkin(int index)
         {
-            _color = color;
+            _skin = Mathf.Clamp(index, 0, Skins.Count - 1);
             _golden = false;
-            ApplyMeshes(_bodyMeshes[(int)color], _wingMeshes[(int)color]);
-            SetFinish(Color.black, 0f, 0.45f, 0f, Color.white, 0.5f);
-            _featherMaterial.SetColor(MaterialLibrary.BaseColor, Palette.Bird(color).Body);
+            var look = _looks[_skin];
+            ApplyMeshes(_bodyMeshes[_skin], _wingMeshes[_skin]);
+            SetFinish(look.Emission, look.Glitter, look.Smoothness, look.Metallic, look.Rim, look.RimStrength);
+            _featherMaterial.SetColor(MaterialLibrary.BaseColor, look.Colors.Body);
         }
+
+        /// <summary>Menu des oiseaux ouvert : l'oiseau vient au centre de l'écran, agrandi, et tourne doucement.</summary>
+        public void SetPreview(bool previewing) => _previewing = previewing;
 
         void ApplyMeshes(Mesh body, Mesh wing)
         {
@@ -194,7 +271,7 @@ namespace PuffyBird.Rendering
             {
                 _golden = golden;
                 if (golden) ApplyMeshes(_goldBody, _goldWing);
-                else SetColor(_color);
+                else SetSkin(_skin);
             }
             if (golden)
             {
@@ -304,6 +381,18 @@ namespace PuffyBird.Rendering
             float y = Mathf.LerpUnclamped(bird.PrevY, bird.Y, alpha) + _cfg.BirdHeight * 0.5f;
             _root.localPosition = _space.ToWorld(_cfg.BirdCenterX, y, 0f);
             _root.localRotation = Quaternion.Euler(0f, 0f, bird.DisplayRotation(_cfg)) * Quaternion.Euler(0f, Yaw, 0f);
+
+            _preview = Mathf.MoveTowards(_preview, _previewing ? 1f : 0f, deltaTime * 4f);
+            if (_preview > 0f)
+            {
+                float k = _preview * _preview * (3f - 2f * _preview);
+                float bob = y - (_cfg.BirdStartY + _cfg.BirdHeight * 0.5f);
+                var target = _space.ToWorld(PreviewX, PreviewY + bob, 0f);
+                _root.localPosition = Vector3.Lerp(_root.localPosition, target, k);
+                float turn = Mathf.Sin(Time.unscaledTime * 0.8f) * 35f;
+                _root.localRotation = Quaternion.Slerp(_root.localRotation, Quaternion.Euler(0f, Yaw + turn, 0f), k);
+            }
+            _root.localScale = Vector3.one * Mathf.Lerp(1f, PreviewScale, _preview * _preview * (3f - 2f * _preview));
 
             // Étirement au battement puis retour : la silhouette reste plus petite que la hitbox n'est grande.
             _squash = Mathf.Max(0f, _squash - deltaTime * 6f);

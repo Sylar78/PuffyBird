@@ -4,6 +4,7 @@ using PuffyBird.Core;
 using PuffyBird.Feedback;
 using PuffyBird.Rendering;
 using PuffyBird.Social;
+using PuffyBird.Store;
 using PuffyBird.UI;
 using UnityEngine;
 
@@ -49,6 +50,10 @@ namespace PuffyBird
         GamePrefs _prefs;
         Haptics _haptics;
         Leaderboard _leaderboard;
+        IStore _store;
+        SkinsView _skins;
+        int _shownSkin = -1;
+        int _bestAtRunStart;
         IBannerAds _banner;
         bool _bannerShown;
         int _shownRun = -1;
@@ -93,6 +98,9 @@ namespace PuffyBird
             _hud = new HudView(_ui, materials);
             _menu = new MenuView(_ui);
             _leaderboard = new Leaderboard();
+            _store = StoreServices.Create();
+            _skins = new SkinsView(_ui, _store, !(_store is NoStore), IsSkinUnlocked, () => SelectedSkin);
+            _menu.Skins = _skins;
             _menu.LeaderboardAvailable = _leaderboard.Available;
             _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
@@ -156,6 +164,7 @@ namespace PuffyBird
             UpdateBanner();
             // Meilleur score envoyé au classement dès qu'il monte (à la mort) et que le joueur est connecté.
             _leaderboard.SubmitBest(_sim.Best);
+            _menu.NewSkinUnlocked = Skins.NewlyUnlocked(_bestAtRunStart, _sim.Best, _cfg) > 0;
             _leaderboard.Update();
             // Musique baissée pendant la pause.
             _music.SetVolume(!_prefs.Music ? 0f : (_sim.State == GameState.Paused ? 0.4f : 1f));
@@ -175,6 +184,26 @@ namespace PuffyBird
                 case UiAction.CloseMenu:
                     _menu.Close();
                     break;
+                case UiAction.OpenSkins:
+                    _menu.Open(MenuScreen.Skins);
+                    break;
+                case UiAction.SkinPrevious:
+                    _skins.Step(-1);
+                    break;
+                case UiAction.SkinNext:
+                    _skins.Step(1);
+                    break;
+                case UiAction.SkinUse:
+                    if (IsSkinUnlocked(_skins.Browsed))
+                    {
+                        _prefs.Skin = Skins.Get(_skins.Browsed).Id;
+                        _haptics.Play(HapticKind.Medium);
+                    }
+                    break;
+                case UiAction.SkinBuy:
+                    string product = Skins.Get(_skins.Browsed).ProductId;
+                    if (product != null) _store.Buy(product);
+                    break;
                 case UiAction.OpenLeaderboard:
                     _leaderboard.Show();
                     break;
@@ -193,6 +222,27 @@ namespace PuffyBird
                     _haptics.Play(HapticKind.Medium);
                     break;
             }
+        }
+
+        /// <summary>Oiseau choisi par le joueur (préférence), même s'il n'est pas encore disponible.</summary>
+        int SelectedSkin => Skins.IndexOf(_prefs.Skin);
+
+        bool IsSkinUnlocked(int index)
+        {
+            var skin = Skins.Get(index);
+            string product = skin.ProductId;
+            return Skins.IsUnlocked(skin, _sim.Best, _cfg, product != null && _store.Owns(product));
+        }
+
+        /// <summary>
+        /// Oiseau affiché : celui parcouru dans le menu des oiseaux, sinon celui choisi s'il est
+        /// débloqué (un achat pas encore confirmé par la boutique ne change pas la préférence).
+        /// </summary>
+        int DisplayedSkin()
+        {
+            if (_menu.Screen == MenuScreen.Skins) return _skins.Browsed;
+            int selected = SelectedSkin;
+            return IsSkinUnlocked(selected) ? selected : 0;
         }
 
         void ToggleSound()
@@ -231,17 +281,17 @@ namespace PuffyBird
             _banner.SetVisible(show);
         }
 
-        /// <summary>Nouvelle partie : couleur de l'oiseau et décor tiré au hasard (§6.8, §8.2).</summary>
+        /// <summary>Nouvelle partie : décor tiré au hasard (§8.2) et sa musique.</summary>
         void ApplyRun()
         {
             _shownRun = _sim.RunId;
+            _bestAtRunStart = _sim.Best;
             var theme = Palette.Theme(_sim.Theme);
             _lighting.ApplyTheme(theme);
             _scenery.ApplyTheme(theme);
             _weather.ApplyTheme(theme);
             _postFx.ApplyTheme(theme);
             _cameraRig.Camera.backgroundColor = theme.SkyHorizon;
-            _bird.SetColor(_sim.BirdColor);
             _music.SetTheme(_sim.Theme);
         }
 
@@ -260,6 +310,13 @@ namespace PuffyBird
             _lighting.SetFlash(lightning);
             _pipes.Update(_sim.Pipes, alpha, dt);
             _stars.Update(_sim.Stars, alpha, _realTime);
+            int skin = DisplayedSkin();
+            if (skin != _shownSkin)
+            {
+                _shownSkin = skin;
+                _bird.SetSkin(skin);
+            }
+            _bird.SetPreview(_menu.Screen == MenuScreen.Skins);
             _bird.Update(_sim, alpha, dt);
             _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
