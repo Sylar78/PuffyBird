@@ -39,6 +39,7 @@ namespace PuffyBird
         StarView _stars;
         BirdView _bird;
         BoostTrailView _trail;
+        UiLayer _ui;
         HudView _hud;
         SfxPlayer _sfx;
         IBannerAds _banner;
@@ -79,7 +80,8 @@ namespace PuffyBird
             _stars = new StarView(world, materials, _space, _sim.Stars.Capacity);
             _bird = new BirdView(world, materials, _space);
             _trail = new BoostTrailView(world, materials, _space);
-            _hud = new HudView(world, materials, _space);
+            _ui = new UiLayer(world, materials, _space);
+            _hud = new HudView(_ui, materials);
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
 
@@ -114,6 +116,12 @@ namespace PuffyBird
                 else _sim.Pause();
             }
             for (int i = 0; i < input.Presses; i++) _sim.Press();
+            for (int i = 0; i < input.Taps; i++)
+            {
+                var action = _ui.HitTest(_cameraRig.ScreenToLogical(_input.TapPosition(i)));
+                if (action != UiAction.None) OnUiAction(action);
+                else _sim.Press();
+            }
 
             _cameraRig.UpdateViewport();
             _sim.ViewMargin = _cameraRig.SideMarginPx;
@@ -130,6 +138,16 @@ namespace PuffyBird
             React(events);
             UpdateBanner();
             Render(dt);
+        }
+
+        void OnUiAction(UiAction action)
+        {
+            switch (action)
+            {
+                case UiAction.Pause:
+                    _sim.Pause();
+                    break;
+            }
         }
 
         void React(GameEvents events)
@@ -184,6 +202,7 @@ namespace PuffyBird
             _bird.Update(_sim, alpha, dt);
             _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
+            _ui.BeginFrame();
             _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx);
             _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, reduceFlash);
         }

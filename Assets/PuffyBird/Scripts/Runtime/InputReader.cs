@@ -10,12 +10,21 @@ namespace PuffyBird
     /// ou bouton A = un tap, à l'appui et sans répétition automatique. Échap / P / Start = pause,
     /// M = muet, B = pilote automatique (démo), C = capture d'écran (éditeur). Fonctionne avec le nouvel Input System ou
     /// l'ancien gestionnaire d'entrées.
+    /// Les doigts et les clics gardent leur position à l'écran (<see cref="TapPosition"/>), pour
+    /// les boutons de l'interface ; les touches et la manette n'en ont pas.
     /// </summary>
     public sealed class InputReader
     {
+        public const int MaxTaps = 8;
+
+        readonly Vector2[] _taps = new Vector2[MaxTaps];
+
         public struct Frame
         {
+            /// <summary>Taps sans position (clavier, manette).</summary>
             public int Presses;
+            /// <summary>Taps avec position (doigt, souris), voir <see cref="TapPosition"/>.</summary>
+            public int Taps;
             public bool Pause;
             public bool Mute;
             public bool ToggleAutoPilot;
@@ -30,6 +39,14 @@ namespace PuffyBird
 #endif
         }
 
+        /// <summary>Position à l'écran (pixels, origine en bas à gauche) du tap <paramref name="index"/> de la dernière lecture.</summary>
+        public Vector2 TapPosition(int index) => _taps[index];
+
+        void AddTap(ref Frame f, Vector2 position)
+        {
+            if (f.Taps < MaxTaps) _taps[f.Taps++] = position;
+        }
+
         public Frame Read()
         {
             var f = new Frame();
@@ -39,11 +56,11 @@ namespace PuffyBird
             {
                 foreach (var touch in touchscreen.touches)
                 {
-                    if (touch.press.wasPressedThisFrame) f.Presses++;
+                    if (touch.press.wasPressedThisFrame) AddTap(ref f, touch.position.ReadValue());
                 }
             }
             var mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame) f.Presses++;
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame) AddTap(ref f, mouse.position.ReadValue());
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
@@ -64,9 +81,10 @@ namespace PuffyBird
 #elif ENABLE_LEGACY_INPUT_MANAGER
             for (int i = 0; i < Input.touchCount; i++)
             {
-                if (Input.GetTouch(i).phase == TouchPhase.Began) f.Presses++;
+                var touch = Input.GetTouch(i);
+                if (touch.phase == TouchPhase.Began) AddTap(ref f, touch.position);
             }
-            if (Input.GetMouseButtonDown(0)) f.Presses++;
+            if (Input.GetMouseButtonDown(0)) AddTap(ref f, Input.mousePosition);
             if (Input.GetKeyDown(KeyCode.Space)) f.Presses++;
             if (Input.GetKeyDown(KeyCode.UpArrow)) f.Presses++;
             if (Input.GetKeyDown(KeyCode.Return)) f.Presses++;

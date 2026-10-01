@@ -101,6 +101,19 @@ namespace PuffyBird.Rendering
             SafeTopPx = _space.Config.Height * 0.5f - visibleHeightPx * 0.5f + topInset * visibleHeightPx;
         }
 
+        /// <summary>
+        /// Position logique (px, y vers le bas) visée par un point de l'écran, dans le plan de jeu :
+        /// c'est là que l'interface place ses boutons (voir <c>WorldSpace.OnScreen</c>).
+        /// </summary>
+        public Vector2 ScreenToLogical(Vector2 screen)
+        {
+            var ray = _camera.ScreenPointToRay(new Vector3(screen.x, screen.y, 0f));
+            float t = Mathf.Abs(ray.direction.z) > 1e-5f ? -ray.origin.z / ray.direction.z : 0f;
+            var p = ray.origin + ray.direction * t;
+            var cfg = _space.Config;
+            return new Vector2(p.x * WorldSpace.PixelsPerUnit + cfg.Width * 0.5f, cfg.GroundY - p.y * WorldSpace.PixelsPerUnit);
+        }
+
         /// <summary>Demi-largeur visible à la profondeur z, pour le format le plus large géré.</summary>
         public static float HalfWidthAt(float z, float verticalFov, float aspect)
         {

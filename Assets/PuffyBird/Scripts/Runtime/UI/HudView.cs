@@ -1,10 +1,11 @@
 using PuffyBird.Core;
 using PuffyBird.Rendering;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace PuffyBird.UI
 {
+    using Element = UiLayer.Element;
+
     /// <summary>
     /// Interface en volume, placée dans la scène juste devant le plan de jeu et positionnée en
     /// pixels logiques selon la spec (§11) : titre, « Get Ready », score, « Game Over » et panneau
@@ -13,15 +14,11 @@ namespace PuffyBird.UI
     /// </summary>
     public sealed class HudView
     {
-        const float HudZ = -1.2f;
-        const float PanelZ = -1.05f;
-
-        sealed class Element
-        {
-            public GameObject GameObject;
-            public Transform Transform;
-            public MeshRenderer Renderer;
-        }
+        const float HudZ = UiLayer.HudZ;
+        const float PanelZ = UiLayer.PanelZ;
+        /// <summary>Bouton pause : coin haut gauche, sous l'encoche, à la hauteur du score.</summary>
+        const float PauseButtonX = 22f;
+        const float PauseButtonSize = 26f;
 
         sealed class Number
         {
@@ -31,11 +28,11 @@ namespace PuffyBird.UI
             public int Shown = -1;
         }
 
+        readonly UiLayer _ui;
         readonly WorldSpace _space;
         readonly GameConfig _cfg;
         readonly Transform _root;
         readonly Material _textMaterial;
-        readonly Material _panelMaterial;
         readonly Material _medalMaterial;
         readonly Material _sparkleMaterial;
         readonly Mesh[] _digitMeshes = new Mesh[10];
@@ -66,22 +63,20 @@ namespace PuffyBird.UI
         readonly Element _pause;
         readonly Element _pauseTap;
         readonly Element _mute;
+        readonly UiLayer.Button _pauseButton;
 
         Medal _shownMedal = (Medal)(-1);
         Vector2 _sparkleOffset;
         float _sparkleTimer;
 
-        public HudView(Transform parent, MaterialLibrary materials, WorldSpace space)
+        public HudView(UiLayer ui, MaterialLibrary materials)
         {
-            _space = space;
-            _cfg = space.Config;
-            _root = new GameObject("Interface").transform;
-            _root.SetParent(parent, false);
+            _ui = ui;
+            _space = ui.Space;
+            _cfg = _space.Config;
+            _root = ui.Root;
+            _textMaterial = ui.TextMaterial;
 
-            _textMaterial = materials.Lit("Texte", Color.white, 0.5f, 0f, 0.2f);
-            _textMaterial.SetFloat(MaterialLibrary.VertexEmission, 0.35f);
-            _panelMaterial = materials.Lit("Panneau", Color.white, 0.3f, 0f, 0.1f);
-            _panelMaterial.SetFloat(MaterialLibrary.VertexEmission, 0.25f);
             _medalMaterial = materials.Lit("Médaille", Color.white, 0.85f, 0.9f, 0.6f);
             _sparkleMaterial = materials.Lit("Étincelle", Color.white, 0f, 0f, 0f);
             _sparkleMaterial.SetColor(MaterialLibrary.EmissionColor, Color.white * 4f);
@@ -99,10 +94,9 @@ namespace PuffyBird.UI
             _score = CreateNumber(TextAlign.Center, 6);
             _gameOver = Text("GAME OVER", TextAlign.Center, Palette.GameOver, outline);
 
-            var box = new MeshBuilder().AddBox(Vector3.zero, Vector3.one, Color.white).Build("Boîte");
-            _panelBorder = Solid(box, Palette.Outline);
-            _panel = Solid(box, Palette.PanelEdge);
-            _panelInner = Solid(box, Palette.Panel);
+            _panelBorder = Solid(Palette.Outline);
+            _panel = Solid(Palette.PanelEdge);
+            _panelInner = Solid(Palette.Panel);
             _medalLabel = Text("MEDAL", TextAlign.Left, Palette.PanelLabel, Palette.Panel);
             _scoreLabel = Text("SCORE", TextAlign.Right, Palette.PanelLabel, Palette.Panel);
             _bestLabel = Text("BEST", TextAlign.Right, Palette.PanelLabel, Palette.Panel);
@@ -120,38 +114,20 @@ namespace PuffyBird.UI
                 .Build("Étincelle");
             _sparkle = Create("Étincelle", sparkleMesh, _sparkleMaterial);
 
-            _newTag = Solid(box, Palette.NewTag);
+            _newTag = Solid(Palette.NewTag);
             _newLabel = Text("NEW", TextAlign.Center, Color.white, Palette.NewTag);
             _retry = Text("TAP TO RETRY", TextAlign.Center, Color.white, outline);
             _pause = Text("PAUSE", TextAlign.Center, Color.white, outline);
             _pauseTap = Text("TAP", TextAlign.Center, Color.white, outline);
             _mute = Text("SOUND OFF", TextAlign.Right, Color.white, outline);
+            _pauseButton = ui.CreateButton(VoxelFont.PauseIcon, Palette.GameOver, Color.white);
         }
 
-        Element Create(string name, Mesh mesh, Material material)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(_root, false);
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = material;
-            r.shadowCastingMode = ShadowCastingMode.Off;
-            r.receiveShadows = false;
-            go.SetActive(false);
-            return new Element { GameObject = go, Transform = go.transform, Renderer = r };
-        }
+        Element Create(string name, Mesh mesh, Material material) => _ui.Create(name, mesh, material);
 
-        Element Text(string text, TextAlign align, Color front, Color outline)
-            => Create(text, VoxelFont.Build(text, align, front, outline), _textMaterial);
+        Element Text(string text, TextAlign align, Color front, Color outline) => _ui.Text(text, align, front, outline);
 
-        Element Solid(Mesh box, Color color)
-        {
-            var e = Create("Panneau", box, _panelMaterial);
-            var mpb = new MaterialPropertyBlock();
-            mpb.SetColor(MaterialLibrary.BaseColor, color);
-            e.Renderer.SetPropertyBlock(mpb);
-            return e;
-        }
+        Element Solid(Color color) => _ui.Solid(color);
 
         Number CreateNumber(TextAlign align, int maxDigits)
         {
@@ -165,7 +141,7 @@ namespace PuffyBird.UI
                 number.Digits[i] = go.AddComponent<MeshFilter>();
                 var r = go.AddComponent<MeshRenderer>();
                 r.sharedMaterial = _textMaterial;
-                r.shadowCastingMode = ShadowCastingMode.Off;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 r.receiveShadows = false;
             }
             root.gameObject.SetActive(false);
@@ -174,22 +150,9 @@ namespace PuffyBird.UI
 
         // ───────── placement ─────────
 
-        void Place(Element e, float px, float py, float voxelPx, float z = HudZ)
-        {
-            var p = _space.OnScreen(px, py, z, out float t);
-            float s = voxelPx / WorldSpace.PixelsPerUnit * t;
-            e.Transform.localPosition = p;
-            e.Transform.localScale = new Vector3(s, s, s);
-            if (!e.GameObject.activeSelf) e.GameObject.SetActive(true);
-        }
+        void Place(Element e, float px, float py, float voxelPx, float z = HudZ) => _ui.Place(e, px, py, voxelPx, z);
 
-        void PlaceBox(Element e, float left, float top, float width, float height, float z)
-        {
-            var p = _space.OnScreen(left + width * 0.5f, top + height * 0.5f, z, out float t);
-            e.Transform.localPosition = p;
-            e.Transform.localScale = new Vector3(width / WorldSpace.PixelsPerUnit * t, height / WorldSpace.PixelsPerUnit * t, 0.04f);
-            if (!e.GameObject.activeSelf) e.GameObject.SetActive(true);
-        }
+        void PlaceBox(Element e, float left, float top, float width, float height, float z) => _ui.PlaceBox(e, left, top, width, height, z);
 
         void PlaceNumber(Number n, int value, float px, float py, float voxelPx, float z = HudZ)
         {
@@ -222,10 +185,7 @@ namespace PuffyBird.UI
             }
         }
 
-        static void Hide(Element e)
-        {
-            if (e.GameObject.activeSelf) e.GameObject.SetActive(false);
-        }
+        static void Hide(Element e) => UiLayer.Hide(e);
 
         static void Hide(Number n)
         {
@@ -286,6 +246,17 @@ namespace PuffyBird.UI
             bool showScore = state == GameState.Ready || state == GameState.Playing || state == GameState.Dying || state == GameState.Paused;
             if (showScore) PlaceNumber(_score, sim.Score, 144f, safeTopPx + _cfg.ScoreTopMargin, 4f);
             else Hide(_score);
+
+            // Bouton pause, seulement pendant la partie (un tap ailleurs fait sauter l'oiseau).
+            if (state == GameState.Playing)
+            {
+                float y = safeTopPx + _cfg.ScoreTopMargin + PauseButtonSize * 0.5f;
+                _ui.PlaceButton(_pauseButton, UiAction.Pause, PauseButtonX, y, PauseButtonSize, PauseButtonSize, 2f, hitMargin: 9f);
+            }
+            else
+            {
+                UiLayer.Hide(_pauseButton);
+            }
 
             // Pause
             if (state == GameState.Paused)
