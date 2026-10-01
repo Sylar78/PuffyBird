@@ -28,8 +28,8 @@ namespace PuffyBird.UI
         const float IconButtonSize = 26f;
         const float RowWidth = 200f;
         const float RowHeight = 24f;
-        const float RowGap = 8f;
-        const float PanelTop = 128f;
+        const float RowGap = 6f;
+        const float PanelTop = 112f;
         const float PanelWidth = 240f;
         const float OverButtonsY = 338f;
         const float OverButtonWidth = 112f;

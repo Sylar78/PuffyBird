@@ -40,6 +40,11 @@ namespace PuffyBird.Editor
         {
             ProjectSetup.Configure(openScene: false);
             ApplyCommandLineOverrides();
+            PurchasingDefine.Sync();
+            bool purchasing = PurchasingDefine.PackageInstalled;
+            Debug.Log(purchasing
+                ? "PuffyBird : achats intégrés activés (package Unity IAP présent)."
+                : "PuffyBird : package Unity IAP absent, build sans boutique.");
 
             var options = new BuildPlayerOptions
             {
@@ -47,6 +52,7 @@ namespace PuffyBird.Editor
                 locationPathName = path,
                 target = target,
                 options = BuildOptions.None,
+                extraScriptingDefines = purchasing ? new[] { PurchasingDefine.Symbol } : null,
             };
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;

@@ -111,6 +111,8 @@ namespace PuffyBird
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
             _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
             _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => AdServices.AdsEnabled, "PRIVACY");
+            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), "REMOVE ADS");
+            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), "RESTORE PURCHASES");
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
             _music = MusicPlayer.Create(world);
@@ -201,6 +203,12 @@ namespace PuffyBird
                     break;
                 case UiAction.CloseMenu:
                     _menu.Close();
+                    break;
+                case UiAction.RemoveAds:
+                    _store.Buy(Products.NoAds);
+                    break;
+                case UiAction.RestorePurchases:
+                    _store.Restore();
                     break;
                 case UiAction.OpenPrivacy:
                     _menu.Open(MenuScreen.Consent);
@@ -306,7 +314,7 @@ namespace PuffyBird
 
         void UpdateBanner()
         {
-            bool show = AdPolicy.BannerVisible(_sim, adsRemoved: false);
+            bool show = AdPolicy.BannerVisible(_sim, adsRemoved: _store.Owns(Products.NoAds));
             if (show == _bannerShown) return;
             _bannerShown = show;
             _banner.SetVisible(show);
@@ -352,7 +360,8 @@ namespace PuffyBird
             _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
             _ui.BeginFrame();
-            _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx, _menu.IsOpen);
+            bool menuCoversTitle = _menu.Screen == MenuScreen.Settings || _menu.Screen == MenuScreen.Consent;
+            _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx, _menu.IsOpen, menuCoversTitle);
             _menu.Update(_sim, _cameraRig.SafeTopPx);
             _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, reduceFlash);
         }
