@@ -5,7 +5,8 @@ using UnityEngine.Rendering;
 namespace PuffyBird.Rendering
 {
     /// <summary>
-    /// L'oiseau en volume : corps dodu, ventre clair, yeux, bec, houppette et deux ailes animées.
+    /// L'oiseau en volume : corps dodu, ventre clair, yeux, bec, houppette et deux ailes animées,
+    /// ou phénix (cou, grandes ailes de plumes lumineuses, queue de feu à ocelles qui ondule).
     /// Le battement suit la séquence haut → milieu → bas → milieu de la spec (§6.6), en continu ;
     /// les plumes du bout des ailes fléchissent dans le vertex shader. Petits nuages de « puff »
     /// à chaque battement, plumes qui volent à l'impact. Tout est purement visuel : la hitbox
@@ -14,7 +15,8 @@ namespace PuffyBird.Rendering
     public sealed class BirdView
     {
         const float Yaw = 22f;
-        const float WingAmplitude = 45f;
+        /// <summary>Ondulation de la queue du phénix (degrés).</summary>
+        const float TailSway = 7f;
         const int PuffCount = 12;
         const int FeatherCount = 10;
         const int SparkleCount = 14;
@@ -43,14 +45,20 @@ namespace PuffyBird.Rendering
         readonly Transform _farWing;
         readonly MeshFilter _nearWingFilter;
         readonly MeshFilter _farWingFilter;
+        readonly Transform _tail;
+        readonly MeshFilter _tailFilter;
         readonly Material _bodyMaterial;
         readonly Material _wingMaterial;
         readonly Material[] _plumage;
         readonly Mesh[] _bodyMeshes = new Mesh[Skins.Count];
         readonly Mesh[] _wingMeshes = new Mesh[Skins.Count];
+        readonly Mesh[] _tailMeshes = new Mesh[Skins.Count];
         readonly Palette.SkinLook[] _looks = new Palette.SkinLook[Skins.Count];
         readonly Mesh _goldBody;
         readonly Mesh _goldWing;
+        readonly Mesh _goldPhoenixBody;
+        readonly Mesh _goldPhoenixWing;
+        readonly Mesh _goldPhoenixTail;
         readonly Particle[] _sparkles = new Particle[SparkleCount];
         readonly Particle[] _puffs = new Particle[PuffCount];
         readonly Particle[] _feathers = new Particle[FeatherCount];
@@ -77,11 +85,23 @@ namespace PuffyBird.Rendering
             {
                 var skin = Skins.Get(i);
                 _looks[i] = Palette.Skin(skin.Id);
-                _bodyMeshes[i] = BuildBody(_looks[i].Colors, _looks[i].Accessory).Build("Oiseau " + skin.Id);
-                _wingMeshes[i] = BuildWing(_looks[i].Colors).Build("Aile " + skin.Id);
+                if (_looks[i].Shape == Palette.BodyShape.Phoenix)
+                {
+                    _bodyMeshes[i] = BuildPhoenixBody(Palette.Phoenix).Build("Oiseau " + skin.Id);
+                    _wingMeshes[i] = BuildPhoenixWing(Palette.Phoenix).Build("Aile " + skin.Id);
+                    _tailMeshes[i] = BuildPhoenixTail(Palette.Phoenix).Build("Queue " + skin.Id);
+                }
+                else
+                {
+                    _bodyMeshes[i] = BuildBody(_looks[i].Colors, _looks[i].Accessory).Build("Oiseau " + skin.Id);
+                    _wingMeshes[i] = BuildWing(_looks[i].Colors).Build("Aile " + skin.Id);
+                }
             }
             _goldBody = BuildBody(Palette.GoldBird, Palette.Accessory.None).Build("Oiseau doré");
             _goldWing = BuildWing(Palette.GoldBird).Build("Aile dorée");
+            _goldPhoenixBody = BuildPhoenixBody(Palette.PhoenixGold).Build("Phénix doré");
+            _goldPhoenixWing = BuildPhoenixWing(Palette.PhoenixGold).Build("Aile du phénix doré");
+            _goldPhoenixTail = BuildPhoenixTail(Palette.PhoenixGold).Build("Queue du phénix doré");
 
             _bodyMaterial = materials.Lit("Oiseau", Color.white, 0.45f, 0f, 0.5f);
             _bodyMaterial.SetFloat(MaterialLibrary.BreathStrength, 0.004f);
@@ -99,6 +119,8 @@ namespace PuffyBird.Rendering
             _farWing = CreatePart(_model, "Aile lointaine", _wingMaterial, out _farWingFilter).transform;
             _farWing.localPosition = new Vector3(-0.01f, 0.01f, 0.105f);
             _farWing.localScale = new Vector3(1f, 1f, -1f);
+            _tail = CreatePart(_model, "Queue", _bodyMaterial, out _tailFilter).transform;
+            _tail.localPosition = PhoenixTailRoot;
 
             var puffMesh = new MeshBuilder().AddSphere(Vector3.zero, 1f, Color.white, 12, 8).Build("Puff");
             var puffMaterial = materials.Lit("Puff", Color.white, 0.1f, 0f, 0.6f);
@@ -115,6 +137,127 @@ namespace PuffyBird.Rendering
             for (int i = 0; i < SparkleCount; i++) _sparkles[i].Transform = CreateParticle(parent, "Éclat", sparkleMesh, sparkleMaterial);
 
             SetSkin(0);
+        }
+
+        // Phénix : positions des articulations dans le repère du modèle (bec vers +x).
+        static readonly Vector3 PhoenixShoulder = new Vector3(0f, 0.045f, 0.06f);
+        static readonly Vector3 PuffyShoulder = new Vector3(-0.01f, 0.01f, 0.105f);
+        static readonly Vector3 PhoenixTailRoot = new Vector3(-0.11f, 0f, 0f);
+
+        /// <summary>
+        /// Ellipsoïde allongé le long de <paramref name="dir"/>, de <paramref name="start"/> à
+        /// <paramref name="end"/> depuis <paramref name="origin"/>, aplati selon <paramref name="normal"/>.
+        /// </summary>
+        static void AddSegment(MeshBuilder b, Vector3 origin, Vector3 dir, Vector3 normal, float start, float end,
+            float width, float thickness, Color color, int longitude = 10, int latitude = 6)
+        {
+            var center = origin + dir * ((start + end) * 0.5f);
+            var piece = new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(width, thickness, (end - start) * 0.5f), color, longitude, latitude);
+            b.Append(piece, Matrix4x4.TRS(center, Quaternion.LookRotation(dir, normal), Vector3.one));
+        }
+
+        /// <summary>Corps du phénix : buste effilé, cou et tête irisés, collier d'or, crête de feu, bec ivoire.</summary>
+        static MeshBuilder BuildPhoenixBody(Palette.PhoenixColors c)
+        {
+            var b = new MeshBuilder();
+            b.AddEllipsoid(new Vector3(-0.02f, 0f, 0f), new Vector3(0.12f, 0.075f, 0.075f), c.Body, 22, 14);
+            b.AddEllipsoid(new Vector3(0.04f, -0.015f, 0f), new Vector3(0.07f, 0.06f, 0.068f), c.Sheen, 18, 12);
+            // Cou penché vers l'avant et tête.
+            b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.04f, 0.07f, 0.042f), c.Sheen, 16, 10),
+                Matrix4x4.TRS(new Vector3(0.095f, 0.055f, 0f), Quaternion.Euler(0f, 0f, -40f), Vector3.one));
+            b.AddSphere(new Vector3(0.14f, 0.11f, 0f), 0.042f, c.Sheen, 16, 12);
+            // Collier de perles d'or à la base du cou.
+            var neck = new Vector3(Mathf.Sin(40f * Mathf.Deg2Rad), Mathf.Cos(40f * Mathf.Deg2Rad), 0f);
+            var across = new Vector3(neck.y, -neck.x, 0f);
+            for (int k = 0; k < 10; k++)
+            {
+                float a = k * Mathf.PI * 2f / 10f;
+                var p = new Vector3(0.07f, 0.02f, 0f) + (Vector3.forward * Mathf.Cos(a) + across * Mathf.Sin(a)) * 0.05f;
+                b.AddSphere(p, 0.01f, c.Gold, 8, 6);
+            }
+            // Crête : trois flammèches inclinées vers l'arrière.
+            for (int k = 0; k < 3; k++)
+            {
+                var flame = new MeshBuilder().AddCone(Vector3.zero, 0.014f, 0.07f - k * 0.01f, k == 1 ? c.TipA : c.Gold, 10);
+                b.Append(flame, Matrix4x4.TRS(new Vector3(0.135f - k * 0.012f, 0.145f, 0f), Quaternion.Euler(0f, 0f, 10f + k * 20f), Vector3.one));
+            }
+            // Yeux dorés des deux côtés.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                b.AddSphere(new Vector3(0.15f, 0.12f, 0.034f * side), 0.011f, c.Eye, 10, 8);
+                b.AddSphere(new Vector3(0.157f, 0.122f, 0.042f * side), 0.006f, Palette.Pupil, 8, 6);
+            }
+            // Bec fin légèrement crochu.
+            b.Append(new MeshBuilder().AddCone(Vector3.zero, 0.016f, 0.055f, c.Beak, 12),
+                Matrix4x4.TRS(new Vector3(0.172f, 0.105f, 0f), Quaternion.Euler(0f, 0f, -100f), Vector3.one));
+            return b;
+        }
+
+        /// <summary>
+        /// Aile du phénix au repos : à plat (plan xz), étendue vers −z depuis l'épaule. Neuf rémiges en
+        /// éventail, sombres à la base, rose ou violet lumineux au milieu, bout doré.
+        /// </summary>
+        static MeshBuilder BuildPhoenixWing(Palette.PhoenixColors c)
+        {
+            var b = new MeshBuilder();
+            AddSegment(b, Vector3.zero, new Vector3(-0.25f, 0f, -1f).normalized, Vector3.up, 0f, 0.13f, 0.045f, 0.018f, c.Sheen, 12, 8);
+            const int count = 9;
+            for (int k = 0; k < count; k++)
+            {
+                float t = (float)k / (count - 1);
+                var root = Vector3.Lerp(new Vector3(-0.01f, 0f, -0.11f), new Vector3(-0.03f, 0f, -0.02f), t) + Vector3.up * (0.002f * k);
+                float a = Mathf.Lerp(15f, 85f, t) * Mathf.Deg2Rad;
+                var dir = new Vector3(-Mathf.Sin(a), 0f, -Mathf.Cos(a));
+                float length = Mathf.Lerp(0.2f, 0.12f, t);
+                AddSegment(b, root, dir, Vector3.up, 0f, length * 0.5f, 0.02f, 0.006f, c.Body);
+                AddSegment(b, root, dir, Vector3.up, length * 0.3f, length * 0.9f, 0.022f, 0.008f, k % 2 == 0 ? c.TipA : c.TipB);
+                AddSegment(b, root, dir, Vector3.up, length * 0.78f, length, 0.018f, 0.01f, c.Gold);
+            }
+            return b;
+        }
+
+        /// <summary>
+        /// Queue du phénix vers −x : longues plumes de feu, du rouge-orangé au jaune, terminées par un
+        /// ocelle (anneau bleu-vert), et deux fines plumes pâles dessous. Plumes aplaties face à la caméra.
+        /// </summary>
+        static MeshBuilder BuildPhoenixTail(Palette.PhoenixColors c)
+        {
+            var b = new MeshBuilder();
+            // Angle (degrés, positif = vers le haut), longueur, décalage en profondeur, ocelle.
+            AddStreamer(b, c, 14f, 0.18f, 0.015f, true);
+            AddStreamer(b, c, 2f, 0.22f, -0.01f, true);
+            AddStreamer(b, c, -10f, 0.2f, 0.02f, true);
+            AddStreamer(b, c, -22f, 0.16f, -0.015f, true);
+            AddStreamer(b, c, -32f, 0.15f, 0f, false);
+            AddStreamer(b, c, -40f, 0.12f, 0.01f, false);
+            return b;
+        }
+
+        static void AddStreamer(MeshBuilder b, Palette.PhoenixColors c, float angle, float length, float depth, bool ocellus)
+        {
+            const int segments = 5;
+            float a = angle * Mathf.Deg2Rad;
+            var axis = new Vector3(-Mathf.Cos(a), Mathf.Sin(a), 0f);
+            var start = new Vector3(0f, 0f, depth);
+            var previous = start;
+            var dir = axis;
+            for (int i = 1; i <= segments; i++)
+            {
+                float u = (float)i / segments;
+                // Légère ondulation : la plume se creuse puis remonte.
+                var point = start + axis * (length * u) + Vector3.up * (-0.03f * Mathf.Sin(u * Mathf.PI));
+                var chord = point - previous;
+                dir = chord.normalized;
+                float width = Mathf.Lerp(0.02f, 0.009f, u) * (ocellus ? 1f : 0.6f);
+                var color = ocellus ? Color.Lerp(c.FlameRoot, c.FlameTip, u) : c.Wisp;
+                AddSegment(b, previous, dir, Vector3.back, -0.008f, chord.magnitude + 0.008f, width, 0.006f, color);
+                previous = point;
+            }
+            if (!ocellus) return;
+            // Ocelle : feuille jaune, anneau bleu-vert puis cœur bleu, de plus en plus épais pour ressortir des deux côtés.
+            AddSegment(b, previous, dir, Vector3.back, -0.01f, 0.08f, 0.03f, 0.006f, c.Ocellus);
+            AddSegment(b, previous, dir, Vector3.back, 0.009f, 0.061f, 0.018f, 0.009f, c.OcellusRing);
+            AddSegment(b, previous, dir, Vector3.back, 0.022f, 0.048f, 0.009f, 0.012f, c.OcellusCore);
         }
 
         static MeshBuilder BuildWing(Palette.BirdColors colors)
@@ -242,19 +385,24 @@ namespace PuffyBird.Rendering
             _skin = Mathf.Clamp(index, 0, Skins.Count - 1);
             _golden = false;
             var look = _looks[_skin];
-            ApplyMeshes(_bodyMeshes[_skin], _wingMeshes[_skin]);
-            SetFinish(look.Emission, look.Glitter, look.Smoothness, look.Metallic, look.Rim, look.RimStrength);
-            _featherMaterial.SetColor(MaterialLibrary.BaseColor, look.Colors.Body);
+            ApplyMeshes(_bodyMeshes[_skin], _wingMeshes[_skin], _tailMeshes[_skin]);
+            var shoulder = look.Shape == Palette.BodyShape.Phoenix ? PhoenixShoulder : PuffyShoulder;
+            _nearWing.localPosition = new Vector3(shoulder.x, shoulder.y, -shoulder.z);
+            _farWing.localPosition = shoulder;
+            SetFinish(look.Emission, look.VertexEmission, look.Glitter, look.Smoothness, look.Metallic, look.Rim, look.RimStrength);
+            _featherMaterial.SetColor(MaterialLibrary.BaseColor, look.Feather);
         }
 
         /// <summary>Menu des oiseaux ouvert : l'oiseau vient au centre de l'écran, agrandi, et tourne doucement.</summary>
         public void SetPreview(bool previewing) => _previewing = previewing;
 
-        void ApplyMeshes(Mesh body, Mesh wing)
+        void ApplyMeshes(Mesh body, Mesh wing, Mesh tail)
         {
             _bodyFilter.sharedMesh = body;
             _nearWingFilter.sharedMesh = wing;
             _farWingFilter.sharedMesh = wing;
+            _tailFilter.sharedMesh = tail;
+            _tail.gameObject.SetActive(tail != null);
         }
 
         public Vector3 Position => _root.position;
@@ -270,13 +418,14 @@ namespace PuffyBird.Rendering
             if (golden != _golden)
             {
                 _golden = golden;
-                if (golden) ApplyMeshes(_goldBody, _goldWing);
-                else SetSkin(_skin);
+                if (!golden) SetSkin(_skin);
+                else if (_looks[_skin].Shape == Palette.BodyShape.Phoenix) ApplyMeshes(_goldPhoenixBody, _goldPhoenixWing, _goldPhoenixTail);
+                else ApplyMeshes(_goldBody, _goldWing, null);
             }
             if (golden)
             {
                 float pulse = 0.75f + 0.25f * Mathf.Sin(time * 9f);
-                SetFinish(Palette.GoldGlow * (0.22f * pulse * amount), 1.4f * amount, 0.85f, 0.3f, Palette.Glitter, 0.5f + 0.8f * amount);
+                SetFinish(Palette.GoldGlow * (0.22f * pulse * amount), _looks[_skin].VertexEmission * 0.5f, 1.4f * amount, 0.85f, 0.3f, Palette.Glitter, 0.5f + 0.8f * amount);
                 _featherMaterial.SetColor(MaterialLibrary.BaseColor, Palette.GoldBird.Body);
 
                 _sparkleAccumulator += SparkleRate * amount * deltaTime;
@@ -293,11 +442,12 @@ namespace PuffyBird.Rendering
             UpdateSparkles(deltaTime);
         }
 
-        void SetFinish(Color emission, float glitter, float smoothness, float metallic, Color rimColor, float rim)
+        void SetFinish(Color emission, float vertexEmission, float glitter, float smoothness, float metallic, Color rimColor, float rim)
         {
             foreach (var m in _plumage)
             {
                 m.SetColor(MaterialLibrary.EmissionColor, emission);
+                m.SetFloat(MaterialLibrary.VertexEmission, vertexEmission);
                 m.SetFloat(MaterialLibrary.Glitter, glitter);
                 m.SetFloat(MaterialLibrary.Smoothness, smoothness);
                 m.SetFloat(MaterialLibrary.Metallic, metallic);
@@ -400,12 +550,15 @@ namespace PuffyBird.Rendering
             _model.localScale = new Vector3(1f - s * 0.5f, 1f + s, 1f - s * 0.5f);
 
             // Ailes : phase continue calée sur la séquence d'images de la spec, figées à la mort.
+            var look = _looks[_skin];
             float phase = bird.WingPhase(_cfg);
-            float angle = WingAmplitude * Mathf.Cos(phase * Mathf.PI * 2f);
+            float angle = look.WingLift + look.WingAmplitude * Mathf.Cos(phase * Mathf.PI * 2f);
             _nearWing.localRotation = Quaternion.Euler(angle, 0f, 0f);
             _farWing.localRotation = Quaternion.Euler(-angle, 0f, 0f);
             bool flapping = sim.State != GameState.Dying && sim.State != GameState.Over;
-            _wingMaterial.SetFloat(MaterialLibrary.BendAmount, flapping ? 2.5f * Mathf.Sin(phase * Mathf.PI * 2f) : 0f);
+            _wingMaterial.SetFloat(MaterialLibrary.BendAmount, flapping ? 2.5f * look.WingBend * Mathf.Sin(phase * Mathf.PI * 2f) : 0f);
+            // La queue ondule à contretemps des ailes.
+            _tail.localRotation = Quaternion.Euler(0f, 0f, TailSway * Mathf.Sin(phase * Mathf.PI * 2f + 1.2f));
 
             UpdateParticles(_puffs, deltaTime, gravity: 0f, drag: 3f, grow: true);
             UpdateParticles(_feathers, deltaTime, gravity: -3.5f, drag: 1.5f, grow: false);

@@ -23,6 +23,15 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void PhoenixIsTheFreeStartingBird()
+        {
+            // Aucun oiseau choisi (préférence vide) : le phénix. Le bleu reste gratuit pour qui l'avait choisi.
+            Assert.AreEqual("phoenix", Skins.Get(Skins.IndexOf("")).Id);
+            Assert.IsNull(Skins.Get(0).ProductId);
+            Assert.AreEqual(SkinUnlock.Free, Skins.Get(Skins.IndexOf("blue")).Unlock);
+        }
+
+        [Test]
         public void OneSkinPerMedal()
         {
             foreach (Medal medal in new[] { Medal.Bronze, Medal.Silver, Medal.Gold, Medal.Platinum })

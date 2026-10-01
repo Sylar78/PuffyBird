@@ -86,6 +86,13 @@ namespace PuffyBird.Rendering
             FlameCrest,
         }
 
+        /// <summary>Silhouette d'un oiseau : boule dodue, ou phénix (cou, grandes ailes, longue queue).</summary>
+        public enum BodyShape
+        {
+            Puffy,
+            Phoenix,
+        }
+
         /// <summary>Apparence d'un oiseau du catalogue : couleurs, accessoire et finition du plumage.</summary>
         public struct SkinLook
         {
@@ -97,6 +104,16 @@ namespace PuffyBird.Rendering
             public Color Emission;
             public Color Rim;
             public float RimStrength;
+            public BodyShape Shape;
+            /// <summary>Lueur des parties dont la couleur de sommet a un alpha non nul (plumes de feu du phénix).</summary>
+            public float VertexEmission;
+            /// <summary>Angle moyen des ailes (degrés, positif = levées) et amplitude du battement.</summary>
+            public float WingLift;
+            public float WingAmplitude;
+            /// <summary>Facteur de flexion du bout des ailes (1 = oiseau dodu).</summary>
+            public float WingBend;
+            /// <summary>Couleur des plumes qui volent à l'impact.</summary>
+            public Color Feather;
         }
 
         static SkinLook Look(string body, string belly, string shade, Accessory accessory = Accessory.None)
@@ -111,6 +128,12 @@ namespace PuffyBird.Rendering
                 Emission = Color.black,
                 Rim = Color.white,
                 RimStrength = 0.5f,
+                Shape = BodyShape.Puffy,
+                VertexEmission = 0f,
+                WingLift = 0f,
+                WingAmplitude = 45f,
+                WingBend = 1f,
+                Feather = Hex(body),
             };
         }
 
@@ -151,11 +174,19 @@ namespace PuffyBird.Rendering
                 }
                 case "phoenix":
                 {
-                    var look = Look("#FF5A1F", "#FFC23A", "#D11F1F", Accessory.FlameCrest);
-                    look.Emission = Hex("#FF6A00") * 0.35f;
-                    look.Glitter = 0.5f;
-                    look.Rim = Hex("#FFD27A");
-                    look.RimStrength = 1f;
+                    // Phénix : corps vert-noir irisé, ailes aux plumes or, rose et violet, queue de feu à ocelles.
+                    var look = Look("#14261C", "#2F8F4E", "#0B140F");
+                    look.Shape = BodyShape.Phoenix;
+                    look.Emission = Hex("#1E5A34") * 0.12f;
+                    look.VertexEmission = 1.2f;
+                    look.Smoothness = 0.7f;
+                    look.Glitter = 0.35f;
+                    look.Rim = Hex("#FFC86B");
+                    look.RimStrength = 0.9f;
+                    look.WingLift = 30f;
+                    look.WingAmplitude = 50f;
+                    look.WingBend = 0.35f;
+                    look.Feather = Hex("#FF8A1A");
                     return look;
                 }
                 case "galaxy":
@@ -181,6 +212,66 @@ namespace PuffyBird.Rendering
             Shade = Hex("#E88F00"),
         };
         public static readonly Color GoldGlow = Hex("#FFB300");
+
+        /// <summary>Couleurs du phénix ; l'alpha règle la lueur de chaque partie (<see cref="SkinLook.VertexEmission"/>).</summary>
+        public struct PhoenixColors
+        {
+            public Color Body;
+            public Color Sheen;
+            public Color Gold;
+            public Color TipA;
+            public Color TipB;
+            public Color FlameRoot;
+            public Color FlameTip;
+            public Color Ocellus;
+            public Color OcellusRing;
+            public Color OcellusCore;
+            public Color Wisp;
+            public Color Beak;
+            public Color Eye;
+        }
+
+        static Color Glow(string hex, float glow)
+        {
+            var c = Hex(hex);
+            c.a = glow;
+            return c;
+        }
+
+        public static readonly PhoenixColors Phoenix = new PhoenixColors
+        {
+            Body = Glow("#14261C", 0f),
+            Sheen = Glow("#2F8F4E", 0.2f),
+            Gold = Glow("#F2B53A", 0.8f),
+            TipA = Glow("#E8399A", 0.9f),
+            TipB = Glow("#9B4DFF", 0.9f),
+            FlameRoot = Glow("#E8340A", 0.8f),
+            FlameTip = Glow("#FF8C1A", 0.75f),
+            Ocellus = Glow("#FFB52E", 0.8f),
+            OcellusRing = Glow("#22B8C8", 1f),
+            OcellusCore = Glow("#1A3C8C", 0.3f),
+            Wisp = Glow("#9FF3FF", 0.9f),
+            Beak = Glow("#F4D58A", 0.1f),
+            Eye = Glow("#FFE07A", 0.8f),
+        };
+
+        /// <summary>Phénix doré pendant l'accélération d'une étoile.</summary>
+        public static readonly PhoenixColors PhoenixGold = new PhoenixColors
+        {
+            Body = Glow("#C98A12", 0f),
+            Sheen = Glow("#FFC21A", 0.2f),
+            Gold = Glow("#FFE680", 0.6f),
+            TipA = Glow("#FFF1A8", 1f),
+            TipB = Glow("#FFD54A", 1f),
+            FlameRoot = Glow("#FFB300", 0.8f),
+            FlameTip = Glow("#FFE680", 1f),
+            Ocellus = Glow("#FFE680", 1f),
+            OcellusRing = Glow("#FFF6C9", 1f),
+            OcellusCore = Glow("#E88F00", 0.3f),
+            Wisp = Glow("#FFF6C9", 0.9f),
+            Beak = Glow("#FFF1A8", 0.1f),
+            Eye = Glow("#FFFFFF", 0.8f),
+        };
         public static readonly Color Glitter = Hex("#FFF6C9");
 
         /// <summary>Éléments de décor propres à un thème, en plus du ciel, des collines et du sol.</summary>

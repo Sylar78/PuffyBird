@@ -42,23 +42,24 @@ namespace PuffyBird.Core
     }
 
     /// <summary>
-    /// Catalogue des oiseaux : un de départ, un par médaille (débloqué dès que le meilleur score
+    /// Catalogue des oiseaux : deux gratuits (le phénix de départ et le bleu), un par médaille (débloqué dès que le meilleur score
     /// atteint son seuil, pour toujours) et quelques oiseaux payants.
     /// </summary>
     public static class Skins
     {
-        public const string DefaultId = "blue";
+        /// <summary>Oiseau de départ : le phénix. Un joueur qui avait choisi un autre oiseau le garde.</summary>
+        public const string DefaultId = "phoenix";
 
         static readonly SkinInfo[] All =
         {
-            new SkinInfo(DefaultId, "BLUE", SkinUnlock.Free),
+            new SkinInfo(DefaultId, "PHOENIX", SkinUnlock.Free),
+            new SkinInfo("blue", "BLUE", SkinUnlock.Free),
             new SkinInfo("cherry", "CHERRY", SkinUnlock.Medal, Medal.Bronze),
             new SkinInfo("mint", "MINT", SkinUnlock.Medal, Medal.Silver),
             new SkinInfo("cool", "COOL", SkinUnlock.Medal, Medal.Gold),
             new SkinInfo("pearl", "PEARL", SkinUnlock.Medal, Medal.Platinum),
             new SkinInfo("ninja", "NINJA", SkinUnlock.Purchase),
             new SkinInfo("robot", "ROBOT", SkinUnlock.Purchase),
-            new SkinInfo("phoenix", "PHOENIX", SkinUnlock.Purchase),
             new SkinInfo("galaxy", "GALAXY", SkinUnlock.Purchase),
         };
 
