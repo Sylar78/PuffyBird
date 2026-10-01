@@ -14,7 +14,7 @@ Google signe l'app finale lui-même (« signature d'application par Play ») ; o
 
 ### A. Créer la clé dans Unity
 
-1. Ouvrir le projet, puis Edit > Project Settings > **Player** > onglet **Android** (icône robot) > déplier **Publishing Settings** > bouton **Keystore Manager**. Pas d'onglet Android : ajouter le module « Android Build Support » dans Unity Hub (Installs > roue dentée > Add modules).
+1. Ouvrir le projet, puis Edit > Project Settings > **Player** > onglet **Android** (icône robot) > déplier **Publishing Settings** > bouton **Keystore Manager**. Pas d'onglet Android : ajouter le module « Android Build Support » dans Unity Hub (Installs > roue dentée de la version du projet > **Add modules** > cocher **Android Build Support**, avec OpenJDK et Android SDK & NDK Tools), puis rouvrir le projet. L'onglet n'apparaît pas tant que le module manque : Player n'affiche alors que PC et Web.
 2. En haut de la fenêtre, menu **Keystore…** > **Create New** > **Anywhere…** : enregistrer `puffybird-upload.keystore` **hors du dossier du projet** (par exemple `C:\Cles\`).
 3. Choisir un **mot de passe du keystore** et le confirmer.
 4. Partie « New Key Values » :
@@ -24,6 +24,14 @@ Google signe l'app finale lui-même (« signature d'application par Play ») ; o
    - **First and Last Name** : son nom ; les autres champs sont facultatifs.
 5. Cliquer sur **Add Key**. Si Unity propose d'utiliser ce keystore pour le projet, répondre **Non** : c'est GitHub qui signe.
 6. **Sauvegarder** le fichier `.keystore` et les deux mots de passe (gestionnaire de mots de passe, copie sur une clé USB ou un cloud personnel). Sans eux, plus de mise à jour possible sans passer par le support Google. Ne jamais mettre le fichier dans le dépôt (`*.keystore` est dans `.gitignore`).
+
+Variante sans module Android (téléchargement de plusieurs Go évité) : installer un JDK (par exemple Eclipse Temurin 17), puis dans PowerShell :
+
+```powershell
+keytool -genkeypair -v -keystore C:\Cles\puffybird-upload.keystore -alias puffybird -keyalg RSA -keysize 2048 -validity 18250
+```
+
+`keytool` demande le mot de passe du keystore, puis le nom et l'organisation (seul le nom compte), puis confirme. Le mot de passe de la clé est alors le même que celui du keystore. On reprend ensuite à l'étape 6.
 
 ### B. Convertir la clé en texte
 
