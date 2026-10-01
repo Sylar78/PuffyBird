@@ -110,12 +110,14 @@ namespace PuffyBird
             _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
             _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
+            _menu.AddSettingsRow(UiAction.CycleQuality, () => (int)CurrentQuality, null, "QUALITY: LOW", "QUALITY: MEDIUM", "QUALITY: HIGH");
             _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => AdServices.AdsEnabled, "PRIVACY");
             _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), "REMOVE ADS");
             _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), "RESTORE PURCHASES");
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
             _music = MusicPlayer.Create(world);
+            GraphicsQuality.Apply(CurrentQuality, _lighting, _postFx);
 
             ApplyRun();
 
@@ -204,6 +206,10 @@ namespace PuffyBird
                 case UiAction.CloseMenu:
                     _menu.Close();
                     break;
+                case UiAction.CycleQuality:
+                    _prefs.Quality = ((int)CurrentQuality + 1) % GraphicsQuality.Count;
+                    GraphicsQuality.Apply(CurrentQuality, _lighting, _postFx);
+                    break;
                 case UiAction.RemoveAds:
                     _store.Buy(Products.NoAds);
                     break;
@@ -262,6 +268,11 @@ namespace PuffyBird
                     break;
             }
         }
+
+        /// <summary>Qualité choisie dans les réglages, sinon déduite de l'appareil.</summary>
+        GraphicsLevel CurrentQuality => _prefs.Quality >= 0 && _prefs.Quality < GraphicsQuality.Count
+            ? (GraphicsLevel)_prefs.Quality
+            : GraphicsQuality.Auto();
 
         /// <summary>Oiseau choisi par le joueur (préférence), même s'il n'est pas encore disponible.</summary>
         int SelectedSkin => Skins.IndexOf(_prefs.Skin);

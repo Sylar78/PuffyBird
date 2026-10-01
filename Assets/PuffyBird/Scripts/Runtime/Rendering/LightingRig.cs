@@ -108,6 +108,12 @@ namespace PuffyBird.Rendering
         }
 
         /// <summary>Éclair : la lumière principale devient un instant blanc bleuté et intense.</summary>
+        /// <summary>Ombres du soleil ou de la lune : aucune, nettes ou douces.</summary>
+        public void SetQuality(GraphicsLevel level)
+        {
+            _sun.shadows = level == GraphicsLevel.Low ? LightShadows.None : (level == GraphicsLevel.Medium ? LightShadows.Hard : LightShadows.Soft);
+        }
+
         public void SetFlash(float amount)
         {
             if (amount <= 0f && _flash <= 0f) return;

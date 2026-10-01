@@ -67,6 +67,14 @@ namespace PuffyBird.Rendering
             _baseExposure = colors.Exposure;
         }
 
+        /// <summary>Effets coûteux coupés selon la qualité ; l'exposition (flash, fondu) reste active.</summary>
+        public void SetQuality(GraphicsLevel level)
+        {
+            _bloom.active = level != GraphicsLevel.Low;
+            _vignette.active = level != GraphicsLevel.Low;
+            _dof.active = level == GraphicsLevel.High;
+        }
+
         /// <param name="flash">0..1, flash blanc d'impact.</param>
         /// <param name="fade">0..1, fondu au noir.</param>
         /// <param name="lightning">0..1, lueur d'un éclair (décor d'orage).</param>
