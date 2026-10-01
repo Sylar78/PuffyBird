@@ -197,7 +197,8 @@ namespace PuffyBird.UI
         // ───────── mise à jour ─────────
 
         /// <param name="safeTopPx">Haut de la zone sûre de l'écran, en y logique (voir <c>CameraRig.SafeTopPx</c>).</param>
-        public void Update(GameSimulation sim, float realTime, float deltaTime, float safeTopPx)
+        /// <param name="menuOpen">Un menu couvre l'écran titre : seul le titre reste affiché.</param>
+        public void Update(GameSimulation sim, float realTime, float deltaTime, float safeTopPx, bool menuOpen)
         {
             var state = sim.State;
             float t = sim.StateTime;
@@ -207,8 +208,8 @@ namespace PuffyBird.UI
             if (state == GameState.Title)
             {
                 Place(_title, 144f, 96f + bob, 4f);
-                if (Blink(realTime)) Place(_tapToPlay, 144f, 330f, 2.4f); else Hide(_tapToPlay);
-                if (sim.Best > 0)
+                if (!menuOpen && Blink(realTime)) Place(_tapToPlay, 144f, 330f, 2.4f); else Hide(_tapToPlay);
+                if (!menuOpen && sim.Best > 0)
                 {
                     Place(_titleBestLabel, 140f, 360f, 1.8f);
                     PlaceNumber(_titleBest, sim.Best, 150f, 358f, 2.2f);

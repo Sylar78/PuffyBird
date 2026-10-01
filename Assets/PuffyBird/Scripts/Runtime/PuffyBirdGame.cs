@@ -1,6 +1,7 @@
 using PuffyBird.Ads;
 using PuffyBird.Audio;
 using PuffyBird.Core;
+using PuffyBird.Feedback;
 using PuffyBird.Rendering;
 using PuffyBird.UI;
 using UnityEngine;
@@ -41,7 +42,10 @@ namespace PuffyBird
         BoostTrailView _trail;
         UiLayer _ui;
         HudView _hud;
+        MenuView _menu;
         SfxPlayer _sfx;
+        GamePrefs _prefs;
+        Haptics _haptics;
         IBannerAds _banner;
         bool _bannerShown;
         int _shownRun = -1;
@@ -55,6 +59,8 @@ namespace PuffyBird
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
             _cfg = GameConfig.CreateDefault();
+            _prefs = new GamePrefs();
+            _haptics = new Haptics { Enabled = _prefs.Haptics };
             _sim = new GameSimulation(_cfg, new PlayerPrefsScoreStorage(), (uint)System.Environment.TickCount);
             _clock = new FixedStepClock(_cfg.Step, _cfg.MaxFrameDelta);
             _input = new InputReader();
@@ -82,6 +88,9 @@ namespace PuffyBird
             _trail = new BoostTrailView(world, materials, _space);
             _ui = new UiLayer(world, materials, _space);
             _hud = new HudView(_ui, materials);
+            _menu = new MenuView(_ui);
+            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
+            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
 
@@ -94,11 +103,7 @@ namespace PuffyBird
             _realTime += dt;
 
             var input = _input.Read();
-            if (input.Mute)
-            {
-                _sim.Muted = !_sim.Muted;
-                _sfx.Muted = _sim.Muted;
-            }
+            if (input.Mute) ToggleSound();
             if (input.ToggleAutoPilot) autoPilot = !autoPilot;
 #if UNITY_EDITOR
             // Captures pour les stores : à la résolution de la vue Game, dans <projet>/Captures.
@@ -112,15 +117,20 @@ namespace PuffyBird
 #endif
             if (input.Pause)
             {
-                if (_sim.State == GameState.Paused) _sim.Resume();
+                if (_menu.IsOpen) _menu.Close();
+                else if (_sim.State == GameState.Paused) _sim.Resume();
                 else _sim.Pause();
             }
-            for (int i = 0; i < input.Presses; i++) _sim.Press();
+            // Menu ouvert : seuls ses boutons réagissent, un tap ailleurs ne lance pas la partie.
+            if (!_menu.IsOpen)
+            {
+                for (int i = 0; i < input.Presses; i++) _sim.Press();
+            }
             for (int i = 0; i < input.Taps; i++)
             {
                 var action = _ui.HitTest(_cameraRig.ScreenToLogical(_input.TapPosition(i)));
                 if (action != UiAction.None) OnUiAction(action);
-                else _sim.Press();
+                else if (!_menu.IsOpen) _sim.Press();
             }
 
             _cameraRig.UpdateViewport();
@@ -147,16 +157,45 @@ namespace PuffyBird
                 case UiAction.Pause:
                     _sim.Pause();
                     break;
+                case UiAction.OpenSettings:
+                    _menu.Open(MenuScreen.Settings);
+                    break;
+                case UiAction.CloseMenu:
+                    _menu.Close();
+                    break;
+                case UiAction.ToggleSound:
+                    ToggleSound();
+                    break;
+                case UiAction.ToggleHaptics:
+                    _prefs.Haptics = !_prefs.Haptics;
+                    _haptics.Enabled = _prefs.Haptics;
+                    _haptics.Play(HapticKind.Medium);
+                    break;
             }
+        }
+
+        void ToggleSound()
+        {
+            _sim.Muted = !_sim.Muted;
+            _sfx.Muted = _sim.Muted;
         }
 
         void React(GameEvents events)
         {
             _sfx.Play(events);
-            if ((events & GameEvents.Flap) != 0) _bird.OnFlap();
-            if ((events & GameEvents.Star) != 0) _trail.OnStar(_bird.Position);
+            if ((events & GameEvents.Flap) != 0)
+            {
+                _bird.OnFlap();
+                _haptics.Play(HapticKind.Light);
+            }
+            if ((events & GameEvents.Star) != 0)
+            {
+                _trail.OnStar(_bird.Position);
+                _haptics.Play(HapticKind.Medium);
+            }
             if ((events & GameEvents.Hit) != 0)
             {
+                _haptics.Play(HapticKind.Heavy);
                 _bird.OnHit();
                 _pipes.Hit(_sim.HitPipeId);
                 if (!reduceFlash) _cameraRig.Shake(0.05f, 0.25f);
@@ -203,7 +242,8 @@ namespace PuffyBird
             _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
             _ui.BeginFrame();
-            _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx);
+            _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx, _menu.IsOpen);
+            _menu.Update(_sim, _cameraRig.SafeTopPx);
             _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, reduceFlash);
         }
 
