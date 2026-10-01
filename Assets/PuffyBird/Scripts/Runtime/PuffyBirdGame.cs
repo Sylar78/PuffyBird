@@ -101,15 +101,25 @@ namespace PuffyBird
             _store = StoreServices.Create();
             _skins = new SkinsView(_ui, _store, !(_store is NoStore), IsSkinUnlocked, () => SelectedSkin);
             _menu.Skins = _skins;
+            if (AdServices.AdsEnabled)
+            {
+                _menu.Consent = new ConsentView(_ui);
+                _menu.ConsentChoice = () => AdServices.Consent;
+            }
             _menu.LeaderboardAvailable = _leaderboard.Available;
             _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
             _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
+            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => AdServices.AdsEnabled, "PRIVACY");
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
             _music = MusicPlayer.Create(world);
 
             ApplyRun();
+
+            // Consentement RGPD : demandé une fois avant toute pub ; la régie attend la réponse.
+            if (_prefs.Consent == GamePrefs.ConsentUnknown) _menu.Open(MenuScreen.Consent);
+            else AdServices.SetConsent(_prefs.Consent == GamePrefs.ConsentGranted);
         }
 
         void Update()
@@ -132,7 +142,15 @@ namespace PuffyBird
 #endif
             if (input.Pause)
             {
-                if (_menu.IsOpen) _menu.Close();
+                // L'écran de consentement du premier lancement attend une réponse.
+                if (_menu.Screen == MenuScreen.Consent)
+                {
+                    if (AdServices.Consent.HasValue) _menu.Back();
+                }
+                else if (_menu.IsOpen)
+                {
+                    _menu.Close();
+                }
                 else if (_sim.State == GameState.Paused) _sim.Resume();
                 else _sim.Pause();
             }
@@ -183,6 +201,19 @@ namespace PuffyBird
                     break;
                 case UiAction.CloseMenu:
                     _menu.Close();
+                    break;
+                case UiAction.OpenPrivacy:
+                    _menu.Open(MenuScreen.Consent);
+                    break;
+                case UiAction.ConsentAccept:
+                case UiAction.ConsentRefuse:
+                    bool granted = action == UiAction.ConsentAccept;
+                    _prefs.Consent = granted ? GamePrefs.ConsentGranted : GamePrefs.ConsentRefused;
+                    AdServices.SetConsent(granted);
+                    _menu.Back();
+                    break;
+                case UiAction.OpenPrivacyPolicy:
+                    Application.OpenURL(AdServices.PrivacyPolicyUrl);
                     break;
                 case UiAction.OpenSkins:
                     _menu.Open(MenuScreen.Skins);

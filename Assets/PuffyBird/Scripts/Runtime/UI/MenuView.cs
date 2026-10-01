@@ -14,6 +14,7 @@ namespace PuffyBird.UI
         None,
         Settings,
         Skins,
+        Consent,
     }
 
     /// <summary>
@@ -58,6 +59,7 @@ namespace PuffyBird.UI
         readonly UiLayer.Button _skinsButton;
         readonly Element _newSkin;
         SkinsView _skins;
+        MenuScreen _returnTo;
 
         public MenuView(UiLayer ui)
         {
@@ -83,6 +85,12 @@ namespace PuffyBird.UI
             set => _skins = value;
         }
 
+        /// <summary>Écran de consentement aux pubs personnalisées ; null = pas de pub, pas d'écran.</summary>
+        public ConsentView Consent { get; set; }
+
+        /// <summary>Choix de consentement à afficher (true, false ou null).</summary>
+        public Func<bool?> ConsentChoice { get; set; }
+
         /// <summary>La partie qui vient de finir a débloqué un oiseau : annonce sur l'écran de fin.</summary>
         public bool NewSkinUnlocked { get; set; }
 
@@ -96,11 +104,16 @@ namespace PuffyBird.UI
         public void Open(MenuScreen screen)
         {
             if (screen == MenuScreen.Skins && _skins == null) return;
+            if (screen == MenuScreen.Consent && Consent == null) return;
+            _returnTo = screen == MenuScreen.Consent ? Screen : MenuScreen.None;
             Screen = screen;
             if (screen == MenuScreen.Skins) _skins.Reset();
         }
 
         public void Close() => Screen = MenuScreen.None;
+
+        /// <summary>Revient à l'écran d'où le consentement a été ouvert (réglages), ou ferme le menu.</summary>
+        public void Back() => Screen = _returnTo;
 
         /// <summary>
         /// Ajoute une ligne aux réglages : un bouton qui déclenche <paramref name="action"/> et
@@ -170,6 +183,8 @@ namespace PuffyBird.UI
             else HideSettings();
             if (Screen == MenuScreen.Skins) _skins.Draw();
             else _skins?.Hide();
+            if (Screen == MenuScreen.Consent) Consent.Draw(ConsentChoice?.Invoke());
+            else Consent?.Hide();
         }
 
         void DrawSettings()

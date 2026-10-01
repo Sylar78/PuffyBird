@@ -9,9 +9,10 @@ using System.Runtime.InteropServices;
 namespace PuffyBird.Monetization
 {
     /// <summary>
-    /// Intégration LevelPlay (package « Ads Mediation »). Ordre imposé : demande de suivi iOS (ATT),
-    /// réglages de confidentialité, puis <c>LevelPlay.Init</c> ; la bannière n'est créée qu'après
-    /// une initialisation réussie. Ce fichier vit hors des assemblies du jeu (Assembly-CSharp),
+    /// Intégration LevelPlay (package « Ads Mediation »). Ordre imposé : réponse du joueur à l'écran
+    /// de consentement du jeu (<see cref="AdServices.Consent"/>), demande de suivi iOS (ATT) s'il a
+    /// accepté, réglages de confidentialité, puis <c>LevelPlay.Init</c> ; la bannière n'est créée
+    /// qu'après une initialisation réussie. Ce fichier vit hors des assemblies du jeu (Assembly-CSharp),
     /// qui référence automatiquement le package ; il s'inscrit dans <see cref="AdServices"/>.
     /// </summary>
     sealed class LevelPlayAds : MonoBehaviour
@@ -34,22 +35,39 @@ namespace PuffyBird.Monetization
 
         IEnumerator Start()
         {
+            yield return new WaitUntil(() => AdServices.Consent.HasValue);
+            bool granted = AdServices.Consent.Value;
 #if UNITY_IOS && !UNITY_EDITOR
-            yield return TrackingAuthorization.Request();
-#else
-            yield return null;
+            // Refus : pas de demande de suivi, l'identifiant publicitaire reste inaccessible.
+            if (granted) yield return TrackingAuthorization.Request();
 #endif
-            // Pas encore d'écran de consentement : sans accord explicite, pubs non personnalisées
-            // pour les joueurs soumis au RGPD. Public visé : 13 ans et plus (COPPA « Not directed »).
-            LevelPlayPrivacySettings.SetGDPRConsent(false);
+            // Public visé : 13 ans et plus (COPPA « Not directed »).
+            ApplyConsent(granted);
+            AdServices.ConsentChanged += OnConsentChanged;
 
             LevelPlay.OnInitSuccess += OnInitSuccess;
             LevelPlay.OnInitFailed += OnInitFailed;
             LevelPlay.Init(AdIds.AppKey);
         }
 
+        /// <summary>Accord : pubs personnalisées. Refus : pubs non personnalisées, pas de vente des données (CCPA).</summary>
+        static void ApplyConsent(bool granted)
+        {
+            LevelPlayPrivacySettings.SetGDPRConsent(granted);
+            LevelPlayPrivacySettings.SetCCPA(!granted);
+        }
+
+        void OnConsentChanged(bool granted)
+        {
+            ApplyConsent(granted);
+#if UNITY_IOS && !UNITY_EDITOR
+            if (granted) StartCoroutine(TrackingAuthorization.Request());
+#endif
+        }
+
         void OnDestroy()
         {
+            AdServices.ConsentChanged -= OnConsentChanged;
             LevelPlay.OnInitSuccess -= OnInitSuccess;
             LevelPlay.OnInitFailed -= OnInitFailed;
             _banner.Destroy();
