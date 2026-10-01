@@ -13,7 +13,7 @@ namespace PuffyBird.Monetization
         public const string BannerAdUnitId = "mcpqptymic0vwr00";
 #elif UNITY_ANDROID
         public const string AppKey = "";
-        public const string BannerAdUnitId = "";
+        public const string BannerAdUnitId = "35omvjrd6xncoif3"; // « Puffy Banner 1 »
 #else
         public const string AppKey = "";
         public const string BannerAdUnitId = "";
