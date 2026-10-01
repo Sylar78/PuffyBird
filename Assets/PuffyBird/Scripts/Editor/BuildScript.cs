@@ -75,15 +75,19 @@ namespace PuffyBird.Editor
                 PlayerSettings.iOS.appleEnableAutomaticSigning = true;
             }
 
-            // Clé d'envoi Google Play. Sans elle, l'APK reste signé avec la clé de débogage.
+            // Clé d'envoi Google Play. Sans elle, l'APK reste signé avec la clé de débogage,
+            // que Google Play refuse : une clé demandée mais introuvable fait échouer le build.
             string keystore = Arg("-androidKeystoreName");
-            if (!string.IsNullOrEmpty(keystore) && File.Exists(keystore))
+            if (!string.IsNullOrEmpty(keystore))
             {
+                if (!File.Exists(keystore))
+                    throw new Exception($"PuffyBird : clé d'envoi introuvable ({Path.GetFullPath(keystore)}).");
                 PlayerSettings.Android.useCustomKeystore = true;
                 PlayerSettings.Android.keystoreName = Path.GetFullPath(keystore);
-                PlayerSettings.Android.keystorePass = Arg("-androidKeystorePass");
+                PlayerSettings.Android.keystorePass = RawArg("-androidKeystorePass");
                 PlayerSettings.Android.keyaliasName = Arg("-androidKeyaliasName");
-                PlayerSettings.Android.keyaliasPass = Arg("-androidKeyaliasPass");
+                PlayerSettings.Android.keyaliasPass = RawArg("-androidKeyaliasPass");
+                Debug.Log($"PuffyBird : signature avec la clé d'envoi {keystore} (alias {PlayerSettings.Android.keyaliasName}).");
             }
         }
 
@@ -94,6 +98,14 @@ namespace PuffyBird.Editor
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, name);
             return i >= 0 && i + 1 < args.Length && !args[i + 1].StartsWith("-") ? args[i + 1] : null;
+        }
+
+        // Valeur brute, même si elle commence par « - » (mot de passe).
+        static string RawArg(string name)
+        {
+            var args = Environment.GetCommandLineArgs();
+            int i = Array.IndexOf(args, name);
+            return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
         }
     }
 }
