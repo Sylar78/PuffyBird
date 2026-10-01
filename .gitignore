@@ -43,3 +43,6 @@ Thumbs.db
 !/tools/**/*.csproj
 /tools/**/bin/
 /tools/**/obj/
+
+# Captures d'écran faites dans l'éditeur (touche C)
+/[Cc]aptures/

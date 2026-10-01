@@ -98,6 +98,16 @@ namespace PuffyBird
                 _sfx.Muted = _sim.Muted;
             }
             if (input.ToggleAutoPilot) autoPilot = !autoPilot;
+#if UNITY_EDITOR
+            // Captures pour les stores : à la résolution de la vue Game, dans <projet>/Captures.
+            if (input.Screenshot)
+            {
+                System.IO.Directory.CreateDirectory("Captures");
+                string file = $"Captures/PuffyBird-{_sim.Theme}-{System.DateTime.Now:yyyyMMdd-HHmmss}.png";
+                ScreenCapture.CaptureScreenshot(file);
+                Debug.Log($"Capture enregistrée : {file} ({Screen.width} × {Screen.height})");
+            }
+#endif
             if (input.Pause)
             {
                 if (_sim.State == GameState.Paused) _sim.Resume();

@@ -8,7 +8,7 @@ namespace PuffyBird
     /// <summary>
     /// Entrées de la spec (§15) : chaque nouveau doigt, clic gauche, Espace, Flèche haut, Entrée
     /// ou bouton A = un tap, à l'appui et sans répétition automatique. Échap / P / Start = pause,
-    /// M = muet, B = pilote automatique (démo). Fonctionne avec le nouvel Input System ou
+    /// M = muet, B = pilote automatique (démo), C = capture d'écran (éditeur). Fonctionne avec le nouvel Input System ou
     /// l'ancien gestionnaire d'entrées.
     /// </summary>
     public sealed class InputReader
@@ -19,6 +19,7 @@ namespace PuffyBird
             public bool Pause;
             public bool Mute;
             public bool ToggleAutoPilot;
+            public bool Screenshot;
         }
 
         public InputReader()
@@ -52,6 +53,7 @@ namespace PuffyBird
                 f.Pause |= keyboard.escapeKey.wasPressedThisFrame || keyboard.pKey.wasPressedThisFrame;
                 f.Mute |= keyboard.mKey.wasPressedThisFrame;
                 f.ToggleAutoPilot |= keyboard.bKey.wasPressedThisFrame;
+                f.Screenshot |= keyboard.cKey.wasPressedThisFrame;
             }
             var gamepad = Gamepad.current;
             if (gamepad != null)
@@ -72,6 +74,7 @@ namespace PuffyBird
             f.Pause = Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.JoystickButton7);
             f.Mute = Input.GetKeyDown(KeyCode.M);
             f.ToggleAutoPilot = Input.GetKeyDown(KeyCode.B);
+            f.Screenshot = Input.GetKeyDown(KeyCode.C);
 #endif
             return f;
         }

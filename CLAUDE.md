@@ -176,7 +176,7 @@ Skills de projet à créer plus tard dans `.claude/skills/` : un contrôle de co
 
 - **Tests de la simulation sans Unity** (possible dans une session cloud) : `dotnet test tools/CoreTests` (.NET 8).
 - **Ouvrir le projet** : Unity Hub > Add > Add project from disk, avec Unity 6 LTS (6000.0 ou plus récent) et les modules iOS / Android. À la première ouverture, `ProjectSetup` configure URP et crée `Assets/PuffyBird/Scenes/Main.unity` ; relançable via le menu **PuffyBird > Configurer le projet**. Si Unity propose d'activer le nouvel Input System, accepter.
-- **Jouer** : ouvrir la scène `Main`, Play. Touches : Espace / clic = tap, Échap ou P = pause, M = muet, B = pilote automatique.
+- **Jouer** : ouvrir la scène `Main`, Play. Touches : Espace / clic = tap, Échap ou P = pause, M = muet, B = pilote automatique, C = capture d'écran dans `Captures/` (éditeur seulement, à la résolution de la vue Game : régler celle-ci sur la taille demandée par l'App Store).
 - **Tests EditMode dans Unity** : Window > General > Test Runner, ou `Unity -batchmode -projectPath . -runTests -testPlatform EditMode -testResults results.xml`.
 - **Builds** : menu **PuffyBird > Build Android (APK)** / **Build iOS (projet Xcode)**, ou `Unity -batchmode -quit -projectPath . -executeMethod PuffyBird.Editor.BuildScript.BuildAndroid` (ajouter `-release` pour un `.aab`) et `...BuildScript.BuildIOS`.
 - **TestFlight** : GitHub, onglet Actions > **iOS TestFlight** > Run workflow. Prérequis (compte Apple, clé API, licence Unity, secrets) : `docs/publication-ios-testflight.md`. La version Unity de la CI est fixée dans le workflow (`UNITY_VERSION`) : la garder alignée sur `ProjectSettings/ProjectVersion.txt`.
