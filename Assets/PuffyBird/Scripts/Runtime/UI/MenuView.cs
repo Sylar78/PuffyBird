@@ -16,7 +16,8 @@ namespace PuffyBird.UI
     }
 
     /// <summary>
-    /// Boutons de l'écran titre (réglages) et panneau des réglages. Chaque ligne du panneau est un
+    /// Boutons de l'écran titre (réglages, classement), de l'écran de fin (partage, classement)
+    /// et panneau des réglages. Chaque ligne du panneau est un
     /// bouton dont le libellé change selon l'état (« SOUND ON » / « SOUND OFF »...) ; tous les
     /// libellés sont construits au chargement.
     /// </summary>
@@ -28,6 +29,9 @@ namespace PuffyBird.UI
         const float RowGap = 8f;
         const float PanelTop = 128f;
         const float PanelWidth = 240f;
+        const float OverButtonsY = 338f;
+        const float OverButtonWidth = 112f;
+        const float OverButtonHeight = 26f;
 
         sealed class Row
         {
@@ -47,6 +51,9 @@ namespace PuffyBird.UI
         readonly Element _settingsTitle;
         readonly UiLayer.Button _gearButton;
         readonly UiLayer.Button _backButton;
+        readonly UiLayer.Button _trophyButton;
+        readonly UiLayer.Button _overRankingButton;
+        readonly UiLayer.Button _overShareButton;
 
         public MenuView(UiLayer ui)
         {
@@ -58,7 +65,13 @@ namespace PuffyBird.UI
             _settingsTitle = ui.Text("SETTINGS", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
             _gearButton = ui.CreateButton(VoxelFont.SettingsIcon, Palette.GameOver, Color.white);
             _backButton = ui.CreateButton("BACK", Palette.GetReady, Color.white);
+            _trophyButton = ui.CreateButton(VoxelFont.TrophyIcon, Palette.GetReady, Color.white);
+            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + " RANKING", Palette.GetReady, Color.white);
+            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + " SHARE", Palette.Hex("#4EA6D8"), Color.white);
         }
+
+        /// <summary>Un classement en ligne existe sur cette plateforme : boutons trophée affichés.</summary>
+        public bool LeaderboardAvailable { get; set; }
 
         public MenuScreen Screen { get; private set; }
 
@@ -95,10 +108,36 @@ namespace PuffyBird.UI
             {
                 float y = safeTopPx + _cfg.ScoreTopMargin + IconButtonSize * 0.5f;
                 _ui.PlaceButton(_gearButton, UiAction.OpenSettings, _cfg.Width - 22f, y, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
+                if (LeaderboardAvailable) _ui.PlaceButton(_trophyButton, UiAction.OpenLeaderboard, 22f, y, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
+                else UiLayer.Hide(_trophyButton);
             }
             else
             {
                 UiLayer.Hide(_gearButton);
+                UiLayer.Hide(_trophyButton);
+            }
+
+            // Fin de partie : partage et classement entre le panneau et « TAP TO RETRY ».
+            bool overButtons = sim.State == GameState.Over && !sim.IsFadingOut && OverScreenTimeline.ButtonsVisible(sim.StateTime, _cfg);
+            if (overButtons)
+            {
+                float cx = _cfg.Width * 0.5f;
+                if (LeaderboardAvailable)
+                {
+                    float offset = OverButtonWidth * 0.5f + 6f;
+                    _ui.PlaceButton(_overShareButton, UiAction.Share, cx - offset, OverButtonsY, OverButtonWidth, OverButtonHeight, 1.6f);
+                    _ui.PlaceButton(_overRankingButton, UiAction.OpenLeaderboard, cx + offset, OverButtonsY, OverButtonWidth, OverButtonHeight, 1.6f);
+                }
+                else
+                {
+                    _ui.PlaceButton(_overShareButton, UiAction.Share, cx, OverButtonsY, OverButtonWidth, OverButtonHeight, 1.6f);
+                    UiLayer.Hide(_overRankingButton);
+                }
+            }
+            else
+            {
+                UiLayer.Hide(_overShareButton);
+                UiLayer.Hide(_overRankingButton);
             }
 
             if (Screen == MenuScreen.Settings) DrawSettings();

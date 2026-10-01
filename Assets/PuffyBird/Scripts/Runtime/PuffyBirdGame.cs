@@ -3,6 +3,7 @@ using PuffyBird.Audio;
 using PuffyBird.Core;
 using PuffyBird.Feedback;
 using PuffyBird.Rendering;
+using PuffyBird.Social;
 using PuffyBird.UI;
 using UnityEngine;
 
@@ -47,6 +48,7 @@ namespace PuffyBird
         MusicPlayer _music;
         GamePrefs _prefs;
         Haptics _haptics;
+        Leaderboard _leaderboard;
         IBannerAds _banner;
         bool _bannerShown;
         int _shownRun = -1;
@@ -90,6 +92,8 @@ namespace PuffyBird
             _ui = new UiLayer(world, materials, _space);
             _hud = new HudView(_ui, materials);
             _menu = new MenuView(_ui);
+            _leaderboard = new Leaderboard();
+            _menu.LeaderboardAvailable = _leaderboard.Available;
             _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
             _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
@@ -150,6 +154,9 @@ namespace PuffyBird
             if (_sim.RunId != _shownRun) ApplyRun();
             React(events);
             UpdateBanner();
+            // Meilleur score envoyé au classement dès qu'il monte (à la mort) et que le joueur est connecté.
+            _leaderboard.SubmitBest(_sim.Best);
+            _leaderboard.Update();
             // Musique baissée pendant la pause.
             _music.SetVolume(!_prefs.Music ? 0f : (_sim.State == GameState.Paused ? 0.4f : 1f));
             Render(dt);
@@ -167,6 +174,12 @@ namespace PuffyBird
                     break;
                 case UiAction.CloseMenu:
                     _menu.Close();
+                    break;
+                case UiAction.OpenLeaderboard:
+                    _leaderboard.Show();
+                    break;
+                case UiAction.Share:
+                    ShareService.ShareScore(_sim.Score);
                     break;
                 case UiAction.ToggleMusic:
                     _prefs.Music = !_prefs.Music;
