@@ -8,7 +8,7 @@ namespace PuffyBird.UI
 {
     using Element = UiLayer.Element;
 
-    /// <summary>Menu ouvert par-dessus l'écran titre.</summary>
+    /// <summary>Menu ouvert par-dessus l'écran titre, ou par-dessus la partie (paramètres).</summary>
     public enum MenuScreen
     {
         None,
@@ -18,10 +18,11 @@ namespace PuffyBird.UI
     }
 
     /// <summary>
-    /// Boutons de l'écran titre (réglages, oiseaux, classement), de l'écran de fin (partage, classement)
-    /// et panneau des réglages. Chaque ligne du panneau est un
-    /// bouton dont le libellé change selon l'état (« SOUND ON » / « SOUND OFF »...) ; tous les
-    /// libellés sont construits au chargement.
+    /// Boutons de l'écran titre (paramètres, oiseaux, classement), bouton des paramètres pendant
+    /// la partie, boutons de l'écran de fin (partage, classement) et panneau des paramètres.
+    /// Chaque ligne du panneau est un bouton dont le libellé change selon l'état
+    /// (« SONS : OUI » / « SONS : NON »...) ; tous les libellés sont construits au chargement.
+    /// Ouvert pendant la partie, le panneau propose aussi ACCUEIL (abandon de la partie).
     /// </summary>
     public sealed class MenuView
     {
@@ -32,7 +33,8 @@ namespace PuffyBird.UI
         const float PanelTop = 112f;
         const float PanelWidth = 240f;
         const float OverButtonsY = 338f;
-        const float OverButtonWidth = 112f;
+        const float OverButtonWidth = 124f;
+        const float SkinsButtonWidth = 100f;
         const float OverButtonHeight = 26f;
 
         sealed class Row
@@ -53,6 +55,7 @@ namespace PuffyBird.UI
         readonly Element _settingsTitle;
         readonly UiLayer.Button _gearButton;
         readonly UiLayer.Button _backButton;
+        readonly UiLayer.Button _homeButton;
         readonly UiLayer.Button _trophyButton;
         readonly UiLayer.Button _overRankingButton;
         readonly UiLayer.Button _overShareButton;
@@ -60,6 +63,7 @@ namespace PuffyBird.UI
         readonly Element _newSkin;
         SkinsView _skins;
         MenuScreen _returnTo;
+        bool _inGame;
 
         public MenuView(UiLayer ui)
         {
@@ -68,17 +72,18 @@ namespace PuffyBird.UI
             _panelBorder = ui.Solid(Palette.Outline);
             _panel = ui.Solid(Palette.PanelEdge);
             _panelInner = ui.Solid(Palette.Panel);
-            _settingsTitle = ui.Text("SETTINGS", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _settingsTitle = ui.Text("PARAMÈTRES", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
             _gearButton = ui.CreateButton(VoxelFont.SettingsIcon, Palette.GameOver, Color.white);
-            _backButton = ui.CreateButton("BACK", Palette.GetReady, Color.white);
+            _backButton = ui.CreateButton("RETOUR", Palette.GetReady, Color.white);
+            _homeButton = ui.CreateButton("ACCUEIL", Palette.GameOver, Color.white);
             _trophyButton = ui.CreateButton(VoxelFont.TrophyIcon, Palette.GetReady, Color.white);
-            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + " RANKING", Palette.GetReady, Color.white);
-            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + " SHARE", Palette.Hex("#4EA6D8"), Color.white);
-            _skinsButton = ui.CreateButton("BIRDS", Palette.GameOver, Color.white);
-            _newSkin = ui.Text("NEW BIRD UNLOCKED!", TextAlign.Center, Palette.GetReady, Palette.Outline);
+            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + " CLASSEMENT", Palette.GetReady, Color.white);
+            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + " PARTAGER", Palette.Hex("#4EA6D8"), Color.white);
+            _skinsButton = ui.CreateButton("OISEAUX", Palette.GameOver, Color.white);
+            _newSkin = ui.Text("NOUVEL OISEAU DÉBLOQUÉ !", TextAlign.Center, Palette.GetReady, Palette.Outline);
         }
 
-        /// <summary>Menu des oiseaux (bouton BIRDS de l'écran titre) ; null = pas de bouton.</summary>
+        /// <summary>Menu des oiseaux (bouton OISEAUX de l'écran titre) ; null = pas de bouton.</summary>
         public SkinsView Skins
         {
             get => _skins;
@@ -112,11 +117,11 @@ namespace PuffyBird.UI
 
         public void Close() => Screen = MenuScreen.None;
 
-        /// <summary>Revient à l'écran d'où le consentement a été ouvert (réglages), ou ferme le menu.</summary>
+        /// <summary>Revient à l'écran d'où le consentement a été ouvert (paramètres), ou ferme le menu.</summary>
         public void Back() => Screen = _returnTo;
 
         /// <summary>
-        /// Ajoute une ligne aux réglages : un bouton qui déclenche <paramref name="action"/> et
+        /// Ajoute une ligne aux paramètres : un bouton qui déclenche <paramref name="action"/> et
         /// affiche <c>labels[variant()]</c>. À appeler au chargement.
         /// </summary>
         public void AddSettingsRow(UiAction action, Func<int> variant, Func<bool> visible, params string[] labels)
@@ -135,21 +140,28 @@ namespace PuffyBird.UI
 
         public void Update(GameSimulation sim, float safeTopPx)
         {
-            bool title = sim.State == GameState.Title && !sim.IsFadingOut;
-            if (!title) Close();
+            var state = sim.State;
+            bool fading = sim.IsFadingOut;
+            bool title = state == GameState.Title && !fading;
+            // Pendant la partie, les paramètres restent accessibles (la partie est mise en pause).
+            bool inGame = !fading && (state == GameState.Ready || state == GameState.Playing || state == GameState.Paused);
+            _inGame = inGame;
+            if (!title && !inGame) Close();
+            // Le menu des oiseaux ne s'ouvre que depuis l'écran titre.
+            if (!title && Screen == MenuScreen.Skins) Close();
 
+            float iconY = safeTopPx + _cfg.ScoreTopMargin + IconButtonSize * 0.5f;
+            if ((title || inGame) && !IsOpen) _ui.PlaceButton(_gearButton, UiAction.OpenSettings, _cfg.Width - 22f, iconY, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
+            else UiLayer.Hide(_gearButton);
             if (title && !IsOpen)
             {
-                float y = safeTopPx + _cfg.ScoreTopMargin + IconButtonSize * 0.5f;
-                _ui.PlaceButton(_gearButton, UiAction.OpenSettings, _cfg.Width - 22f, y, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
-                if (LeaderboardAvailable) _ui.PlaceButton(_trophyButton, UiAction.OpenLeaderboard, 22f, y, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
+                if (LeaderboardAvailable) _ui.PlaceButton(_trophyButton, UiAction.OpenLeaderboard, 22f, iconY, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
                 else UiLayer.Hide(_trophyButton);
-                if (_skins != null) _ui.PlaceButton(_skinsButton, UiAction.OpenSkins, _cfg.Width * 0.5f, y, 84f, IconButtonSize, 2f, hitMargin: 6f);
+                if (_skins != null) _ui.PlaceButton(_skinsButton, UiAction.OpenSkins, _cfg.Width * 0.5f, iconY, SkinsButtonWidth, IconButtonSize, 2f, hitMargin: 6f);
                 else UiLayer.Hide(_skinsButton);
             }
             else
             {
-                UiLayer.Hide(_gearButton);
                 UiLayer.Hide(_trophyButton);
                 UiLayer.Hide(_skinsButton);
             }
@@ -194,7 +206,8 @@ namespace PuffyBird.UI
             {
                 if (row.Visible == null || row.Visible()) visible++;
             }
-            float contentHeight = 34f + (visible + 1) * (RowHeight + RowGap) + 6f;
+            int buttons = visible + (_inGame ? 2 : 1);
+            float contentHeight = 34f + buttons * (RowHeight + RowGap) + 6f;
             float left = (_cfg.Width - PanelWidth) * 0.5f;
             _ui.PlaceBox(_panelBorder, left - 2f, PanelTop - 2f, PanelWidth + 4f, contentHeight + 4f, UiLayer.PanelZ + 0.03f);
             _ui.PlaceBox(_panel, left, PanelTop, PanelWidth, contentHeight, UiLayer.PanelZ + 0.02f);
@@ -218,6 +231,15 @@ namespace PuffyBird.UI
                 _ui.PlaceButton(row.Button, row.Action, cx, y, RowWidth, RowHeight, 1.6f, row.Labels[variant], hitMargin: RowGap * 0.5f);
                 y += RowHeight + RowGap;
             }
+            if (_inGame)
+            {
+                _ui.PlaceButton(_homeButton, UiAction.GoHome, cx, y, RowWidth * 0.6f, RowHeight, 1.6f, hitMargin: RowGap * 0.5f);
+                y += RowHeight + RowGap;
+            }
+            else
+            {
+                UiLayer.Hide(_homeButton);
+            }
             _ui.PlaceButton(_backButton, UiAction.CloseMenu, cx, y, RowWidth * 0.6f, RowHeight, 1.6f, hitMargin: RowGap * 0.5f);
         }
 
@@ -228,6 +250,7 @@ namespace PuffyBird.UI
             UiLayer.Hide(_panelInner);
             UiLayer.Hide(_settingsTitle);
             UiLayer.Hide(_backButton);
+            UiLayer.Hide(_homeButton);
             foreach (var row in _rows) HideRow(row);
         }
 

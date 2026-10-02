@@ -36,6 +36,58 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void QuitToTitleFromPauseFadesToTitleWithoutSavingScore()
+        {
+            var storage = new MemoryScoreStorage();
+            var sim = NewReadySim(storage);
+            sim.Press();
+            sim.Step();
+            Assert.AreEqual(GameState.Playing, sim.State);
+            sim.Pause();
+            int run = sim.RunId;
+            sim.QuitToTitle();
+            sim.Step();
+            Assert.IsTrue(sim.IsFadingOut);
+            Assert.AreEqual(GameState.Paused, sim.State);
+            // Les taps sont ignorés pendant le fondu.
+            sim.Press();
+            Run(sim, _cfg.FadeTime + 0.05f);
+            Assert.AreEqual(GameState.Title, sim.State);
+            Assert.AreEqual(run + 1, sim.RunId);
+            Assert.AreEqual(0, sim.Score);
+            Assert.AreEqual(0, storage.Writes);
+            // L'écran titre relance ensuite normalement une partie.
+            sim.Press();
+            Run(sim, _cfg.FadeTime + 0.05f);
+            Assert.AreEqual(GameState.Ready, sim.State);
+        }
+
+        [Test]
+        public void QuitToTitleWhilePlayingFreezesTheBird()
+        {
+            var sim = NewReadySim();
+            sim.Press();
+            sim.Step();
+            sim.QuitToTitle();
+            sim.Step();
+            float y = sim.Bird.Y;
+            Run(sim, _cfg.FadeTime * 0.5f);
+            Assert.AreEqual(y, sim.Bird.Y);
+            Run(sim, _cfg.FadeTime);
+            Assert.AreEqual(GameState.Title, sim.State);
+        }
+
+        [Test]
+        public void QuitToTitleOnTitleDoesNothing()
+        {
+            var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), 1);
+            sim.QuitToTitle();
+            sim.Step();
+            Assert.IsFalse(sim.IsFadingOut);
+            Assert.AreEqual(GameState.Title, sim.State);
+        }
+
+        [Test]
         public void ReadyBirdFloatsWithoutFalling()
         {
             var sim = NewReadySim();

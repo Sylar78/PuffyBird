@@ -52,15 +52,15 @@ namespace PuffyBird.Core
 
         static readonly SkinInfo[] All =
         {
-            new SkinInfo(DefaultId, "PHOENIX", SkinUnlock.Free),
-            new SkinInfo("blue", "BLUE", SkinUnlock.Free),
-            new SkinInfo("cherry", "CHERRY", SkinUnlock.Medal, Medal.Bronze),
-            new SkinInfo("mint", "MINT", SkinUnlock.Medal, Medal.Silver),
+            new SkinInfo(DefaultId, "PHÉNIX", SkinUnlock.Free),
+            new SkinInfo("blue", "BLEU", SkinUnlock.Free),
+            new SkinInfo("cherry", "CERISE", SkinUnlock.Medal, Medal.Bronze),
+            new SkinInfo("mint", "MENTHE", SkinUnlock.Medal, Medal.Silver),
             new SkinInfo("cool", "COOL", SkinUnlock.Medal, Medal.Gold),
-            new SkinInfo("pearl", "PEARL", SkinUnlock.Medal, Medal.Platinum),
+            new SkinInfo("pearl", "PERLE", SkinUnlock.Medal, Medal.Platinum),
             new SkinInfo("ninja", "NINJA", SkinUnlock.Purchase),
             new SkinInfo("robot", "ROBOT", SkinUnlock.Purchase),
-            new SkinInfo("galaxy", "GALAXY", SkinUnlock.Purchase),
+            new SkinInfo("galaxy", "GALAXIE", SkinUnlock.Purchase),
         };
 
         public static int Count => All.Length;

@@ -9,7 +9,7 @@ Tout est **non consommable** (acheté une fois, gardé pour toujours, restauré 
 | `fr.puffybird.app.skin.robot` | Oiseau ROBOT (métal, antenne) | 0,99 € |
 | `fr.puffybird.app.skin.galaxy` | Oiseau GALAXY (violet pailleté) | 0,99 € |
 
-Dans le jeu : bouton **BIRDS** de l'écran titre (oiseaux, avec leur prix et **BUY**), et dans **SETTINGS** les lignes **REMOVE ADS** et **RESTORE PURCHASES** (exigée par Apple). Les oiseaux payants et ces lignes n'apparaissent que si la boutique est disponible.
+Dans le jeu : bouton **OISEAUX** de l'écran titre (oiseaux, avec leur prix et **ACHETER**), et dans **PARAMÈTRES** les lignes **SUPPRIMER LES PUBS** et **RESTAURER LES ACHATS** (exigée par Apple). Les oiseaux payants et ces lignes n'apparaissent que si la boutique est disponible.
 
 ## 1. Installer le package Unity IAP (une fois, sur le PC)
 
@@ -24,7 +24,7 @@ Dans le jeu : bouton **BIRDS** de l'écran titre (oiseaux, avec leur prix et **B
    - Nom de référence (ex. « Sans pub »), **ID du produit** exactement comme dans le tableau.
    - **Prix** : 1,99 € ou 0,99 €.
    - Localisation française (et anglaise) : nom affiché et description courte.
-   - **Informations pour la révision** : une capture de l'écran BIRDS ou SETTINGS (touche C dans Unity).
+   - **Informations pour la révision** : une capture de l'écran OISEAUX ou PARAMÈTRES (touche C dans Unity).
 3. À la prochaine soumission de version, ajouter les achats intégrés à la version (section « Achats intégrés et abonnements » de la page de version) : Apple les valide avec elle.
 4. Tester avec un compte **Sandbox** (Utilisateurs et accès > Sandbox) sur un build TestFlight : aucun débit réel.
 

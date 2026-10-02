@@ -26,6 +26,7 @@ namespace PuffyBird.Core
         float _dieSoundTimer;
         float _fadeOut;
         float _fadeIn;
+        bool _fadeToTitle;
         int _pairsSpawned;
         float _boostTime;
         float _speedFactor = 1f;
@@ -125,6 +126,19 @@ namespace PuffyBird.Core
             if (State == GameState.Paused) SetState(GameState.Playing);
         }
 
+        /// <summary>
+        /// Abandon de la partie (bouton ACCUEIL des paramètres) : fondu au noir puis écran titre,
+        /// avec un nouveau décor. Le score de la partie abandonnée n'est pas enregistré.
+        /// </summary>
+        public void QuitToTitle()
+        {
+            if (State == GameState.Title || IsFadingOut) return;
+            // Figée pendant le fondu : l'oiseau ne peut plus mourir ni marquer.
+            Pause();
+            BeginTransition();
+            _fadeToTitle = true;
+        }
+
         public GameEvents ConsumeEvents()
         {
             var e = _events;
@@ -142,7 +156,8 @@ namespace PuffyBird.Core
             _pipes.SavePrevious();
             _stars.SavePrevious();
 
-            if (State == GameState.Paused) return;
+            // En pause, tout est figé, sauf le fondu d'un retour à l'accueil.
+            if (State == GameState.Paused && !IsFadingOut) return;
 
             Time += dt;
             StateTime += dt;
@@ -349,6 +364,7 @@ namespace PuffyBird.Core
 
         void BeginTransition()
         {
+            _fadeToTitle = false;
             _events |= GameEvents.Swoosh;
             _fadeOut = _cfg.FadeTime;
             _fadeIn = 0f;
@@ -363,6 +379,8 @@ namespace PuffyBird.Core
                 {
                     _fadeOut = 0f;
                     ResetRun();
+                    if (_fadeToTitle) SetState(GameState.Title);
+                    _fadeToTitle = false;
                     _fadeIn = _cfg.FadeTime;
                 }
             }

@@ -11,6 +11,7 @@ namespace PuffyBird.UI
         Pause,
         OpenSettings,
         CloseMenu,
+        GoHome,
         ToggleMusic,
         ToggleSound,
         ToggleHaptics,

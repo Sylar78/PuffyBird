@@ -7,39 +7,27 @@ namespace PuffyBird.UI
 
     /// <summary>
     /// Écran de consentement RGPD aux pubs personnalisées, au premier lancement puis depuis les
-    /// réglages (PRIVACY). Accepter et refuser ont le même poids (même taille, même couleur) ;
-    /// lien vers la politique de confidentialité. En français si l'appareil l'est, sinon en
-    /// anglais (police sans accents).
+    /// paramètres (CONFIDENTIALITÉ). Accepter et refuser ont le même poids (même taille, même
+    /// couleur) ; lien vers la politique de confidentialité.
     /// </summary>
     public sealed class ConsentView
     {
         const float PanelTop = 112f;
         const float PanelWidth = 252f;
         const float PanelHeight = 224f;
-        const float LineHeight = 14f;
+        const float LineHeight = 15f;
         const float ButtonsY = PanelTop + 162f;
         const float LinkY = PanelTop + 200f;
 
-        static readonly string[] English =
-        {
-            "PUFFYBIRD IS FREE",
-            "THANKS TO ADS. MAY OUR",
-            "PARTNERS USE YOUR DATA",
-            "TO SHOW YOU ADS THAT",
-            "MATCH YOUR INTERESTS?",
-            "YOU CAN CHANGE THIS IN",
-            "SETTINGS > PRIVACY.",
-        };
-
-        static readonly string[] French =
+        static readonly string[] Lines =
         {
             "PUFFYBIRD EST GRATUIT",
-            "GRACE A LA PUB. NOS",
+            "GRÂCE À LA PUB. NOS",
             "PARTENAIRES PEUVENT-ILS",
-            "UTILISER VOS DONNEES",
-            "POUR DES PUBS ADAPTEES ?",
-            "MODIFIABLE A TOUT MOMENT",
-            "DANS SETTINGS > PRIVACY.",
+            "UTILISER VOS DONNÉES",
+            "POUR DES PUBS ADAPTÉES ?",
+            "MODIFIABLE DANS PARAMÈTRES",
+            "> CONFIDENTIALITÉ.",
         };
 
         readonly UiLayer _ui;
@@ -61,18 +49,16 @@ namespace PuffyBird.UI
         {
             _ui = ui;
             _width = ui.Space.Config.Width;
-            bool french = Application.systemLanguage == SystemLanguage.French;
 
             _panelBorder = ui.Solid(Palette.Outline);
             _panel = ui.Solid(Palette.PanelEdge);
             _panelInner = ui.Solid(Palette.Panel);
-            _title = ui.Text(french ? "VIE PRIVEE" : "PRIVACY", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
-            var text = french ? French : English;
-            _lines = new Element[text.Length];
-            for (int i = 0; i < text.Length; i++) _lines[i] = ui.Text(text[i], TextAlign.Center, Palette.Outline, Palette.Panel);
+            _title = ui.Text("CONFIDENTIALITÉ", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _lines = new Element[Lines.Length];
+            for (int i = 0; i < Lines.Length; i++) _lines[i] = ui.Text(Lines[i], TextAlign.Center, Palette.Outline, Palette.Panel);
 
-            string accept = french ? "ACCEPTER" : "ACCEPT";
-            string refuse = french ? "REFUSER" : "REFUSE";
+            const string accept = "ACCEPTER";
+            const string refuse = "REFUSER";
             _accept = ui.Text(accept, TextAlign.Center, Color.white, Palette.Outline);
             _acceptChosen = ui.Text(VoxelFont.CheckIcon + " " + accept, TextAlign.Center, Color.white, Palette.Outline);
             _refuse = ui.Text(refuse, TextAlign.Center, Color.white, Palette.Outline);
@@ -80,7 +66,7 @@ namespace PuffyBird.UI
             var fill = Palette.Hex("#4EA6D8");
             _acceptButton = ui.CreateButton(null, fill, Color.white);
             _refuseButton = ui.CreateButton(null, fill, Color.white);
-            _policyButton = ui.CreateButton(french ? "POLITIQUE DE CONFIDENTIALITE" : "PRIVACY POLICY", Palette.PanelEdge, Color.white);
+            _policyButton = ui.CreateButton("POLITIQUE DE CONFIDENTIALITÉ", Palette.PanelEdge, Color.white);
         }
 
         /// <param name="choice">Choix actuel : true accepté, false refusé, null pas encore répondu.</param>

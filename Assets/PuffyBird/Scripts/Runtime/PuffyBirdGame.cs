@@ -107,13 +107,13 @@ namespace PuffyBird
                 _menu.ConsentChoice = () => AdServices.Consent;
             }
             _menu.LeaderboardAvailable = _leaderboard.Available;
-            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
-            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
-            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
-            _menu.AddSettingsRow(UiAction.CycleQuality, () => (int)CurrentQuality, null, "QUALITY: LOW", "QUALITY: MEDIUM", "QUALITY: HIGH");
-            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => AdServices.AdsEnabled, "PRIVACY");
-            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), "REMOVE ADS");
-            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), "RESTORE PURCHASES");
+            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIQUE : OUI", "MUSIQUE : NON");
+            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SONS : OUI", "SONS : NON");
+            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATIONS : OUI", "VIBRATIONS : NON");
+            _menu.AddSettingsRow(UiAction.CycleQuality, () => (int)CurrentQuality, null, "QUALITÉ : BASSE", "QUALITÉ : MOYENNE", "QUALITÉ : HAUTE");
+            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => AdServices.AdsEnabled, "CONFIDENTIALITÉ");
+            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), "SUPPRIMER LES PUBS");
+            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), "RESTAURER LES ACHATS");
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
             _music = MusicPlayer.Create(world);
@@ -201,10 +201,16 @@ namespace PuffyBird
                     _sim.Pause();
                     break;
                 case UiAction.OpenSettings:
+                    // Pendant la partie, l'oiseau est figé tant que les paramètres sont ouverts.
+                    _sim.Pause();
                     _menu.Open(MenuScreen.Settings);
                     break;
                 case UiAction.CloseMenu:
                     _menu.Close();
+                    break;
+                case UiAction.GoHome:
+                    _menu.Close();
+                    _sim.QuitToTitle();
                     break;
                 case UiAction.CycleQuality:
                     _prefs.Quality = ((int)CurrentQuality + 1) % GraphicsQuality.Count;
