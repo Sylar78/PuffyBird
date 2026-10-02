@@ -15,16 +15,19 @@ namespace PuffyBird.Core
     public sealed class SkinInfo
     {
         public readonly string Id;
-        /// <summary>Nom affiché (texte du jeu, en anglais en attendant la localisation).</summary>
+        /// <summary>Nom affiché en français.</summary>
         public readonly string Name;
+        /// <summary>Nom affiché en anglais (téléphone dans une autre langue que le français).</summary>
+        public readonly string EnglishName;
         public readonly SkinUnlock Unlock;
         /// <summary>Médaille à obtenir (meilleur score) si <see cref="Unlock"/> vaut <see cref="SkinUnlock.Medal"/>.</summary>
         public readonly Medal Medal;
 
-        public SkinInfo(string id, string name, SkinUnlock unlock, Medal medal = Medal.None)
+        public SkinInfo(string id, string name, string englishName, SkinUnlock unlock, Medal medal = Medal.None)
         {
             Id = id;
             Name = name;
+            EnglishName = englishName;
             Unlock = unlock;
             Medal = medal;
         }
@@ -52,15 +55,15 @@ namespace PuffyBird.Core
 
         static readonly SkinInfo[] All =
         {
-            new SkinInfo(DefaultId, "PHOENIX", SkinUnlock.Free),
-            new SkinInfo("blue", "BLUE", SkinUnlock.Free),
-            new SkinInfo("cherry", "CHERRY", SkinUnlock.Medal, Medal.Bronze),
-            new SkinInfo("mint", "MINT", SkinUnlock.Medal, Medal.Silver),
-            new SkinInfo("cool", "COOL", SkinUnlock.Medal, Medal.Gold),
-            new SkinInfo("pearl", "PEARL", SkinUnlock.Medal, Medal.Platinum),
-            new SkinInfo("ninja", "NINJA", SkinUnlock.Purchase),
-            new SkinInfo("robot", "ROBOT", SkinUnlock.Purchase),
-            new SkinInfo("galaxy", "GALAXY", SkinUnlock.Purchase),
+            new SkinInfo(DefaultId, "PHÉNIX", "PHOENIX", SkinUnlock.Free),
+            new SkinInfo("blue", "BLEU", "BLUE", SkinUnlock.Free),
+            new SkinInfo("cherry", "CERISE", "CHERRY", SkinUnlock.Medal, Medal.Bronze),
+            new SkinInfo("mint", "MENTHE", "MINT", SkinUnlock.Medal, Medal.Silver),
+            new SkinInfo("cool", "COOL", "COOL", SkinUnlock.Medal, Medal.Gold),
+            new SkinInfo("pearl", "PERLE", "PEARL", SkinUnlock.Medal, Medal.Platinum),
+            new SkinInfo("ninja", "NINJA", "NINJA", SkinUnlock.Purchase),
+            new SkinInfo("robot", "ROBOT", "ROBOT", SkinUnlock.Purchase),
+            new SkinInfo("galaxy", "GALAXIE", "GALAXY", SkinUnlock.Purchase),
         };
 
         public static int Count => All.Length;

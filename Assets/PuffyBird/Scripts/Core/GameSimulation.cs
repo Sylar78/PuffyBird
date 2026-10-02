@@ -26,6 +26,7 @@ namespace PuffyBird.Core
         float _dieSoundTimer;
         float _fadeOut;
         float _fadeIn;
+        bool _fadeToTitle;
         int _pairsSpawned;
         float _boostTime;
         float _speedFactor = 1f;
@@ -109,6 +110,34 @@ namespace PuffyBird.Core
 
         public bool CanRestart => State == GameState.Over && StateTime > _cfg.OverInputDelay && !IsFadingOut;
 
+        /// <summary>La partie a déjà eu sa seconde chance (une seule par partie).</summary>
+        public bool Continued { get; private set; }
+
+        /// <summary>Seconde chance possible : écran de fin, pas encore utilisée.</summary>
+        public bool CanContinue => State == GameState.Over && !Continued && !IsFadingOut;
+
+        /// <summary>
+        /// Seconde chance (vidéo récompensée choisie par le joueur) : l'oiseau repart de sa position
+        /// de départ en <see cref="GameState.Ready"/>, avec le même score et le même décor ; les
+        /// tuyaux et les étoiles sont retirés, le prochain tap relance la partie comme au début.
+        /// </summary>
+        public void ContinueRun()
+        {
+            if (!CanContinue) return;
+            Continued = true;
+            _bird.Reset(_cfg.BirdStartY);
+            _pipes.Clear();
+            _stars.Clear();
+            _boostTime = 0f;
+            _speedFactor = 1f;
+            Flash = 0f;
+            HitPipeId = -1;
+            DiedOnGround = false;
+            _dieSoundTimer = 0f;
+            _events |= GameEvents.Swoosh;
+            SetState(GameState.Ready);
+        }
+
         public void Press()
         {
             if (_pendingPresses < MaxPendingPresses) _pendingPresses++;
@@ -123,6 +152,19 @@ namespace PuffyBird.Core
         public void Resume()
         {
             if (State == GameState.Paused) SetState(GameState.Playing);
+        }
+
+        /// <summary>
+        /// Abandon de la partie (bouton ACCUEIL des paramètres) : fondu au noir puis écran titre,
+        /// avec un nouveau décor. Le score de la partie abandonnée n'est pas enregistré.
+        /// </summary>
+        public void QuitToTitle()
+        {
+            if (State == GameState.Title || IsFadingOut) return;
+            // Figée pendant le fondu : l'oiseau ne peut plus mourir ni marquer.
+            Pause();
+            BeginTransition();
+            _fadeToTitle = true;
         }
 
         public GameEvents ConsumeEvents()
@@ -142,7 +184,8 @@ namespace PuffyBird.Core
             _pipes.SavePrevious();
             _stars.SavePrevious();
 
-            if (State == GameState.Paused) return;
+            // En pause, tout est figé, sauf le fondu d'un retour à l'accueil.
+            if (State == GameState.Paused && !IsFadingOut) return;
 
             Time += dt;
             StateTime += dt;
@@ -230,6 +273,7 @@ namespace PuffyBird.Core
             _speedFactor = 1f;
             Score = 0;
             NewBest = false;
+            Continued = false;
             Flash = 0f;
             HitPipeId = -1;
             DiedOnGround = false;
@@ -349,6 +393,7 @@ namespace PuffyBird.Core
 
         void BeginTransition()
         {
+            _fadeToTitle = false;
             _events |= GameEvents.Swoosh;
             _fadeOut = _cfg.FadeTime;
             _fadeIn = 0f;
@@ -363,6 +408,8 @@ namespace PuffyBird.Core
                 {
                     _fadeOut = 0f;
                     ResetRun();
+                    if (_fadeToTitle) SetState(GameState.Title);
+                    _fadeToTitle = false;
                     _fadeIn = _cfg.FadeTime;
                 }
             }
@@ -394,6 +441,11 @@ namespace PuffyBird.Core
         internal void ForcePlaying()
         {
             SetState(GameState.Playing);
+        }
+
+        internal void ForceScore(int score)
+        {
+            Score = score;
         }
 
         internal void ForceBoost(float seconds)

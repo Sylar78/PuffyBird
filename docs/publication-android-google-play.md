@@ -111,7 +111,7 @@ Chez LevelPlay, chaque plateforme est une app distincte. Tant que `AdIds` (bloc 
 
 4. Relancer le workflow **Android Google Play**.
 
-Au premier lancement, le jeu demande le consentement aux pubs personnalisées (écran PRIVACY) ; la pub ne s'initialise qu'après la réponse. La permission `AD_ID` est ajoutée au manifeste par `Editor/AndroidPostBuild`, le SDK Android de LevelPlay par le résolveur de dépendances.
+Au premier lancement, le jeu demande le consentement aux pubs personnalisées (écran CONFIDENTIALITÉ) ; la pub ne s'initialise qu'après la réponse. La permission `AD_ID` est ajoutée au manifeste par `Editor/AndroidPostBuild`, le SDK Android de LevelPlay par le résolveur de dépendances.
 
 ## 8. Mises à jour
 

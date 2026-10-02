@@ -2,6 +2,7 @@ using PuffyBird.Ads;
 using PuffyBird.Audio;
 using PuffyBird.Core;
 using PuffyBird.Feedback;
+using PuffyBird.Metrics;
 using PuffyBird.Rendering;
 using PuffyBird.Social;
 using PuffyBird.Store;
@@ -55,6 +56,9 @@ namespace PuffyBird
         int _shownSkin = -1;
         int _bestAtRunStart;
         IBannerAds _banner;
+        IRewardedAds _rewarded;
+        IGameMetrics _metrics;
+        float _playSeconds;
         bool _bannerShown;
         int _shownRun = -1;
         float _realTime;
@@ -74,6 +78,8 @@ namespace PuffyBird
             _input = new InputReader();
             _space = new WorldSpace(_cfg);
             _banner = AdServices.CreateBanner();
+            _rewarded = AdServices.CreateRewarded();
+            _metrics = MetricsServices.Create();
 
             var materials = new MaterialLibrary();
             var world = transform;
@@ -101,19 +107,21 @@ namespace PuffyBird
             _store = StoreServices.Create();
             _skins = new SkinsView(_ui, _store, !(_store is NoStore), IsSkinUnlocked, () => SelectedSkin);
             _menu.Skins = _skins;
-            if (AdServices.AdsEnabled)
+            if (PrivacyConsentNeeded)
             {
                 _menu.Consent = new ConsentView(_ui);
                 _menu.ConsentChoice = () => AdServices.Consent;
             }
             _menu.LeaderboardAvailable = _leaderboard.Available;
-            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, "MUSIC ON", "MUSIC OFF");
-            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, "SOUND ON", "SOUND OFF");
-            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, "VIBRATION ON", "VIBRATION OFF");
-            _menu.AddSettingsRow(UiAction.CycleQuality, () => (int)CurrentQuality, null, "QUALITY: LOW", "QUALITY: MEDIUM", "QUALITY: HIGH");
-            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => AdServices.AdsEnabled, "PRIVACY");
-            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), "REMOVE ADS");
-            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), "RESTORE PURCHASES");
+            _menu.ContinueAvailable = () => _sim.CanContinue && _rewarded.IsReady;
+            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, Lang.T("MUSIQUE : OUI", "MUSIC ON"), Lang.T("MUSIQUE : NON", "MUSIC OFF"));
+            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, Lang.T("SONS : OUI", "SOUND ON"), Lang.T("SONS : NON", "SOUND OFF"));
+            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, Lang.T("VIBRATIONS : OUI", "VIBRATION ON"), Lang.T("VIBRATIONS : NON", "VIBRATION OFF"));
+            _menu.AddSettingsRow(UiAction.CycleQuality, () => (int)CurrentQuality, null, 
+                Lang.T("QUALITÉ : BASSE", "QUALITY: LOW"), Lang.T("QUALITÉ : MOYENNE", "QUALITY: MEDIUM"), Lang.T("QUALITÉ : HAUTE", "QUALITY: HIGH"));
+            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => PrivacyConsentNeeded, Lang.T("CONFIDENTIALITÉ", "PRIVACY"));
+            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), Lang.T("SUPPRIMER LES PUBS", "REMOVE ADS"));
+            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), Lang.T("RESTAURER LES ACHATS", "RESTORE PURCHASES"));
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
             _music = MusicPlayer.Create(world);
@@ -180,6 +188,10 @@ namespace PuffyBird
                 _sim.Step();
             }
 
+            // Durée de jeu de la partie (ou depuis la seconde chance), pour la mesure d'audience.
+            if (_sim.State == GameState.Ready) _playSeconds = 0f;
+            else if (_sim.State == GameState.Playing) _playSeconds += dt;
+
             var events = _sim.ConsumeEvents();
             if (_sim.RunId != _shownRun) ApplyRun();
             React(events);
@@ -201,10 +213,20 @@ namespace PuffyBird
                     _sim.Pause();
                     break;
                 case UiAction.OpenSettings:
+                    // Pendant la partie, l'oiseau est figé tant que les paramètres sont ouverts.
+                    _sim.Pause();
                     _menu.Open(MenuScreen.Settings);
                     break;
                 case UiAction.CloseMenu:
                     _menu.Close();
+                    break;
+                case UiAction.GoHome:
+                    _metrics.QuitToTitle(_sim.Score);
+                    _menu.Close();
+                    _sim.QuitToTitle();
+                    break;
+                case UiAction.Continue:
+                    if (_sim.CanContinue && _rewarded.IsReady) _rewarded.Show(OnRewardedFinished);
                     break;
                 case UiAction.CycleQuality:
                     _prefs.Quality = ((int)CurrentQuality + 1) % GraphicsQuality.Count;
@@ -242,6 +264,7 @@ namespace PuffyBird
                     if (IsSkinUnlocked(_skins.Browsed))
                     {
                         _prefs.Skin = Skins.Get(_skins.Browsed).Id;
+                        _metrics.SkinSelected(_prefs.Skin);
                         _haptics.Play(HapticKind.Medium);
                     }
                     break;
@@ -268,6 +291,17 @@ namespace PuffyBird
                     break;
             }
         }
+
+        /// <summary>Vidéo de la seconde chance terminée : la partie reprend si elle a été vue jusqu'au bout.</summary>
+        void OnRewardedFinished(bool rewarded)
+        {
+            if (!rewarded || !_sim.CanContinue) return;
+            _metrics.ContinueUsed(_sim.Score);
+            _sim.ContinueRun();
+        }
+
+        /// <summary>Une régie ou une mesure d'audience est branchée : le consentement est demandé.</summary>
+        static bool PrivacyConsentNeeded => AdServices.AdsEnabled || MetricsServices.Enabled;
 
         /// <summary>Qualité choisie dans les réglages, sinon déduite de l'appareil.</summary>
         GraphicsLevel CurrentQuality => _prefs.Quality >= 0 && _prefs.Quality < GraphicsQuality.Count
@@ -317,6 +351,7 @@ namespace PuffyBird
             if ((events & GameEvents.Hit) != 0)
             {
                 _haptics.Play(HapticKind.Heavy);
+                _metrics.PlayerDied(_sim.Score, _sim.Theme.ToString(), _playSeconds, _sim.Continued);
                 _bird.OnHit();
                 _pipes.Hit(_sim.HitPipeId);
                 if (!reduceFlash) _cameraRig.Shake(0.05f, 0.25f);

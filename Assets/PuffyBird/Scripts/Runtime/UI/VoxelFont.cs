@@ -14,6 +14,8 @@ namespace PuffyBird.UI
     /// Police 5 × 7 (§14.5) transformée en texte en volume : chaque pixel allumé devient un petit
     /// cube éclairé, doublé d'un cube sombre en retrait qui fait office de contour. Aucune police
     /// ni atlas à importer. Les maillages sont construits une fois au chargement.
+    /// Les lettres accentuées du français dépassent au-dessus de la ligne (accent sur deux rangées
+    /// plus une rangée vide), la cédille au-dessous : la largeur et l'alignement ne changent pas.
     /// </summary>
     public static class VoxelFont
     {
@@ -91,7 +93,47 @@ namespace PuffyBird.UI
             ['\uE006'] = new[] { ".###.", "#.#.#", ".#.#.", "#.#.#", ".#.#.", "#.#.#", ".###." },
             ['\uE007'] = new[] { ".###.", "#...#", "#...#", "#####", "##.##", "##.##", "#####" },
             ['\uE008'] = new[] { ".....", "....#", "...##", "#.##.", "###..", ".#...", "....." },
+            ['\uE009'] = new[] { ".#...", ".##..", ".###.", ".####", ".###.", ".##..", ".#..." },
         };
+
+        // Accents : deux rangées au-dessus de la lettre, puis une rangée vide.
+        static readonly string[] Acute = { "...#.", "..#..", "....." };
+        static readonly string[] Grave = { ".#...", "..#..", "....." };
+        static readonly string[] Circumflex = { "..#..", ".#.#.", "....." };
+        static readonly string[] Diaeresis = { ".....", ".#.#.", "....." };
+        static readonly string[] Cedilla = { "..#..", ".#..." };
+
+        /// <summary>Rangées sous la ligne de base (cédille) ; les autres rangées en trop sont au-dessus.</summary>
+        static readonly HashSet<char> Descends = new HashSet<char> { 'Ç' };
+
+        static VoxelFont()
+        {
+            AddAccented('À', 'A', Grave);
+            AddAccented('Â', 'A', Circumflex);
+            AddAccented('É', 'E', Acute);
+            AddAccented('È', 'E', Grave);
+            AddAccented('Ê', 'E', Circumflex);
+            AddAccented('Ë', 'E', Diaeresis);
+            AddAccented('Î', 'I', Circumflex);
+            AddAccented('Ï', 'I', Diaeresis);
+            AddAccented('Ô', 'O', Circumflex);
+            AddAccented('Ù', 'U', Grave);
+            AddAccented('Û', 'U', Circumflex);
+            AddAccented('Ü', 'U', Diaeresis);
+            var c = Glyphs['C'];
+            var cedilla = new string[c.Length + Cedilla.Length];
+            c.CopyTo(cedilla, 0);
+            Cedilla.CopyTo(cedilla, c.Length);
+            Glyphs['Ç'] = cedilla;
+        }
+
+        static void AddAccented(char accented, char letter, string[] accent)
+        {
+            var rows = new string[accent.Length + GlyphHeight];
+            accent.CopyTo(rows, 0);
+            Glyphs[letter].CopyTo(rows, accent.Length);
+            Glyphs[accented] = rows;
+        }
 
         public const string PauseIcon = "\uE000";
         public const string SettingsIcon = "\uE001";
@@ -102,6 +144,7 @@ namespace PuffyBird.UI
         public const string VibrationIcon = "\uE006";
         public const string LockIcon = "\uE007";
         public const string CheckIcon = "\uE008";
+        public const string PlayIcon = "\uE009";
 
         public static float Width(string text) => text.Length == 0 ? 0f : text.Length * Advance - 1;
 
@@ -122,13 +165,16 @@ namespace PuffyBird.UI
 
             for (int c = 0; c < text.Length; c++)
             {
-                if (!Glyphs.TryGetValue(char.ToUpperInvariant(text[c]), out var rows)) continue;
-                for (int row = 0; row < GlyphHeight; row++)
+                char upper = char.ToUpperInvariant(text[c]);
+                if (!Glyphs.TryGetValue(upper, out var rows)) continue;
+                // Rangées au-dessus de la ligne (accents) : la lettre garde sa place.
+                int above = Descends.Contains(upper) ? 0 : rows.Length - GlyphHeight;
+                for (int row = 0; row < rows.Length; row++)
                 {
                     for (int col = 0; col < GlyphWidth; col++)
                     {
                         if (rows[row][col] != '#') continue;
-                        var min = new Vector3(offsetX + c * Advance + col, -(row + 1), -0.5f);
+                        var min = new Vector3(offsetX + c * Advance + col, -(row - above + 1), -0.5f);
                         AddCube(vertices, normals, colors, indices, min, min + new Vector3(1f, 1f, 1f), front);
                         var grow = new Vector3(OutlineGrow, OutlineGrow, 0f);
                         AddCube(vertices, normals, colors, indices, min - grow + new Vector3(0f, 0f, 0.6f), min + new Vector3(1f, 1f, 1.3f) + grow, outline);

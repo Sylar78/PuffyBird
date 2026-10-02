@@ -6,6 +6,24 @@ namespace PuffyBird.Ads
         void SetVisible(bool visible);
     }
 
+    /// <summary>
+    /// Vidéo récompensée, toujours choisie par le joueur (bouton CONTINUER de l'écran de fin).
+    /// <c>onFinished(true)</c> quand la récompense est acquise, <c>false</c> sinon (vidéo fermée
+    /// avant la fin, erreur d'affichage).
+    /// </summary>
+    public interface IRewardedAds
+    {
+        bool IsReady { get; }
+        void Show(System.Action<bool> onFinished);
+    }
+
+    /// <summary>Pas de vidéo récompensée : le bouton CONTINUER n'apparaît pas.</summary>
+    public sealed class NoRewardedAds : IRewardedAds
+    {
+        public bool IsReady => false;
+        public void Show(System.Action<bool> onFinished) => onFinished(false);
+    }
+
     /// <summary>Aucune régie configurée : rien ne s'affiche.</summary>
     public sealed class NoBannerAds : IBannerAds
     {
@@ -26,6 +44,10 @@ namespace PuffyBird.Ads
 
         public static IBannerAds CreateBanner() => BannerFactory?.Invoke() ?? new NoBannerAds();
 
+        public static System.Func<IRewardedAds> RewardedFactory;
+
+        public static IRewardedAds CreateRewarded() => RewardedFactory?.Invoke() ?? new NoRewardedAds();
+
         /// <summary>Une régie est branchée : le consentement doit être demandé.</summary>
         public static bool AdsEnabled => BannerFactory != null;
 
@@ -35,7 +57,7 @@ namespace PuffyBird.Ads
         /// </summary>
         public static bool? Consent { get; private set; }
 
-        /// <summary>Le joueur a changé d'avis (réglages > PRIVACY).</summary>
+        /// <summary>Le joueur a changé d'avis (paramètres > CONFIDENTIALITÉ).</summary>
         public static event System.Action<bool> ConsentChanged;
 
         public static void SetConsent(bool granted)

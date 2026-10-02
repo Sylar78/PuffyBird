@@ -36,6 +36,115 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void QuitToTitleFromPauseFadesToTitleWithoutSavingScore()
+        {
+            var storage = new MemoryScoreStorage();
+            var sim = NewReadySim(storage);
+            sim.Press();
+            sim.Step();
+            Assert.AreEqual(GameState.Playing, sim.State);
+            sim.Pause();
+            int run = sim.RunId;
+            sim.QuitToTitle();
+            sim.Step();
+            Assert.IsTrue(sim.IsFadingOut);
+            Assert.AreEqual(GameState.Paused, sim.State);
+            // Les taps sont ignorés pendant le fondu.
+            sim.Press();
+            Run(sim, _cfg.FadeTime + 0.05f);
+            Assert.AreEqual(GameState.Title, sim.State);
+            Assert.AreEqual(run + 1, sim.RunId);
+            Assert.AreEqual(0, sim.Score);
+            Assert.AreEqual(0, storage.Writes);
+            // L'écran titre relance ensuite normalement une partie.
+            sim.Press();
+            Run(sim, _cfg.FadeTime + 0.05f);
+            Assert.AreEqual(GameState.Ready, sim.State);
+        }
+
+        [Test]
+        public void QuitToTitleWhilePlayingFreezesTheBird()
+        {
+            var sim = NewReadySim();
+            sim.Press();
+            sim.Step();
+            sim.QuitToTitle();
+            sim.Step();
+            float y = sim.Bird.Y;
+            Run(sim, _cfg.FadeTime * 0.5f);
+            Assert.AreEqual(y, sim.Bird.Y);
+            Run(sim, _cfg.FadeTime);
+            Assert.AreEqual(GameState.Title, sim.State);
+        }
+
+        [Test]
+        public void QuitToTitleOnTitleDoesNothing()
+        {
+            var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), 1);
+            sim.QuitToTitle();
+            sim.Step();
+            Assert.IsFalse(sim.IsFadingOut);
+            Assert.AreEqual(GameState.Title, sim.State);
+        }
+
+        static void DieOnGround(GameSimulation sim, GameConfig cfg)
+        {
+            int guard = 0;
+            while (sim.State != GameState.Over && guard++ < 2000) sim.Step();
+        }
+
+        [Test]
+        public void ContinueKeepsScoreAndRestartsFromReadyOnce()
+        {
+            var sim = NewReadySim();
+            sim.Press();
+            sim.Step();
+            sim.ForceScore(7);
+            DieOnGround(sim, _cfg);
+            Assert.AreEqual(GameState.Over, sim.State);
+            Assert.IsTrue(sim.CanContinue);
+            int run = sim.RunId;
+
+            sim.ContinueRun();
+            Assert.AreEqual(GameState.Ready, sim.State);
+            Assert.AreEqual(7, sim.Score);
+            Assert.AreEqual(run, sim.RunId);
+            Assert.AreEqual(0, sim.Pipes.Count);
+            Assert.AreEqual(_cfg.BirdStartY, sim.Bird.Y);
+
+            // Le tap suivant relance la partie avec une nouvelle paire de tuyaux.
+            sim.Press();
+            sim.Step();
+            Assert.AreEqual(GameState.Playing, sim.State);
+            Assert.AreEqual(1, sim.Pipes.Count);
+            Assert.AreEqual(7, sim.Score);
+
+            // Une seule seconde chance par partie.
+            DieOnGround(sim, _cfg);
+            Assert.IsFalse(sim.CanContinue);
+            sim.ContinueRun();
+            Assert.AreEqual(GameState.Over, sim.State);
+
+            // La partie suivante y a de nouveau droit.
+            Run(sim, _cfg.OverInputDelay + 0.05f);
+            sim.Press();
+            Run(sim, _cfg.FadeTime + 0.05f);
+            Assert.AreEqual(GameState.Ready, sim.State);
+            Assert.AreEqual(0, sim.Score);
+            Assert.IsFalse(sim.Continued);
+        }
+
+        [Test]
+        public void ContinueIsOnlyPossibleOnTheOverScreen()
+        {
+            var sim = NewReadySim();
+            Assert.IsFalse(sim.CanContinue);
+            sim.ContinueRun();
+            Assert.AreEqual(GameState.Ready, sim.State);
+            Assert.IsFalse(sim.Continued);
+        }
+
+        [Test]
         public void ReadyBirdFloatsWithoutFalling()
         {
             var sim = NewReadySim();

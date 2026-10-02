@@ -11,7 +11,7 @@ namespace PuffyBird.Monetization
     /// <summary>
     /// Achats intégrés par Unity IAP 5 (App Store et Google Play) : « Sans pub » et oiseaux
     /// payants, tous non consommables. Compilé seulement si le package est installé (symbole
-    /// <c>PUFFYBIRD_IAP</c>, posé par <c>Editor/PurchasingDefine</c>) ; s'inscrit dans
+    /// <c>PUFFYBIRD_IAP</c>, posé par <c>Editor/PackageDefines</c>) ; s'inscrit dans
     /// <see cref="StoreServices"/> avant le chargement de la scène.
     /// Achat : la boutique annonce une commande en attente, le jeu l'enregistre (PlayerPrefs
     /// <c>puffybird.owned</c>, pour jouer hors ligne) puis seulement la confirme ; une commande non

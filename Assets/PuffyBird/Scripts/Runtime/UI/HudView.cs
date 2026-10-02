@@ -84,21 +84,21 @@ namespace PuffyBird.UI
             for (int d = 0; d < 10; d++) _digitMeshes[d] = VoxelFont.Build(d.ToString(), TextAlign.Left, Color.white, outline);
 
             _title = Text("PUFFYBIRD", TextAlign.Center, Palette.Hex("#F8C82A"), outline);
-            _tapToPlay = Text("TAP TO PLAY", TextAlign.Center, Color.white, outline);
-            _titleBestLabel = Text("BEST", TextAlign.Right, Palette.PanelLabel, outline);
+            _tapToPlay = Text(Lang.T("TOUCHE POUR JOUER", "TAP TO PLAY"), TextAlign.Center, Color.white, outline);
+            _titleBestLabel = Text(Lang.T("RECORD", "BEST"), TextAlign.Right, Palette.PanelLabel, outline);
             _titleBest = CreateNumber(TextAlign.Left, 5);
-            _getReady = Text("GET READY!", TextAlign.Center, Palette.GetReady, outline);
+            _getReady = Text(Lang.T("PRÊT ?", "GET READY!"), TextAlign.Center, Palette.GetReady, outline);
             _tapArrow = Text("^", TextAlign.Center, Color.white, outline);
-            _tapLabel = Text("TAP", TextAlign.Center, Color.white, outline);
+            _tapLabel = Text(Lang.T("TOUCHE", "TAP"), TextAlign.Center, Color.white, outline);
             _score = CreateNumber(TextAlign.Center, 6);
-            _gameOver = Text("GAME OVER", TextAlign.Center, Palette.GameOver, outline);
+            _gameOver = Text(Lang.T("PERDU !", "GAME OVER"), TextAlign.Center, Palette.GameOver, outline);
 
             _panelBorder = Solid(Palette.Outline);
             _panel = Solid(Palette.PanelEdge);
             _panelInner = Solid(Palette.Panel);
-            _medalLabel = Text("MEDAL", TextAlign.Left, Palette.PanelLabel, Palette.Panel);
+            _medalLabel = Text(Lang.T("MÉDAILLE", "MEDAL"), TextAlign.Left, Palette.PanelLabel, Palette.Panel);
             _scoreLabel = Text("SCORE", TextAlign.Right, Palette.PanelLabel, Palette.Panel);
-            _bestLabel = Text("BEST", TextAlign.Right, Palette.PanelLabel, Palette.Panel);
+            _bestLabel = Text(Lang.T("RECORD", "BEST"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
             _panelScore = CreateNumber(TextAlign.Right, 6);
             _panelBest = CreateNumber(TextAlign.Right, 6);
 
@@ -114,10 +114,10 @@ namespace PuffyBird.UI
             _sparkle = Create("Étincelle", sparkleMesh, _sparkleMaterial);
 
             _newTag = Solid(Palette.NewTag);
-            _newLabel = Text("NEW", TextAlign.Center, Color.white, Palette.NewTag);
-            _retry = Text("TAP TO RETRY", TextAlign.Center, Color.white, outline);
+            _newLabel = Text(Lang.T("NOUVEAU", "NEW"), TextAlign.Center, Color.white, Palette.NewTag);
+            _retry = Text(Lang.T("TOUCHE POUR REJOUER", "TAP TO RETRY"), TextAlign.Center, Color.white, outline);
             _pause = Text("PAUSE", TextAlign.Center, Color.white, outline);
-            _pauseTap = Text("TAP", TextAlign.Center, Color.white, outline);
+            _pauseTap = Text(Lang.T("TOUCHE POUR REPRENDRE", "TAP TO RESUME"), TextAlign.Center, Color.white, outline);
             _pauseButton = ui.CreateButton(VoxelFont.PauseIcon, Palette.GameOver, Color.white);
         }
 
@@ -195,7 +195,7 @@ namespace PuffyBird.UI
         // ───────── mise à jour ─────────
 
         /// <param name="safeTopPx">Haut de la zone sûre de l'écran, en y logique (voir <c>CameraRig.SafeTopPx</c>).</param>
-        /// <param name="menuOpen">Un menu est ouvert sur l'écran titre : « TAP TO PLAY » et le record disparaissent.</param>
+        /// <param name="menuOpen">Un menu est ouvert : « TOUCHE POUR JOUER », le record, « PRÊT ? » et « PAUSE » disparaissent.</param>
         /// <param name="menuCoversTitle">Le panneau du menu monte jusqu'au titre du jeu, qui disparaît aussi.</param>
         public void Update(GameSimulation sim, float realTime, float deltaTime, float safeTopPx, bool menuOpen, bool menuCoversTitle)
         {
@@ -229,7 +229,7 @@ namespace PuffyBird.UI
             }
 
             // Get Ready
-            if (state == GameState.Ready)
+            if (state == GameState.Ready && !menuOpen)
             {
                 Place(_getReady, 144f, 100f, 3.2f);
                 float arrowBob = Mathf.Abs(Mathf.Sin(realTime * Mathf.PI * 1.25f)) * 6f;
@@ -260,10 +260,10 @@ namespace PuffyBird.UI
             }
 
             // Pause
-            if (state == GameState.Paused)
+            if (state == GameState.Paused && !menuOpen && !sim.IsFadingOut)
             {
                 Place(_pause, 144f, 190f, 4f);
-                if (Blink(realTime)) Place(_pauseTap, 144f, 250f, 2.4f); else Hide(_pauseTap);
+                if (Blink(realTime)) Place(_pauseTap, 144f, 250f, 1.8f); else Hide(_pauseTap);
             }
             else
             {
@@ -295,8 +295,8 @@ namespace PuffyBird.UI
 
                 if (OverScreenTimeline.NewBadgeVisible(t, sim.Score, sim.NewBest, _cfg))
                 {
-                    PlaceBox(_newTag, 150f, py + 58f, 34f, 14f, HudZ + 0.02f);
-                    Place(_newLabel, 167f, py + 60.5f, 1.4f, HudZ - 0.02f);
+                    PlaceBox(_newTag, 122f, py + 58f, 58f, 14f, HudZ + 0.02f);
+                    Place(_newLabel, 151f, py + 61f, 1.2f, HudZ - 0.02f);
                 }
                 else
                 {
