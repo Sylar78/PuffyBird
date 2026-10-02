@@ -15,6 +15,9 @@ namespace PuffyBird.Core
 
         public uint State => _state;
 
+        /// <summary>Repart de la graine donnée : la suite de tirages redevient celle d'un générateur neuf.</summary>
+        public void Reseed(uint seed) => _state = seed;
+
         public uint NextUInt()
         {
             uint z = _state += 0x6D2B79F5u;

@@ -1,3 +1,4 @@
+using System;
 using PuffyBird.Core;
 using UnityEngine;
 
@@ -18,6 +19,13 @@ namespace PuffyBird
         const string StreakKey = "puffybird.streak";
         const string StreakDayKey = "puffybird.streakday";
         const string LongestStreakKey = "puffybird.streakbest";
+        const string DailyDayKey = "puffybird.dailyday";
+        const string DailyBestKey = "puffybird.dailybest";
+        const string AchievementsKey = "puffybird.ach";
+        const string AchievementsReportedKey = "puffybird.achsent";
+        const string AutoQualityKey = "puffybird.qualityauto";
+        const string ReduceFlashKey = "puffybird.reduceflash";
+        const string HighContrastKey = "puffybird.contrast";
 
         /// <summary>Consentement aux pubs personnalisées pas encore demandé.</summary>
         public const int ConsentUnknown = -1;
@@ -32,6 +40,11 @@ namespace PuffyBird
         int _streak;
         int _streakDay;
         int _longestStreak;
+        int _dailyDay;
+        int _dailyBest;
+        int _autoQuality;
+        bool _reduceFlash;
+        bool _highContrast;
 
         public GamePrefs()
         {
@@ -43,6 +56,58 @@ namespace PuffyBird
             _streak = PlayerPrefs.GetInt(StreakKey, 0);
             _streakDay = PlayerPrefs.GetInt(StreakDayKey, 0);
             _longestStreak = PlayerPrefs.GetInt(LongestStreakKey, 0);
+            _dailyDay = PlayerPrefs.GetInt(DailyDayKey, 0);
+            _dailyBest = PlayerPrefs.GetInt(DailyBestKey, 0);
+            _autoQuality = PlayerPrefs.GetInt(AutoQualityKey, -1);
+            _reduceFlash = PlayerPrefs.GetInt(ReduceFlashKey, 0) == 1;
+            _highContrast = PlayerPrefs.GetInt(HighContrastKey, 0) == 1;
+            Achievements = new AchievementTracker(PlayerPrefs.GetInt(AchievementsKey, 0), PlayerPrefs.GetInt(AchievementsReportedKey, 0));
+        }
+
+        /// <summary>Succès débloqués et envoyés. Après un changement, appeler <see cref="SaveAchievements"/>.</summary>
+        public AchievementTracker Achievements { get; }
+
+        public void SaveAchievements()
+        {
+            PlayerPrefs.SetInt(AchievementsKey, Achievements.Unlocked);
+            PlayerPrefs.SetInt(AchievementsReportedKey, Achievements.Reported);
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>Meilleur score du défi du jour <paramref name="today"/> (0 si le joueur n'y a pas encore joué aujourd'hui).</summary>
+        public int DailyBest(int today) => DailyChallenge.BestFor(_dailyDay, _dailyBest, today);
+
+        /// <summary>Note le score d'une partie du défi du jour ; ne garde que le meilleur du jour.</summary>
+        public void RecordDaily(int today, int score)
+        {
+            int current = DailyBest(today);
+            if (_dailyDay == today && score <= current) return;
+            _dailyDay = today;
+            _dailyBest = Math.Max(score, current);
+            PlayerPrefs.SetInt(DailyDayKey, _dailyDay);
+            PlayerPrefs.SetInt(DailyBestKey, _dailyBest);
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>Qualité apprise par la mesure de fluidité (−1 : aucune) ; sert tant que le joueur n'a rien choisi.</summary>
+        public int AutoQuality
+        {
+            get => _autoQuality;
+            set => SetInt(AutoQualityKey, ref _autoQuality, value);
+        }
+
+        /// <summary>Réduire les flashs et les tremblements de caméra (accessibilité).</summary>
+        public bool ReduceFlash
+        {
+            get => _reduceFlash;
+            set => SetInt(ReduceFlashKey, ref _reduceFlash, value);
+        }
+
+        /// <summary>Tuyaux orange vif cerclés de clair, lisibles aussi pour les daltoniens (accessibilité).</summary>
+        public bool HighContrast
+        {
+            get => _highContrast;
+            set => SetInt(HighContrastKey, ref _highContrast, value);
         }
 
         /// <summary>Série de jours consécutifs en cours (à relire avec <see cref="DailyStreak.Current"/> pour l'affichage).</summary>

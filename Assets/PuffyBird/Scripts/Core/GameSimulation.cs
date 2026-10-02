@@ -28,6 +28,8 @@ namespace PuffyBird.Core
         float _fadeIn;
         bool _fadeToTitle;
         int _pairsSpawned;
+        bool _dailyPending;
+        uint _dailySeed;
         float _boostTime;
         float _speedFactor = 1f;
         GameEvents _events;
@@ -46,6 +48,8 @@ namespace PuffyBird.Core
         }
 
         public GameConfig Config => _cfg;
+        /// <summary>La partie (et les suivantes, jusqu'au retour à l'accueil) suit le défi du jour : même graine, donc mêmes tuyaux et même décor pour tous.</summary>
+        public bool IsDaily { get; private set; }
         public GameState State { get; private set; }
         /// <summary>Secondes écoulées dans l'état courant.</summary>
         public float StateTime { get; private set; }
@@ -167,6 +171,19 @@ namespace PuffyBird.Core
             _fadeToTitle = true;
         }
 
+        /// <summary>
+        /// Lance le défi du jour depuis l'écran titre : fondu, puis une partie dont toute la suite
+        /// aléatoire (ouvertures, étoiles, mouvements, décor) vient de <paramref name="seed"/>. Chaque nouvel
+        /// essai repart de la même graine ; ACCUEIL (<see cref="QuitToTitle"/>) quitte le défi.
+        /// </summary>
+        public void StartDaily(uint seed)
+        {
+            if (State != GameState.Title || IsFadingOut) return;
+            _dailyPending = true;
+            _dailySeed = seed;
+            BeginTransition();
+        }
+
         public GameEvents ConsumeEvents()
         {
             var e = _events;
@@ -276,6 +293,20 @@ namespace PuffyBird.Core
         {
             // L'oiseau est toujours de la même couleur, mais le tirage de §6.8 est conservé :
             // la suite des ouvertures pour une graine donnée reste celle de la spec.
+            if (_dailyPending)
+            {
+                IsDaily = true;
+                _dailyPending = false;
+            }
+            else if (_fadeToTitle)
+            {
+                IsDaily = false;
+            }
+            if (IsDaily)
+            {
+                _rng.Reseed(_dailySeed);
+                _bonusRng.Reseed(_dailySeed ^ 0x9E3779B9u);
+            }
             _rng.Range(0, 2);
             BirdColor = _cfg.BirdColor;
             Theme = (Theme)_rng.Range(0, _cfg.ThemeCount - 1);

@@ -1,4 +1,4 @@
-// Pont natif Game Center pour PuffyBird.Social.Leaderboard : connexion, envoi du score, classement.
+// Pont natif Game Center pour PuffyBird.Social.Leaderboard : connexion, envoi du score, succès, classement.
 #import <GameKit/GameKit.h>
 
 extern UIViewController* UnityGetGLViewController();
@@ -53,6 +53,18 @@ extern "C"
             entry.value = score;
             [GKScore reportScores:@[entry] withCompletionHandler:done];
         }
+    }
+
+    void _GC_Unlock(const char* achievement)
+    {
+        if (![GKLocalPlayer localPlayer].isAuthenticated || achievement == NULL) return;
+        GKAchievement* entry = [[GKAchievement alloc] initWithIdentifier:[NSString stringWithUTF8String:achievement]];
+        entry.percentComplete = 100.0;
+        entry.showsCompletionBanner = YES;
+        [GKAchievement reportAchievements:@[entry] withCompletionHandler:^(NSError* error)
+        {
+            if (error != nil) NSLog(@"PuffyBird : succès non envoyé (%@)", error.localizedDescription);
+        }];
     }
 
     void _GC_Show(const char* leaderboard)

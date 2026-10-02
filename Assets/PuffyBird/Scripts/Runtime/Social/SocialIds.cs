@@ -1,3 +1,5 @@
+using PuffyBird.Core;
+
 namespace PuffyBird.Social
 {
     /// <summary>
@@ -20,6 +22,24 @@ namespace PuffyBird.Social
 
         /// <summary>Lien ajouté au message de partage du score.</summary>
         public const string ShareUrl = "https://sylar78.github.io/puffybird-site/";
+
+        /// <summary>Préfixe des succès Game Center : <c>puffybird.ach.</c> + <see cref="AchievementTracker.Key"/>, à créer à l'identique dans App Store Connect.</summary>
+        public const string GameCenterAchievementPrefix = "puffybird.ach.";
+
+        /// <summary>
+        /// IDs des succès Play Games (de la forme <c>CgkI…</c>), dans l'ordre de l'énumération
+        /// <see cref="Achievement"/> : Score10, Score20, Score30, Score40, FirstStar, CloseCalls, Streak7,
+        /// Streak30, DailyChallenge. Un ID vide : ce succès n'est pas envoyé sur Android.
+        /// </summary>
+        public static readonly string[] PlayGamesAchievements = { "", "", "", "", "", "", "", "", "" };
+
+        public static string GameCenterAchievement(Achievement a) => GameCenterAchievementPrefix + AchievementTracker.Key(a);
+
+        public static string PlayGamesAchievement(Achievement a)
+        {
+            int i = (int)a;
+            return i < PlayGamesAchievements.Length ? PlayGamesAchievements[i] : "";
+        }
 
         public static bool PlayGamesConfigured => PlayGamesAppId.Length > 0 && PlayGamesLeaderboard.Length > 0;
     }

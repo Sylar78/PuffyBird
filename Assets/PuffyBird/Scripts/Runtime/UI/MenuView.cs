@@ -30,7 +30,12 @@ namespace PuffyBird.UI
         const float RowWidth = 200f;
         const float RowHeight = 24f;
         const float RowGap = 6f;
-        const float PanelTop = 112f;
+        const float PanelTopDefault = 112f;
+        const float DailyButtonY = 284f;
+        const float DailyButtonWidth = 168f;
+        const float DailyBestY = 306f;
+        const float DailyTagY = 140f;
+        const float DailyOverBestY = 158f;
         const float PanelWidth = 240f;
         const float OverNewSkinY = 304f;
         const float OverContinueY = 330f;
@@ -64,6 +69,11 @@ namespace PuffyBird.UI
         readonly UiLayer.Button _overShareButton;
         readonly UiLayer.Button _skinsButton;
         readonly UiLayer.Button _continueButton;
+        readonly UiLayer.Button _dailyButton;
+        readonly Element _dailyTag;
+        Element _dailyBest;
+        int _dailyBestShown = -1;
+        float _safeTop;
         readonly Element _newSkin;
         SkinsView _skins;
         MenuScreen _returnTo;
@@ -85,6 +95,8 @@ namespace PuffyBird.UI
             _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + Lang.T(" PARTAGER", " SHARE", " COMPARTIR", " TEILEN", " COMPARTILHAR"), Palette.Hex("#4EA6D8"), Color.white);
             _skinsButton = ui.CreateButton(Lang.T("OISEAUX", "BIRDS", "PÁJAROS", "VÖGEL", "AVES"), Palette.GameOver, Color.white);
             _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" CONTINUER (PUB)", " CONTINUE (AD)", " CONTINUAR (ANUNCIO)", " WEITER (WERBUNG)", " CONTINUAR (ANÚNCIO)"), Palette.GetReady, Color.white);
+            _dailyButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" DÉFI DU JOUR", " DAILY CHALLENGE", " RETO DEL DÍA", " TAGESAUFGABE", " DESAFIO DO DIA"), Palette.Hex("#E8892B"), Color.white);
+            _dailyTag = ui.Text(Lang.T("DÉFI DU JOUR", "DAILY CHALLENGE", "RETO DEL DÍA", "TAGESAUFGABE", "DESAFIO DO DIA"), TextAlign.Center, Palette.GetReady, Palette.Outline);
             _newSkin = ui.Text(Lang.T("NOUVEL OISEAU DÉBLOQUÉ !", "NEW BIRD UNLOCKED!", "¡NUEVO PÁJARO DESBLOQUEADO!", "NEUER VOGEL FREIGESCHALTET!", "NOVA AVE DESBLOQUEADA!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
         }
 
@@ -106,6 +118,12 @@ namespace PuffyBird.UI
 
         /// <summary>Seconde chance proposée sur l'écran de fin (partie pas encore relancée, vidéo prête).</summary>
         public Func<bool> ContinueAvailable { get; set; }
+
+        /// <summary>Meilleur score d'aujourd'hui au défi du jour (0 : pas encore joué).</summary>
+        public Func<int> DailyBestScore { get; set; }
+
+        /// <summary>Cache les boutons et bandeaux de l'écran de fin le temps d'une capture d'écran à partager.</summary>
+        public bool HideOverlay { get; set; }
 
         /// <summary>Un classement en ligne existe sur cette plateforme : boutons trophée affichés.</summary>
         public bool LeaderboardAvailable { get; set; }
@@ -149,6 +167,7 @@ namespace PuffyBird.UI
         public void Update(GameSimulation sim, float safeTopPx)
         {
             var state = sim.State;
+            _safeTop = safeTopPx;
             bool fading = sim.IsFadingOut;
             bool title = state == GameState.Title && !fading;
             // Pendant la partie, les paramètres restent accessibles (la partie est mise en pause).
@@ -167,15 +186,35 @@ namespace PuffyBird.UI
                 else UiLayer.Hide(_trophyButton);
                 if (_skins != null) _ui.PlaceButton(_skinsButton, UiAction.OpenSkins, _cfg.Width * 0.5f, iconY, SkinsButtonWidth, IconButtonSize, 2f, hitMargin: 6f);
                 else UiLayer.Hide(_skinsButton);
+                _ui.PlaceButton(_dailyButton, UiAction.PlayDaily, _cfg.Width * 0.5f, DailyButtonY, DailyButtonWidth, IconButtonSize, 1.6f, hitMargin: 6f);
             }
             else
             {
                 UiLayer.Hide(_trophyButton);
                 UiLayer.Hide(_skinsButton);
+                UiLayer.Hide(_dailyButton);
+            }
+
+            // Défi du jour : meilleur score du jour sous le bouton (titre), bandeau en attente de partie et à l'écran de fin.
+            int dailyBest = DailyBestScore != null ? DailyBestScore() : 0;
+            bool dailyReady = sim.IsDaily && state == GameState.Ready && !IsOpen && !fading;
+            bool dailyOver = sim.IsDaily && state == GameState.Over && !fading && OverScreenTimeline.PanelVisible(sim.StateTime);
+            if (dailyReady || dailyOver)
+            {
+                float tagY = dailyOver ? DailyTagY : 128f;
+                _ui.Place(_dailyTag, _cfg.Width * 0.5f, tagY, 1.6f);
+                if (dailyBest > 0) _ui.Place(DailyBestText(dailyBest), _cfg.Width * 0.5f, tagY + 18f, 1.4f);
+                else UiLayer.Hide(_dailyBest);
+            }
+            else
+            {
+                UiLayer.Hide(_dailyTag);
+                if (title && !IsOpen && dailyBest > 0) _ui.Place(DailyBestText(dailyBest), _cfg.Width * 0.5f, DailyBestY, 1.4f);
+                else UiLayer.Hide(_dailyBest);
             }
 
             // Fin de partie : seconde chance, partage et classement entre le panneau et « TOUCHE POUR REJOUER ».
-            bool overButtons = sim.State == GameState.Over && !sim.IsFadingOut && OverScreenTimeline.ButtonsVisible(sim.StateTime, _cfg);
+            bool overButtons = !HideOverlay && sim.State == GameState.Over && !sim.IsFadingOut && OverScreenTimeline.ButtonsVisible(sim.StateTime, _cfg);
             if (overButtons)
             {
                 float cx = _cfg.Width * 0.5f;
@@ -210,6 +249,25 @@ namespace PuffyBird.UI
             else Consent?.Hide();
         }
 
+        /// <summary>« MEILLEUR AUJOURD'HUI : n », reconstruit seulement quand n change (à la mort, hors partie).</summary>
+        Element DailyBestText(int best)
+        {
+            if (_dailyBest != null && best == _dailyBestShown) return _dailyBest;
+            _dailyBestShown = best;
+            string text = Lang.T($"MEILLEUR AUJOURD'HUI : {best}", $"TODAY'S BEST: {best}", $"MEJOR DE HOY: {best}", $"HEUTE BESTE: {best}", $"MELHOR DE HOJE: {best}");
+            var mesh = VoxelFont.Build(text, TextAlign.Center, Palette.GetReady, Palette.Outline);
+            if (_dailyBest == null)
+            {
+                _dailyBest = _ui.Create("Meilleur du jour", mesh, _ui.TextMaterial);
+            }
+            else
+            {
+                UnityEngine.Object.Destroy(_dailyBest.Filter.sharedMesh);
+                _dailyBest.Filter.sharedMesh = mesh;
+            }
+            return _dailyBest;
+        }
+
         void DrawSettings()
         {
             int visible = 0;
@@ -220,12 +278,14 @@ namespace PuffyBird.UI
             int buttons = visible + (_inGame ? 2 : 1);
             float contentHeight = 34f + buttons * (RowHeight + RowGap) + 6f;
             float left = (_cfg.Width - PanelWidth) * 0.5f;
-            _ui.PlaceBox(_panelBorder, left - 2f, PanelTop - 2f, PanelWidth + 4f, contentHeight + 4f, UiLayer.PanelZ + 0.03f);
-            _ui.PlaceBox(_panel, left, PanelTop, PanelWidth, contentHeight, UiLayer.PanelZ + 0.02f);
-            _ui.PlaceBox(_panelInner, left + 6f, PanelTop + 6f, PanelWidth - 12f, contentHeight - 12f, UiLayer.PanelZ);
-            _ui.Place(_settingsTitle, _cfg.Width * 0.5f, PanelTop + 14f, 2f);
+            // Le panneau se centre dans la hauteur quand il y a beaucoup de lignes, sans passer sous l'encoche.
+            float panelTop = Mathf.Clamp((_cfg.Height - contentHeight) * 0.5f - 6f, _safeTop + 8f, PanelTopDefault);
+            _ui.PlaceBox(_panelBorder, left - 2f, panelTop - 2f, PanelWidth + 4f, contentHeight + 4f, UiLayer.PanelZ + 0.03f);
+            _ui.PlaceBox(_panel, left, panelTop, PanelWidth, contentHeight, UiLayer.PanelZ + 0.02f);
+            _ui.PlaceBox(_panelInner, left + 6f, panelTop + 6f, PanelWidth - 12f, contentHeight - 12f, UiLayer.PanelZ);
+            _ui.Place(_settingsTitle, _cfg.Width * 0.5f, panelTop + 14f, 2f);
 
-            float y = PanelTop + 34f + RowHeight * 0.5f + 4f;
+            float y = panelTop + 34f + RowHeight * 0.5f + 4f;
             float cx = _cfg.Width * 0.5f;
             foreach (var row in _rows)
             {

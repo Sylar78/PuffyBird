@@ -1,5 +1,6 @@
 #if UNITY_IOS
 using System.IO;
+using System.Text;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.iOS.Xcode;
@@ -17,12 +18,36 @@ namespace PuffyBird.Editor
     ///   droit <c>com.apple.developer.game-center</c>. Volontairement sans
     ///   <c>ProjectCapabilityManager.AddGameCenter</c>, qui ajouterait « gamekit » aux capacités
     ///   requises de l'appareil, interdit d'ajout dans une mise à jour sur l'App Store.
+    /// - langues de l'app (français, anglais, espagnol, allemand, portugais) : <c>CFBundleLocalizations</c> et
+    ///   texte ATT traduit dans un <c>InfoPlist.strings</c> par langue ;
     /// Les identifiants SKAdNetwork sont ajoutés par le package LevelPlay lui-même.
     /// </summary>
     static class IosPostBuild
     {
         const string TrackingUsage =
             "Your data will be used to show you more relevant ads, which keeps PuffyBird free.";
+
+        /// <summary>Langues du jeu : code de dossier .lproj et texte de la demande de suivi (ATT) dans cette langue.</summary>
+        sealed class Localization
+        {
+            public readonly string Code;
+            public readonly string Tracking;
+
+            public Localization(string code, string tracking)
+            {
+                Code = code;
+                Tracking = tracking;
+            }
+        }
+
+        static readonly Localization[] Localizations =
+        {
+            new Localization("en", TrackingUsage),
+            new Localization("fr", "Vos données serviront à vous proposer des publicités plus pertinentes, ce qui permet à PuffyBird de rester gratuit."),
+            new Localization("es", "Tus datos se usarán para mostrarte anuncios más relevantes, lo que mantiene PuffyBird gratis."),
+            new Localization("de", "Deine Daten werden verwendet, um dir passendere Werbung zu zeigen. So bleibt PuffyBird kostenlos."),
+            new Localization("pt", "Seus dados serão usados para mostrar anúncios mais relevantes, o que mantém o PuffyBird gratuito."),
+        };
 
         const string EntitlementsFile = "Unity-iPhone/PuffyBird.entitlements";
 
@@ -38,6 +63,10 @@ namespace PuffyBird.Editor
             plist.root.SetString("NSUserTrackingUsageDescription", TrackingUsage);
             var ats = plist.root["NSAppTransportSecurity"]?.AsDict() ?? plist.root.CreateDict("NSAppTransportSecurity");
             ats.SetBoolean("NSAllowsArbitraryLoads", true);
+            // Langues gérées : l'App Store les affiche, et la demande de suivi s'adapte à la langue du téléphone.
+            plist.root.SetString("CFBundleDevelopmentRegion", "en");
+            var languages = plist.root.CreateArray("CFBundleLocalizations");
+            foreach (var localization in Localizations) languages.AddString(localization.Code);
             plist.WriteToFile(plistPath);
 
             string projectPath = PBXProject.GetPBXProjectPath(path);
@@ -55,6 +84,18 @@ namespace PuffyBird.Editor
             string main = project.GetUnityMainTargetGuid();
             if (project.FindFileGuidByProjectPath(EntitlementsFile) == null) project.AddFile(EntitlementsFile, EntitlementsFile);
             project.SetBuildProperty(main, "CODE_SIGN_ENTITLEMENTS", EntitlementsFile);
+
+            // Un dossier <langue>.lproj par langue, avec la demande de suivi traduite (InfoPlist.strings).
+            foreach (var localization in Localizations)
+            {
+                string folder = localization.Code + ".lproj";
+                string folderPath = Path.Combine(path, folder);
+                Directory.CreateDirectory(folderPath);
+                File.WriteAllText(Path.Combine(folderPath, "InfoPlist.strings"),
+                    "\"NSUserTrackingUsageDescription\" = \"" + localization.Tracking + "\";\n", new UTF8Encoding(false));
+                string guid = project.AddFolderReference(folderPath, folder);
+                project.AddFileToBuild(main, guid);
+            }
             project.WriteToFile(projectPath);
         }
     }

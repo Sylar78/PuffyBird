@@ -24,12 +24,15 @@ namespace PuffyBird.UI
         OpenLeaderboard,
         Share,
         OpenSkins,
+        PlayDaily,
         SkinPrevious,
         SkinNext,
         SkinUse,
         SkinBuy,
         RemoveAds,
         RestorePurchases,
+        ToggleReduceFlash,
+        ToggleHighContrast,
     }
 
     /// <summary>

@@ -33,6 +33,12 @@ namespace PuffyBird.Rendering
         readonly GameConfig _cfg;
         readonly Pair[] _pairs = new Pair[4];
         readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
+        readonly Mesh _bodyMesh;
+        readonly Mesh _capMesh;
+        readonly Mesh _bodyMeshContrast;
+        readonly Mesh _capMeshContrast;
+        readonly MeshFilter[] _bodyFilters = new MeshFilter[8];
+        readonly MeshFilter[] _capFilters = new MeshFilter[8];
 
         public PipeView(Transform parent, MaterialLibrary materials, WorldSpace space)
         {
@@ -49,30 +55,54 @@ namespace PuffyBird.Rendering
             float capHeight = WorldSpace.Length(_cfg.PipeCapHeight);
 
             // Fût : cylindre unitaire (hauteur 1, base à l'origine), étiré à la bonne longueur.
-            var bodyMesh = new MeshBuilder()
-                .AddCylinder(Vector3.zero, bodyRadius, 1f, Palette.PipeBody, 28, caps: false)
-                .Build("Fût");
-            // Chapeau : lèvre jade avec une bague dorée et un léger biseau, base à l'origine.
-            var capMesh = new MeshBuilder()
-                .AddFrustum(Vector3.zero, capRadius * 0.96f, capRadius, capHeight * 0.18f, Palette.PipeShade, 28)
-                .AddCylinder(new Vector3(0f, capHeight * 0.18f, 0f), capRadius, capHeight * 0.5f, Palette.PipeBody, 28)
-                .AddCylinder(new Vector3(0f, capHeight * 0.68f, 0f), capRadius * 1.03f, capHeight * 0.14f, Palette.PipeRim, 28)
-                .AddFrustum(new Vector3(0f, capHeight * 0.82f, 0f), capRadius, capRadius * 0.9f, capHeight * 0.18f, Palette.PipeBody, 28)
-                .Build("Chapeau");
+            // Chapeau : lèvre avec une bague et un léger biseau, base à l'origine. Deux palettes : normale et contrastée.
+            _bodyMesh = BuildBody(bodyRadius, Palette.PipeBody, "Fût");
+            _capMesh = BuildCap(capRadius, capHeight, Palette.PipeBody, Palette.PipeShade, Palette.PipeRim, "Chapeau");
+            _bodyMeshContrast = BuildBody(bodyRadius, Palette.PipeBodyContrast, "Fût contrasté");
+            _capMeshContrast = BuildCap(capRadius, capHeight, Palette.PipeBodyContrast, Palette.PipeShadeContrast, Palette.PipeRimContrast, "Chapeau contrasté");
 
             for (int i = 0; i < _pairs.Length; i++)
             {
                 var pair = new Pair { Root = new GameObject("Paire " + i) };
                 pair.Root.transform.SetParent(root, false);
-                pair.TopBody = CreatePart(pair.Root.transform, "Fût haut", bodyMesh, material);
-                pair.TopCap = CreatePart(pair.Root.transform, "Chapeau haut", capMesh, material);
-                pair.BottomBody = CreatePart(pair.Root.transform, "Fût bas", bodyMesh, material);
-                pair.BottomCap = CreatePart(pair.Root.transform, "Chapeau bas", capMesh, material);
+                pair.TopBody = CreatePart(pair.Root.transform, "Fût haut", _bodyMesh, material);
+                pair.TopCap = CreatePart(pair.Root.transform, "Chapeau haut", _capMesh, material);
+                pair.BottomBody = CreatePart(pair.Root.transform, "Fût bas", _bodyMesh, material);
+                pair.BottomCap = CreatePart(pair.Root.transform, "Chapeau bas", _capMesh, material);
                 // Le chapeau du haut est retourné : lèvre vers le bas (§7.1).
                 pair.TopCap.localRotation = Quaternion.Euler(180f, 0f, 0f);
+                _bodyFilters[i * 2] = pair.TopBody.GetComponent<MeshFilter>();
+                _bodyFilters[i * 2 + 1] = pair.BottomBody.GetComponent<MeshFilter>();
+                _capFilters[i * 2] = pair.TopCap.GetComponent<MeshFilter>();
+                _capFilters[i * 2 + 1] = pair.BottomCap.GetComponent<MeshFilter>();
                 pair.Renderers = pair.Root.GetComponentsInChildren<Renderer>();
                 pair.Root.SetActive(false);
                 _pairs[i] = pair;
+            }
+        }
+
+        static Mesh BuildBody(float radius, Color body, string name)
+        {
+            return new MeshBuilder().AddCylinder(Vector3.zero, radius, 1f, body, 28, caps: false).Build(name);
+        }
+
+        static Mesh BuildCap(float radius, float height, Color body, Color shade, Color rim, string name)
+        {
+            return new MeshBuilder()
+                .AddFrustum(Vector3.zero, radius * 0.96f, radius, height * 0.18f, shade, 28)
+                .AddCylinder(new Vector3(0f, height * 0.18f, 0f), radius, height * 0.5f, body, 28)
+                .AddCylinder(new Vector3(0f, height * 0.68f, 0f), radius * 1.03f, height * 0.14f, rim, 28)
+                .AddFrustum(new Vector3(0f, height * 0.82f, 0f), radius, radius * 0.9f, height * 0.18f, body, 28)
+                .Build(name);
+        }
+
+        /// <summary>Palette contrastée des tuyaux (accessibilité) : change seulement les maillages, jamais la hitbox. Rare, hors partie.</summary>
+        public void SetHighContrast(bool on)
+        {
+            for (int i = 0; i < _bodyFilters.Length; i++)
+            {
+                _bodyFilters[i].sharedMesh = on ? _bodyMeshContrast : _bodyMesh;
+                _capFilters[i].sharedMesh = on ? _capMeshContrast : _capMesh;
             }
         }
 

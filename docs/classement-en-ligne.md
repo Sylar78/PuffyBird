@@ -1,10 +1,11 @@
-# Classement en ligne et partage du score
+# Classement, succès et partage du score
 
 Le jeu affiche un bouton trophée sur l'écran titre (en haut à gauche) et deux boutons sur l'écran de fin : **SHARE** (partager son score) et **RANKING** (classement).
 
 - **iOS** : Game Center. Le code est prêt ; il reste à créer le classement dans App Store Connect (étape 1).
 - **Android** : Play Games Services v2. Le code est prêt, mais la bibliothèque Play Games n'est ajoutée au build qu'une fois les deux identifiants renseignés dans `Assets/PuffyBird/Scripts/Runtime/Social/SocialIds.cs` (étape 2). Sans eux, le bouton RANKING n'apparaît pas sur Android.
-- **Partage** : rien à configurer. Le message (« J'ai fait 12 points à PuffyBird ! Tu fais mieux ? » + lien du site) s'ouvre dans la feuille de partage du téléphone (WhatsApp, SMS, Instagram…).
+- **Partage** : rien à configurer. Le message (« J'ai fait 12 points à PuffyBird ! Tu fais mieux ? » + lien du site, dans la langue du jeu) s'ouvre dans la feuille de partage du téléphone (WhatsApp, SMS, Instagram…), accompagné d'une **capture de l'écran de fin** (sans les boutons). Sur Android, l'image est ajoutée à la galerie dans `Pictures/PuffyBird` (Android 10 ou plus) ; en dessous, seul le texte est partagé.
+- **Succès** : 9 succès (étape 3), débloqués en jouant. Un succès gagné hors connexion est envoyé à la prochaine connexion, jamais deux fois. Sans les succès créés côté Apple ou Google, le jeu fonctionne normalement : ils sont simplement refusés par la plateforme.
 
 ## 1. Game Center (iOS)
 
@@ -44,3 +45,35 @@ Le classement fonctionne tout de suite en TestFlight, avant la validation d'Appl
 9. Une fois le test validé : **Services de jeux Play** > **Publier** pour ouvrir le classement à tous.
 
 Au lancement, Play Games connecte le joueur automatiquement (petite bannière « Connecté en tant que… »). Sinon, la connexion est proposée au tap sur le trophée.
+
+## 3. Succès (Game Center et Play Games)
+
+Les 9 succès, leurs conditions et les icônes prêtes à envoyer (512 × 512, dans les fichiers du projet : `app-store/succes/`, regénérables par `python3 tools/achievements/make_icons.py`) :
+
+| ID Game Center | Icône | Titre (FR / EN) | Condition | Points |
+|---|---|---|---|---|
+| `puffybird.ach.score10` | `score10.png` | Médaille de bronze / Bronze medal | 10 points dans une partie | 10 |
+| `puffybird.ach.score20` | `score20.png` | Médaille d'argent / Silver medal | 20 points dans une partie | 20 |
+| `puffybird.ach.score30` | `score30.png` | Médaille d'or / Gold medal | 30 points dans une partie | 30 |
+| `puffybird.ach.score40` | `score40.png` | Médaille de platine / Platinum medal | 40 points dans une partie | 50 |
+| `puffybird.ach.star` | `star.png` | Étoile filante / Shooting star | Attraper une étoile de vitesse | 10 |
+| `puffybird.ach.closecalls` | `closecalls.png` | Sang-froid / Cool nerves | Frôler 5 tuyaux dans une même partie | 20 |
+| `puffybird.ach.streak7` | `streak7.png` | Une semaine de vol / A week in flight | Jouer 7 jours de suite | 20 |
+| `puffybird.ach.streak30` | `streak30.png` | Phénix éternel / Eternal phoenix | Jouer 30 jours de suite (débloque aussi l'oiseau ÉCLIPSE) | 50 |
+| `puffybird.ach.daily` | `daily.png` | Défi relevé / Challenge accepted | Lancer le défi du jour | 10 |
+
+Total : 200 points (Apple en accepte 1000 par app). Aucun n'est « caché ».
+
+### Game Center (iOS)
+
+App Store Connect > PuffyBird > **Services** > **Game Center** > **Succès** > **+** : pour chacun, l'**ID** exact du tableau ci-dessus, le nom de référence, les points, **Succès masqué : non**, **Réalisable plusieurs fois : non**, l'icône, puis une localisation en français et en anglais (titre, description avant et après avoir été obtenu). Ajouter les succès à la version comme le classement (étape 1). Ils fonctionnent tout de suite en TestFlight.
+
+### Play Games (Android)
+
+Play Console > **Services de jeux Play** > **Configuration et gestion** > **Succès** > **Ajouter un succès** : nom, description, icône, points (multiples de 5, 1000 au total au maximum), état initial **Visible**, type **Standard**. Chaque succès reçoit un ID `CgkI…`. Les renseigner, dans l'ordre du tableau, dans `SocialIds.PlayGamesAchievements` (un ID vide = succès non envoyé) :
+
+```csharp
+public static readonly string[] PlayGamesAchievements = { "CgkI...", "CgkI...", /* 9 valeurs, dans l'ordre du tableau */ };
+```
+
+Le classement doit déjà être configuré (étape 2) : sans `PlayGamesAppId` et `PlayGamesLeaderboard`, Play Games n'est pas inclus dans le build.

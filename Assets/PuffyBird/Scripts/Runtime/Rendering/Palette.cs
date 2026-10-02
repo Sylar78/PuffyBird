@@ -40,6 +40,10 @@ namespace PuffyBird.Rendering
         public static readonly Color PipeBody = Hex("#3FB6A8");
         public static readonly Color PipeShade = Hex("#2B8C82");
         public static readonly Color PipeRim = Hex("#F2C35B");
+        // Tuyaux contrastés (accessibilité) : orangé vif (vermillon, la teinte que distinguent le mieux les daltoniens) et bague claire.
+        public static readonly Color PipeBodyContrast = Hex("#E8650A");
+        public static readonly Color PipeShadeContrast = Hex("#9A3F00");
+        public static readonly Color PipeRimContrast = Hex("#FFF4C8");
 
         // Étoiles de vitesse et traînée multicolore.
         public static readonly Color Star = Hex("#FFD23F");

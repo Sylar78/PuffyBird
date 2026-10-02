@@ -29,7 +29,7 @@ Dans **Apps > PuffyBird** :
 
 Dans l'onglet **Distribution**, version **0.1.0** (ou celle du build) :
 
-1. Captures d'écran, texte promotionnel, description, mots-clés (100 caractères), URL d'assistance, copyright.
+1. Captures d'écran, texte promotionnel, description, mots-clés (100 caractères), URL d'assistance, copyright. Les textes en français, anglais, espagnol, allemand et portugais sont prêts dans `docs/fiches-stores-multilingues.md` (ajouter chaque langue dans la fiche, via le menu des langues de la version).
 2. **Build** : choisir le build TestFlight (par exemple le 9).
 3. **Informations pour la vérification** : coordonnées, pas de compte de démo (pas de connexion), note pour le vérificateur (« jeu d'arcade, un tap pour voler ; bannière de pub uniquement sur l'écran titre et l'écran de fin »).
 4. **Publication de la version** : manuelle (conseillé pour choisir le jour) ou automatique après validation.
@@ -37,9 +37,9 @@ Dans l'onglet **Distribution**, version **0.1.0** (ou celle du build) :
 
 ## 4. Risques de refus à anticiper
 
-- **Guideline 4.3 (spam) et 4.1 (copies)** : Apple a refusé beaucoup de clones de Flappy Bird. Mettre en avant ce qui est original dans la description et les captures : six décors, tuyaux mobiles, étoiles de vitesse, rendu 2.5D. Ne jamais employer « Flappy » dans le nom, les mots-clés ou la description.
+- **Guideline 4.3 (spam) et 4.1 (copies)** : Apple a refusé beaucoup de clones de Flappy Bird. Mettre en avant ce qui est original dans la description et les captures : neuf décors, défi du jour, tuyaux mobiles, étoiles de vitesse, rendu 2.5D. Ne jamais employer « Flappy » dans le nom, les mots-clés ou la description.
 - **Pubs** : la bannière ne doit jamais couvrir le jeu (c'est déjà la règle de `AdPolicy`).
-- **ATT** : le texte d'autorisation doit expliquer l'usage (déjà ajouté par `IosPostBuild`) ; ne pas bloquer le jeu en cas de refus.
+- **ATT** : le texte d'autorisation doit expliquer l'usage (déjà ajouté par `IosPostBuild`, traduit dans les cinq langues du jeu) ; ne pas bloquer le jeu en cas de refus.
 - **Consentement RGPD** : le jeu envoie `SetGDPRConsent(false)` faute d'écran de consentement. Apple ne le vérifie pas, mais un écran de consentement (CMP) sera nécessaire pour des pubs personnalisées en Europe.
 
 ## 5. Mises à jour

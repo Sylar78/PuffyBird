@@ -1,4 +1,5 @@
 using System;
+using PuffyBird.Core;
 using UnityEngine;
 #if UNITY_IOS && !UNITY_EDITOR
 using System.Runtime.InteropServices;
@@ -67,6 +68,25 @@ namespace PuffyBird.Social
             _submitted = _pending;
         }
 
+        /// <summary>
+        /// Envoie un succès gagné. Vrai si la plateforme l'a reçu (ou n'a pas de succès à lui donner) ;
+        /// faux si le joueur n'est pas encore connecté : à réessayer plus tard.
+        /// </summary>
+        public bool Unlock(Achievement achievement)
+        {
+            if (_backend == null) return true;
+            if (!_backend.SignedIn) return false;
+            try
+            {
+                _backend.Unlock(achievement);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"PuffyBird : succès impossible à envoyer ({e.Message}).");
+            }
+            return true;
+        }
+
         /// <summary>Ouvre le classement, ou la connexion si le joueur n'est pas connecté.</summary>
         public void Show()
         {
@@ -84,6 +104,7 @@ namespace PuffyBird.Social
         {
             bool SignedIn { get; }
             void Submit(int score);
+            void Unlock(Achievement achievement);
             void Show();
         }
 
@@ -92,6 +113,7 @@ namespace PuffyBird.Social
         {
             public bool SignedIn => true;
             public void Submit(int score) => Debug.Log($"PuffyBird : score {score} envoyé au classement (simulation éditeur).");
+            public void Unlock(Achievement achievement) => Debug.Log($"PuffyBird : succès « {AchievementTracker.Key(achievement)} » débloqué (simulation éditeur).");
             public void Show() => Debug.Log("PuffyBird : ouverture du classement (Game Center ou Play Games sur l'appareil).");
         }
 #endif
@@ -102,12 +124,14 @@ namespace PuffyBird.Social
             [DllImport("__Internal")] static extern void _GC_Authenticate();
             [DllImport("__Internal")] static extern bool _GC_IsAuthenticated();
             [DllImport("__Internal")] static extern void _GC_Submit(string leaderboard, long score);
+            [DllImport("__Internal")] static extern void _GC_Unlock(string achievement);
             [DllImport("__Internal")] static extern void _GC_Show(string leaderboard);
 
             public GameCenterBackend() => _GC_Authenticate();
 
             public bool SignedIn => _GC_IsAuthenticated();
             public void Submit(int score) => _GC_Submit(SocialIds.GameCenterLeaderboard, score);
+            public void Unlock(Achievement achievement) => _GC_Unlock(SocialIds.GameCenterAchievement(achievement));
             public void Show() => _GC_Show(SocialIds.GameCenterLeaderboard);
         }
 #endif
@@ -147,6 +171,16 @@ namespace PuffyBird.Social
                 using (var client = _playGames.CallStatic<AndroidJavaObject>("getLeaderboardsClient", _activity))
                 {
                     client.Call("submitScore", SocialIds.PlayGamesLeaderboard, (long)score);
+                }
+            }
+
+            public void Unlock(Achievement achievement)
+            {
+                string id = SocialIds.PlayGamesAchievement(achievement);
+                if (string.IsNullOrEmpty(id)) return;
+                using (var client = _playGames.CallStatic<AndroidJavaObject>("getAchievementsClient", _activity))
+                {
+                    client.Call("unlock", id);
                 }
             }
 
