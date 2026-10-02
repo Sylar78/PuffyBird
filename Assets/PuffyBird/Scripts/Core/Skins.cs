@@ -45,7 +45,7 @@ namespace PuffyBird.Core
     }
 
     /// <summary>
-    /// Catalogue des oiseaux : deux gratuits (le phénix de départ et le bleu), un par médaille (débloqué dès que le meilleur score
+    /// Catalogue des oiseaux, tous des phénix de plumages différents : deux gratuits (le phénix de départ et l'azur), un par médaille (débloqué dès que le meilleur score
     /// atteint son seuil, pour toujours) et quelques oiseaux payants.
     /// </summary>
     public static class Skins
@@ -53,17 +53,20 @@ namespace PuffyBird.Core
         /// <summary>Oiseau de départ : le phénix. Un joueur qui avait choisi un autre oiseau le garde.</summary>
         public const string DefaultId = "phoenix";
 
+        // Les identifiants datent des premiers oiseaux (bleu, cerise, ninja…) : ils sont gardés pour
+        // les choix enregistrés et les produits des boutiques, seuls les noms affichés ont changé.
+
         static readonly SkinInfo[] All =
         {
             new SkinInfo(DefaultId, "PHÉNIX", "PHOENIX", SkinUnlock.Free),
-            new SkinInfo("blue", "BLEU", "BLUE", SkinUnlock.Free),
-            new SkinInfo("cherry", "CERISE", "CHERRY", SkinUnlock.Medal, Medal.Bronze),
-            new SkinInfo("mint", "MENTHE", "MINT", SkinUnlock.Medal, Medal.Silver),
-            new SkinInfo("cool", "COOL", "COOL", SkinUnlock.Medal, Medal.Gold),
-            new SkinInfo("pearl", "PERLE", "PEARL", SkinUnlock.Medal, Medal.Platinum),
-            new SkinInfo("ninja", "NINJA", "NINJA", SkinUnlock.Purchase),
-            new SkinInfo("robot", "ROBOT", "ROBOT", SkinUnlock.Purchase),
-            new SkinInfo("galaxy", "GALAXIE", "GALAXY", SkinUnlock.Purchase),
+            new SkinInfo("blue", "AZUR", "AZURE", SkinUnlock.Free),
+            new SkinInfo("cherry", "BRAISE", "EMBER", SkinUnlock.Medal, Medal.Bronze),
+            new SkinInfo("mint", "JADE", "JADE", SkinUnlock.Medal, Medal.Silver),
+            new SkinInfo("cool", "AURORE", "DAWN", SkinUnlock.Medal, Medal.Gold),
+            new SkinInfo("pearl", "NACRE", "PEARL", SkinUnlock.Medal, Medal.Platinum),
+            new SkinInfo("ninja", "OMBRE", "SHADOW", SkinUnlock.Purchase),
+            new SkinInfo("robot", "CHROME", "CHROME", SkinUnlock.Purchase),
+            new SkinInfo("galaxy", "COSMOS", "COSMOS", SkinUnlock.Purchase),
         };
 
         public static int Count => All.Length;

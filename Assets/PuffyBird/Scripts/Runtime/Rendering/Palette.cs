@@ -114,6 +114,8 @@ namespace PuffyBird.Rendering
             public float WingBend;
             /// <summary>Couleur des plumes qui volent à l'impact.</summary>
             public Color Feather;
+            /// <summary>Plumage si <see cref="Shape"/> vaut <see cref="BodyShape.Phoenix"/>.</summary>
+            public PhoenixColors Phoenix;
         }
 
         static SkinLook Look(string body, string belly, string shade, Accessory accessory = Accessory.None)
@@ -137,70 +139,109 @@ namespace PuffyBird.Rendering
             };
         }
 
-        /// <summary>Apparence de l'oiseau <paramref name="id"/> (identifiants de <see cref="Skins"/>).</summary>
+        /// <summary>
+        /// Plumage d'un phénix : corps, reflet, or, bouts des rémiges, flammes de la queue, ocelle,
+        /// plumes pâles, bec et œil. Même lueur par partie que le phénix de départ.
+        /// </summary>
+        static PhoenixColors Plumage(string body, string sheen, string gold, string tipA, string tipB, string flameRoot, string flameTip,
+            string ocellus, string ring, string core, string wisp, string beak = "#F4D58A", string eye = "#FFE07A")
+        {
+            return new PhoenixColors
+            {
+                Body = Glow(body, 0f),
+                Sheen = Glow(sheen, 0.2f),
+                Gold = Glow(gold, 0.8f),
+                TipA = Glow(tipA, 0.9f),
+                TipB = Glow(tipB, 0.9f),
+                FlameRoot = Glow(flameRoot, 0.8f),
+                FlameTip = Glow(flameTip, 0.75f),
+                Ocellus = Glow(ocellus, 0.8f),
+                OcellusRing = Glow(ring, 1f),
+                OcellusCore = Glow(core, 0.3f),
+                Wisp = Glow(wisp, 0.9f),
+                Beak = Glow(beak, 0.1f),
+                Eye = Glow(eye, 0.8f),
+            };
+        }
+
+        static SkinLook PhoenixLook(PhoenixColors plumage, string rim, string feather)
+        {
+            var look = Look("#000000", "#000000", "#000000");
+            look.Colors = new BirdColors { Body = plumage.Body, Belly = plumage.Sheen, Shade = plumage.Body };
+            look.Shape = BodyShape.Phoenix;
+            look.Phoenix = plumage;
+            look.Emission = (Color)plumage.Sheen * 0.08f;
+            look.VertexEmission = 1.2f;
+            look.Smoothness = 0.7f;
+            look.Glitter = 0.35f;
+            look.Rim = Hex(rim);
+            look.RimStrength = 0.9f;
+            look.WingLift = 30f;
+            look.WingAmplitude = 50f;
+            look.WingBend = 0.35f;
+            look.Feather = Hex(feather);
+            return look;
+        }
+
+        /// <summary>
+        /// Apparence de l'oiseau <paramref name="id"/> (identifiants de <see cref="Skins"/>) : tous des
+        /// phénix, de plumages différents. Les identifiants d'origine sont gardés pour les choix
+        /// enregistrés et les produits des boutiques.
+        /// </summary>
         public static SkinLook Skin(string id)
         {
             switch (id)
             {
-                case "cherry":
-                    return Look("#E5452C", "#F38A6A", "#B0271B");
-                case "mint":
-                    return Look("#4FCF94", "#B5F0D0", "#2E9C6A");
-                case "cool":
-                    return Look("#FF7EB6", "#FFC4DD", "#D94A8C", Accessory.Sunglasses);
-                case "pearl":
+                case "blue": // Azur : phénix de glace.
                 {
-                    var look = Look("#F4F1EA", "#FFFFFF", "#C9C2D6", Accessory.Crown);
+                    var look = PhoenixLook(Plumage("#12263F", "#2F6FBF", "#BFE8FF", "#4FC3FF", "#8A7CFF", "#1E6BFF", "#7FE6FF",
+                        "#9FE8FF", "#FFFFFF", "#1A3C8C", "#E0FAFF", "#DCEBF5", "#BFF4FF"), "#9FE8FF", "#4FC3FF");
+                    look.Glitter = 0.5f;
+                    return look;
+                }
+                case "cherry": // Braise : phénix de feu rouge.
+                    return PhoenixLook(Plumage("#2A0E0A", "#8C1F14", "#FFB13B", "#FF4D1F", "#FFD23F", "#C81E0A", "#FFC21A",
+                        "#FFE14D", "#FF5A1F", "#5A0A0A", "#FFD9A0"), "#FF8A3D", "#FF4D1F");
+                case "mint": // Jade.
+                    return PhoenixLook(Plumage("#0E2A1E", "#1F9A6A", "#E8D27A", "#3FE0A0", "#2EC4C4", "#12A86A", "#B8F56A",
+                        "#E8F57A", "#1FB8A8", "#0E3C3A", "#C8FFE8"), "#7FFFC8", "#3FE0A0");
+                case "cool": // Aurore : rose et pêche du lever du jour.
+                    return PhoenixLook(Plumage("#3A1430", "#D9558C", "#FFC86B", "#FF7EB6", "#FFB36B", "#FF5A7A", "#FFD08A",
+                        "#FFE0A8", "#B07AFF", "#4A1A6A", "#FFE6F2"), "#FFC4DD", "#FF7EB6");
+                case "pearl": // Nacre : blanc irisé, or pâle.
+                {
+                    var look = PhoenixLook(Plumage("#D9D4E6", "#F4F1EA", "#F2D58A", "#CFE8FF", "#F2D0FF", "#E8E4F4", "#FFFFFF",
+                        "#F2E6B8", "#8FD8F0", "#6A7AB0", "#FFFFFF", "#F2C35B", "#8FD8F0"), "#CFE8FF", "#F4F1EA");
                     look.Smoothness = 0.85f;
                     look.Glitter = 0.6f;
-                    look.Rim = Hex("#CFE8FF");
-                    look.RimStrength = 0.9f;
+                    look.VertexEmission = 0.8f;
                     return look;
                 }
-                case "ninja":
+                case "ninja": // Ombre : noir aux flammes violettes, œil rouge.
+                    return PhoenixLook(Plumage("#0A0A12", "#2A2440", "#8A6AC8", "#9B4DFF", "#5A2AFF", "#3A0A6A", "#B06BFF",
+                        "#C8A0FF", "#FF3A6A", "#120A1A", "#8A7AB0", "#3A3448", "#FF3A3A"), "#B06BFF", "#5A2AFF");
+                case "robot": // Chrome : métal poli, flammes électriques.
                 {
-                    var look = Look("#2E2E3E", "#55556A", "#1A1A24", Accessory.Headband);
-                    look.Rim = Hex("#FF5A5A");
-                    look.RimStrength = 0.6f;
-                    return look;
-                }
-                case "robot":
-                {
-                    var look = Look("#AEBBC6", "#DCE4EA", "#6E7D8A", Accessory.Antenna);
+                    var look = PhoenixLook(Plumage("#6E7D8A", "#AEBBC6", "#DCE4EA", "#7FE6FF", "#3EA6FF", "#3EC6FF", "#E0FAFF",
+                        "#DCE4EA", "#3EC6FF", "#1A2A3A", "#9FE8FF", "#DCE4EA", "#7FE6FF"), "#9FE8FF", "#AEBBC6");
                     look.Smoothness = 0.82f;
                     look.Metallic = 0.75f;
-                    look.Rim = Hex("#9FE8FF");
                     return look;
                 }
-                case "phoenix":
+                case "galaxy": // Cosmos : violet profond semé d'étoiles.
                 {
-                    // Phénix : corps vert-noir irisé, ailes aux plumes or, rose et violet, queue de feu à ocelles.
-                    var look = Look("#14261C", "#2F8F4E", "#0B140F");
-                    look.Shape = BodyShape.Phoenix;
-                    look.Emission = Hex("#1E5A34") * 0.12f;
-                    look.VertexEmission = 1.2f;
-                    look.Smoothness = 0.7f;
-                    look.Glitter = 0.35f;
-                    look.Rim = Hex("#FFC86B");
-                    look.RimStrength = 0.9f;
-                    look.WingLift = 30f;
-                    look.WingAmplitude = 50f;
-                    look.WingBend = 0.35f;
-                    look.Feather = Hex("#FF8A1A");
-                    return look;
-                }
-                case "galaxy":
-                {
-                    var look = Look("#3B2A7A", "#6C4FD8", "#1E1546");
+                    var look = PhoenixLook(Plumage("#1E1546", "#3B2A7A", "#B9A7FF", "#6C4FD8", "#FF6BD8", "#5B3BFF", "#FF9FE8",
+                        "#FFE6FF", "#3EC6FF", "#0A0A2A", "#D8C8FF", "#D8C8FF", "#FFE6FF"), "#B9A7FF", "#6C4FD8");
                     look.Emission = Hex("#5B3BFF") * 0.18f;
                     look.Glitter = 1.2f;
-                    look.Smoothness = 0.7f;
-                    look.Rim = Hex("#B9A7FF");
-                    look.RimStrength = 0.9f;
                     return look;
                 }
-                default:
-                    return Look("#4EA6D8", "#9BD4F0", "#2C6FA0");
+                default: // Phénix de départ : vert-noir irisé, rémiges or, rose et violet, queue de feu.
+                {
+                    var look = PhoenixLook(Phoenix, "#FFC86B", "#FF8A1A");
+                    look.Emission = Hex("#1E5A34") * 0.12f;
+                    return look;
+                }
             }
         }
 
@@ -281,6 +322,9 @@ namespace PuffyBird.Rendering
             City,
             Japan,
             Winter,
+            Jungle,
+            Sky,
+            Ocean,
         }
 
         public enum Weather
@@ -289,6 +333,10 @@ namespace PuffyBird.Rendering
             Rain,
             Snow,
             Petals,
+            /// <summary>Feuilles tropicales qui tombent en tournoyant.</summary>
+            Leaves,
+            /// <summary>Bulles qui remontent vers la surface.</summary>
+            Bubbles,
         }
 
         /// <summary>Ambiance d'un thème : ciel, brouillard, lumière, décor, météo, post-traitement.</summary>
@@ -298,6 +346,8 @@ namespace PuffyBird.Rendering
             public Weather Weather;
             public bool Lightning;
             public bool Fireflies;
+            /// <summary>Nuages dans le ciel (absents sous la mer).</summary>
+            public bool Clouds;
             public Color SkyTop;
             public Color SkyHorizon;
             public Color Fog;
@@ -338,6 +388,7 @@ namespace PuffyBird.Rendering
             {
                 Set = SetPiece.Forest,
                 Weather = Weather.None,
+                Clouds = true,
                 FogStart = 18f,
                 FogEnd = 95f,
                 SunSize = 0.05f,
@@ -507,6 +558,103 @@ namespace PuffyBird.Rendering
                     t.BloomThreshold = 1.15f;
                     t.ColorFilter = Hex("#F2F7FF");
                     t.Vignette = 0.18f;
+                    break;
+
+                // Jungle tropicale : palmiers, fromagers à lianes, temple en ruine dans la brume.
+                case Core.Theme.Jungle:
+                    t.Set = SetPiece.Jungle;
+                    t.Weather = Weather.Leaves;
+                    t.SkyTop = Hex("#3FA7C9");
+                    t.SkyHorizon = Hex("#D2F2C8");
+                    t.Fog = Hex("#A4D4AE");
+                    t.FogStart = 10f;
+                    t.FogEnd = 70f;
+                    t.SunColor = Hex("#FFEFC2");
+                    t.SunIntensity = 1.25f;
+                    t.SunEuler = new Vector3(48f, -25f, 0f);
+                    t.AmbientSky = Hex("#8CCBB0");
+                    t.AmbientEquator = Hex("#A8D8A0");
+                    t.AmbientGround = Hex("#4E7A3A");
+                    t.HillFar = Hex("#5AA07E");
+                    t.HillNear = Hex("#2F8F4E");
+                    t.Foliage = Hex("#2FA84A");
+                    t.Cloud = Hex("#FFFFFF");
+                    t.SunScreenPos = new Vector2(0.78f, 0.82f);
+                    t.SunDisc = Hex("#FFF4C8");
+                    t.Grass = Hex("#6FD24A");
+                    t.Dirt = new Color(0.85f, 0.75f, 0.6f);
+                    t.Wind = 1.1f;
+                    t.BloomIntensity = 0.55f;
+                    t.ColorFilter = Hex("#F4FFF0");
+                    t.Vignette = 0.24f;
+                    break;
+
+                // Ciel : au-dessus d'une mer de nuages, îles flottantes, montgolfières, arc-en-ciel.
+                case Core.Theme.Sky:
+                    t.Set = SetPiece.Sky;
+                    t.SkyTop = Hex("#2F74D8");
+                    t.SkyHorizon = Hex("#D6EBFF");
+                    t.Fog = Hex("#E2EEFF");
+                    t.FogStart = 30f;
+                    t.FogEnd = 160f;
+                    t.SunColor = Hex("#FFF3DC");
+                    t.SunIntensity = 1.4f;
+                    t.SunEuler = new Vector3(35f, 30f, 0f);
+                    t.AmbientSky = Hex("#A9CBFF");
+                    t.AmbientEquator = Hex("#E2EEFF");
+                    t.AmbientGround = Hex("#D2DEF2");
+                    t.HillFar = Hex("#F2F7FF");
+                    t.HillNear = Hex("#FFFFFF");
+                    t.Foliage = Hex("#FFFFFF");
+                    t.Cloud = Hex("#FFFFFF");
+                    t.SunScreenPos = new Vector2(0.72f, 0.8f);
+                    t.SunSize = 0.06f;
+                    t.SunDisc = Hex("#FFFBE6");
+                    t.Grass = Hex("#F6F9FF");
+                    t.Dirt = new Color(0.93f, 0.95f, 1f);
+                    t.Wind = 0.6f;
+                    t.Flowers = false;
+                    t.BloomIntensity = 0.6f;
+                    t.BloomThreshold = 1f;
+                    t.ColorFilter = Hex("#F6F9FF");
+                    t.Vignette = 0.15f;
+                    break;
+
+                // Fond marin : sable, algues géantes, coraux, bancs de poissons, méduses, bulles.
+                case Core.Theme.Ocean:
+                    t.Set = SetPiece.Ocean;
+                    t.Weather = Weather.Bubbles;
+                    t.Clouds = false;
+                    t.SkyTop = Hex("#43C8E2");
+                    t.SkyHorizon = Hex("#0C3D68");
+                    t.Fog = Hex("#16607E");
+                    t.FogStart = 6f;
+                    t.FogEnd = 48f;
+                    t.SunColor = Hex("#BFF4FF");
+                    t.SunIntensity = 1f;
+                    t.SunEuler = new Vector3(70f, 10f, 0f);
+                    t.AmbientSky = Hex("#4FB8D0");
+                    t.AmbientEquator = Hex("#1F6E8C");
+                    t.AmbientGround = Hex("#2A4A5A");
+                    t.HillFar = Hex("#1B4F6E");
+                    t.HillNear = Hex("#2C6E7E");
+                    t.Foliage = Hex("#E8738A");
+                    t.Cloud = Hex("#FFFFFF");
+                    // Lumière de la surface : grand disque pâle tout en haut.
+                    t.SunScreenPos = new Vector2(0.5f, 1f);
+                    t.SunSize = 0.09f;
+                    t.SunDisc = Hex("#DFFBFF");
+                    t.Grass = Hex("#E2CF98");
+                    t.Dirt = new Color(0.9f, 0.85f, 0.7f);
+                    t.SceneTint = new Color(0.85f, 0.95f, 1f);
+                    t.Wind = 0.7f;
+                    t.Flowers = false;
+                    t.BloomIntensity = 0.9f;
+                    t.BloomThreshold = 0.85f;
+                    t.BloomTint = Hex("#BFF4FF");
+                    t.ColorFilter = Hex("#DDF4FF");
+                    t.Vignette = 0.3f;
+                    t.Exposure = 0.05f;
                     break;
 
                 default:

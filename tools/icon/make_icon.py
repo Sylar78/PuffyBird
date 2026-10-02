@@ -1,4 +1,4 @@
-"""Génère l'icône de l'application (1024 × 1024, PNG sans canal alpha, exigé par l'App Store).
+"""Génère l'icône de l'application, le phénix (1024 × 1024, PNG sans canal alpha, exigé par l'App Store).
 
 Aucune dépendance : dessin par formes analytiques avec anticrénelage, écriture PNG à la main.
 Usage : python3 tools/icon/make_icon.py [chemin de sortie]
@@ -17,24 +17,27 @@ def hex_rgb(h):
     return tuple(int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
 
 
-# Palette du jeu (Palette.cs)
-SKY_TOP = hex_rgb("#3C9BDB")
-SKY_LOW = hex_rgb("#BFEAF2")
-SUN = hex_rgb("#FFF6D8")
-GRASS_LIGHT = hex_rgb("#9CE659")
-GRASS_DARK = hex_rgb("#73BF2E")
-SAND = hex_rgb("#DED895")
-SAND_EDGE = hex_rgb("#D7A84C")
-PIPE = hex_rgb("#3FB6A8")
-PIPE_SHADE = hex_rgb("#2B8C82")
-PIPE_LIGHT = hex_rgb("#8FE0D2")
-PIPE_RIM = hex_rgb("#F2C35B")
-BODY = hex_rgb("#4EA6D8")
-BELLY = hex_rgb("#BFE6F7")
-SHADE = hex_rgb("#2C6FA0")
-BEAK = hex_rgb("#F7A23B")
-CHEEK = hex_rgb("#F59AA8")
-OUTLINE = hex_rgb("#543847")
+# Palette du phénix (Palette.cs)
+SKY_TOP = hex_rgb("#1B1446")
+SKY_MID = hex_rgb("#5A2A7A")
+SKY_LOW = hex_rgb("#FF8A4C")
+HALO = hex_rgb("#FFC86B")
+BODY = hex_rgb("#14261C")
+OUTLINE = hex_rgb("#0B140F")
+SHEEN = hex_rgb("#2F8F4E")
+SHEEN_LIGHT = hex_rgb("#5FD08A")
+GOLD = hex_rgb("#F2B53A")
+GOLD_LIGHT = hex_rgb("#FFE07A")
+TIP_A = hex_rgb("#E8399A")
+TIP_B = hex_rgb("#9B4DFF")
+FLAME_ROOT = hex_rgb("#E8340A")
+FLAME_TIP = hex_rgb("#FF8C1A")
+OCELLUS = hex_rgb("#FFB52E")
+RING = hex_rgb("#22B8C8")
+CORE = hex_rgb("#1A3C8C")
+WISP = hex_rgb("#9FF3FF")
+BEAK = hex_rgb("#F4D58A")
+EYE = hex_rgb("#FFE07A")
 WHITE = (1.0, 1.0, 1.0)
 PUPIL = hex_rgb("#1A1016")
 
@@ -58,7 +61,7 @@ def cov(d):
     return min(1.0, max(0.0, 0.5 - d))
 
 
-def ellipse(cx, cy, rx, ry, color, shade=None, rot=0.0):
+def ellipse(cx, cy, rx, ry, color, shade=None, rot=0.0, alpha=1.0):
     """Ellipse pleine ; shade(x, y) -> couleur optionnelle pour un dégradé."""
     c, s = math.cos(rot), math.sin(rot)
     r = max(rx, ry) + 2
@@ -67,17 +70,7 @@ def ellipse(cx, cy, rx, ry, color, shade=None, rot=0.0):
             dx, dy = x + 0.5 - cx, y + 0.5 - cy
             u, v = dx * c + dy * s, -dx * s + dy * c
             k = math.sqrt((u / rx) ** 2 + (v / ry) ** 2)
-            a = cov((k - 1.0) * min(rx, ry))
-            if a > 0.0:
-                blend(x, y, shade(x, y) if shade else color, a)
-
-
-def rect(x0, y0, x1, y1, color, shade=None):
-    for y in range(max(0, int(y0) - 1), min(SIZE, int(y1) + 2)):
-        for x in range(max(0, int(x0) - 1), min(SIZE, int(x1) + 2)):
-            px, py = x + 0.5, y + 0.5
-            d = max(x0 - px, px - x1, y0 - py, py - y1)
-            a = cov(d)
+            a = cov((k - 1.0) * min(rx, ry)) * alpha
             if a > 0.0:
                 blend(x, y, shade(x, y) if shade else color, a)
 
@@ -86,79 +79,118 @@ def lerp(a, b, t):
     return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
 
 
-# Ciel en dégradé
+def segment(x0, y0, angle, start, end, width, color, outline=0):
+    """Plume : ellipse allongée le long de angle (radians, y vers le bas), de start à end depuis (x0, y0)."""
+    mid = (start + end) * 0.5
+    cx, cy = x0 + math.cos(angle) * mid, y0 + math.sin(angle) * mid
+    if outline:
+        ellipse(cx, cy, (end - start) * 0.5 + outline, width + outline, OUTLINE, rot=angle)
+    ellipse(cx, cy, (end - start) * 0.5, width, color, rot=angle)
+
+
+def glow(cx, cy, radius, color, strength):
+    for y in range(max(0, int(cy - radius * 2)), min(SIZE, int(cy + radius * 2))):
+        for x in range(max(0, int(cx - radius * 2)), min(SIZE, int(cx + radius * 2))):
+            d2 = ((x - cx) ** 2 + (y - cy) ** 2) / (radius * radius)
+            blend(x, y, color, strength * math.exp(-d2))
+
+
+# Ciel du crépuscule : nuit en haut, braise à l'horizon.
 for y in range(SIZE):
-    col = lerp(SKY_TOP, SKY_LOW, (y / (SIZE - 1)) ** 1.2)
+    t = y / (SIZE - 1)
+    col = lerp(SKY_TOP, SKY_MID, t / 0.55) if t < 0.55 else lerp(SKY_MID, SKY_LOW, (t - 0.55) / 0.45)
     for x in range(SIZE):
         img[y * SIZE + x] = list(col)
 
-# Soleil et halo
-ellipse(210, 230, 170, 170, None, shade=lambda x, y: lerp(lerp(SKY_TOP, SKY_LOW, 0.3), SUN, 0.3))
-ellipse(210, 230, 105, 105, SUN)
+# Petites étoiles
+rnd = 7
+for i in range(40):
+    rnd = (rnd * 1103515245 + 12345) & 0x7FFFFFFF
+    sx = rnd % SIZE
+    rnd = (rnd * 1103515245 + 12345) & 0x7FFFFFFF
+    sy = rnd % 420
+    ellipse(sx, sy, 3 + (i % 3), 3 + (i % 3), WHITE, alpha=0.5 + 0.1 * (i % 5))
 
-# Nuages
-for cx, cy, r in ((600, 170, 70), (680, 150, 90), (770, 175, 65), (90, 470, 55), (150, 455, 70)):
-    ellipse(cx, cy, r * 1.15, r, WHITE)
+# Halo de feu derrière l'oiseau
+glow(560, 520, 360, HALO, 0.7)
+glow(590, 500, 190, GOLD_LIGHT, 0.45)
+
+# Repère : épaule, corps tourné vers la droite.
+SX, SY = 580, 560
+
+# Queue de feu : longues plumes vers le bas à gauche, terminées par un ocelle.
+TAIL_X, TAIL_Y = SX - 140, SY + 110
+for angle_deg, length, ocellus in ((160, 300, True), (174, 320, True), (146, 270, True), (188, 270, True), (134, 210, False), (200, 210, False)):
+    a0 = math.radians(angle_deg)
+    px, py = TAIL_X, TAIL_Y
+    steps = 14
+    for i in range(1, steps + 1):
+        u = i / steps
+        # La plume s'incurve doucement puis remonte au bout.
+        a = a0 + 0.25 * u
+        nx = TAIL_X + math.cos(a) * length * u
+        ny = TAIL_Y + math.sin(a) * length * u + 70 * math.sin(u * math.pi * 0.9)
+        seg_a = math.atan2(ny - py, nx - px)
+        seg_len = math.hypot(nx - px, ny - py)
+        w = (22 - 12 * u) * (1.0 if ocellus else 0.55)
+        col = lerp(FLAME_ROOT, FLAME_TIP, u) if ocellus else WISP
+        segment(px, py, seg_a, -4, seg_len + 4, w, col)
+        px, py, last = nx, ny, seg_a
+    if ocellus:
+        segment(px, py, last, -14, 66, 28, OCELLUS, outline=5)
+        segment(px, py, last, 2, 50, 18, RING)
+        segment(px, py, last, 14, 40, 8, CORE)
+
+# Aile lointaine (plus sombre), levée derrière le corps.
+for k in range(8):
+    t = k / 7
+    a = math.radians(-155 + 65 * t)
+    length = 290 - 60 * t
+    rx, ry = SX + 30, SY - 20
+    segment(rx, ry, a, 0, length * 0.55, 20, lerp(BODY, SHEEN, 0.3), outline=5)
+    segment(rx, ry, a, length * 0.35, length * 0.9, 22, lerp(TIP_B if k % 2 else TIP_A, BODY, 0.35), outline=5)
+    segment(rx, ry, a, length * 0.8, length, 18, lerp(GOLD, BODY, 0.3))
+
+# Corps
+ellipse(SX, SY + 60, 175 + 10, 105 + 10, OUTLINE, rot=-0.45)
+ellipse(SX, SY + 60, 175, 105, None, rot=-0.45,
+        shade=lambda x, y: lerp(SHEEN, BODY, min(1.0, max(0.0, (y - 420) / 180))))
+ellipse(SX + 60, SY + 50, 95, 60, lerp(SHEEN, SHEEN_LIGHT, 0.3), rot=-0.6)
+
+# Aile proche : grandes rémiges levées, sombres, rose et violet lumineux, bout doré.
+WX, WY = SX - 10, SY + 10
+for k in range(9):
+    t = k / 8
+    a = math.radians(-172 + 78 * t)
+    length = 360 - 100 * t
+    segment(WX, WY, a, 0, length * 0.5, 24, BODY, outline=6)
+    segment(WX, WY, a, length * 0.3, length * 0.9, 27, TIP_A if k % 2 == 0 else TIP_B, outline=6)
+    segment(WX, WY, a, length * 0.78, length, 22, GOLD, outline=5)
+ellipse(WX, WY, 70 + 8, 52 + 8, OUTLINE)
+ellipse(WX, WY, 70, 52, SHEEN)
 
 
-def pipe_shade(x0, x1):
-    def f(x, y):
-        t = (x - x0) / (x1 - x0)
-        if t < 0.18:
-            return lerp(PIPE, PIPE_LIGHT, 0.6)
-        if t > 0.72:
-            return PIPE_SHADE
-        return PIPE
-    return f
+# Cou et tête
+ellipse(SX + 150, SY - 60, 52 + 10, 105 + 10, OUTLINE, rot=0.55)
+ellipse(SX + 150, SY - 60, 52, 105, SHEEN, rot=0.55)
+ellipse(SX + 205, SY - 150, 72 + 10, 70 + 10, OUTLINE)
+ellipse(SX + 205, SY - 150, 72, 70, None,
+        shade=lambda x, y: lerp(SHEEN_LIGHT, SHEEN, min(1.0, max(0.0, (y - (SY - 220)) / 140))))
 
+# Collier de perles d'or à la base du cou, en travers du cou.
+for k in range(7):
+    t = (k - 3) / 3
+    ellipse(SX + 109 + 0.85 * 50 * t, SY + 7 + 0.52 * 50 * t + 8 * (1 - t * t), 13, 13, GOLD_LIGHT if k % 2 else GOLD)
 
-# Tuyaux jade à liseré doré (tuyau du haut et du bas, à droite)
-BX0, BX1, CX0, CX1 = 760, 930, 735, 955
-rect(BX0, -10, BX1, 250, None, pipe_shade(BX0, BX1))
-rect(CX0, 250, CX1, 330, None, pipe_shade(CX0, CX1))
-rect(CX0, 300, CX1, 316, PIPE_RIM)
-rect(BX0, 700, BX1, 900, None, pipe_shade(BX0, BX1))
-rect(CX0, 640, CX1, 720, None, pipe_shade(CX0, CX1))
-rect(CX0, 654, CX1, 670, PIPE_RIM)
+# Crête : trois flammèches vers l'arrière
+for k, (dx, ang, length, col) in enumerate(((0, -2.1, 120, GOLD), (-25, -2.45, 140, TIP_A), (-50, -2.8, 110, GOLD))):
+    segment(SX + 190 + dx, SY - 205, ang, 0, length, 20 - k * 2, col, outline=6)
 
-# Sol : gazon rayé puis sable
-for y in range(870, SIZE):
-    for x in range(SIZE):
-        if y < 930:
-            stripe = ((x + y) // 36) % 2 == 0
-            img[y * SIZE + x] = list(GRASS_LIGHT if stripe else GRASS_DARK)
-        elif y < 944:
-            img[y * SIZE + x] = list(SAND_EDGE)
-        else:
-            img[y * SIZE + x] = list(SAND)
-
-# Oiseau
-BX, BY, RX, RY = 430, 520, 270, 235
-OUT_W = 16
-ellipse(BX, BY, RX + OUT_W, RY + OUT_W, OUTLINE)
-
-
-def body_shade(x, y):
-    t = min(1.0, max(0.0, (y - (BY - RY)) / (2 * RY)))
-    return lerp(BODY, SHADE, max(0.0, t - 0.45) * 1.3)
-
-
-ellipse(BX, BY, RX, RY, None, shade=body_shade)
-ellipse(BX - 10, BY + 105, 190, 105, BELLY)
-# Reflet
-ellipse(BX - 110, BY - 140, 70, 38, lerp(BODY, WHITE, 0.55), rot=-0.5)
-# Aile
-ellipse(BX - 150, BY + 30, 125 + OUT_W, 78 + OUT_W, OUTLINE, rot=-0.25)
-ellipse(BX - 150, BY + 30, 125, 78, lerp(BODY, WHITE, 0.35), rot=-0.25)
-# Œil
-ellipse(BX + 105, BY - 85, 88 + OUT_W, 92 + OUT_W, OUTLINE)
-ellipse(BX + 105, BY - 85, 88, 92, WHITE)
-ellipse(BX + 135, BY - 80, 38, 44, PUPIL)
-ellipse(BX + 122, BY - 98, 12, 12, WHITE)
-# Joue et petit bec pointu
-ellipse(BX + 60, BY + 40, 52, 34, CHEEK)
-ellipse(BX + 262, BY + 5, 72 + OUT_W, 42 + OUT_W, OUTLINE, rot=0.18)
-ellipse(BX + 262, BY + 5, 72, 42, BEAK, rot=0.18)
+# Œil doré et bec fin crochu
+ellipse(SX + 230, SY - 165, 24, 24, EYE)
+ellipse(SX + 238, SY - 165, 12, 13, PUPIL)
+ellipse(SX + 232, SY - 172, 5, 5, WHITE)
+segment(SX + 262, SY - 140, 0.45, -6, 90, 18, BEAK, outline=6)
 
 
 def png(path, pixels):

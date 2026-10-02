@@ -6,7 +6,7 @@ namespace PuffyBird.Rendering
 {
     /// <summary>
     /// Météo des décors : pluie battante (orage), flocons (neige), pétales de cerisier (Japon),
-    /// et éclairs de l'orage (zigzag lumineux au loin + lueur sur tout le décor).
+    /// feuilles tropicales (jungle), bulles qui remontent (fond marin) et éclairs de l'orage (zigzag lumineux au loin + lueur sur tout le décor).
     /// Les particules tombent derrière le plan de jeu : elles ne passent jamais devant un tuyau
     /// ni devant l'oiseau. Pools fixes créés au chargement, emportés par le défilement du monde.
     /// </summary>
@@ -15,6 +15,8 @@ namespace PuffyBird.Rendering
         const int RainCount = 80;
         const int SnowCount = 70;
         const int PetalCount = 36;
+        const int LeafCount = 24;
+        const int BubbleCount = 48;
         const float NearZ = 0.6f;
         const float FarZ = 11f;
         const float SpawnFov = 40f;
@@ -32,6 +34,8 @@ namespace PuffyBird.Rendering
         readonly Flake[] _rain = new Flake[RainCount];
         readonly Flake[] _snow = new Flake[SnowCount];
         readonly Flake[] _petals = new Flake[PetalCount];
+        readonly Flake[] _leaves = new Flake[LeafCount];
+        readonly Flake[] _bubbles = new Flake[BubbleCount];
         readonly Transform[] _bolts = new Transform[3];
         Palette.Weather _weather;
         bool _lightning;
@@ -69,6 +73,24 @@ namespace PuffyBird.Rendering
             petalMaterial.SetFloat(MaterialLibrary.VertexEmission, 0.15f);
             for (int i = 0; i < PetalCount; i++) _petals[i].Transform = Create(root, "Pétale", petalMeshes[i % 2], petalMaterial);
 
+            var leafMeshes = new[]
+            {
+                BuildLeaf(Palette.Hex("#3FAE4A"), Palette.Hex("#2A7A36")).Build("Feuille"),
+                BuildLeaf(Palette.Hex("#8BCB3C"), Palette.Hex("#5A9A2A")).Build("Feuille claire"),
+                BuildLeaf(Palette.Hex("#E3B23C"), Palette.Hex("#B07A22")).Build("Feuille sèche"),
+            };
+            var leafMaterial = materials.Lit("Feuilles", Color.white, 0.45f, 0f, 0.4f);
+            for (int i = 0; i < LeafCount; i++) _leaves[i].Transform = Create(root, "Feuille", leafMeshes[i % leafMeshes.Length], leafMaterial);
+
+            // Bulles : sphère claire, reflet brillant ; l'émission les garde visibles dans le bleu.
+            var bubbleMesh = new MeshBuilder()
+                .AddSphere(Vector3.zero, 1f, Palette.Hex("#D8F6FF"), 10, 8)
+                .AddSphere(new Vector3(-0.35f, 0.4f, -0.6f), 0.28f, Color.white, 6, 4)
+                .Build("Bulle");
+            var bubbleMaterial = materials.Lit("Bulles", Color.white, 0.95f, 0f, 1f);
+            bubbleMaterial.SetFloat(MaterialLibrary.VertexEmission, 0.5f);
+            for (int i = 0; i < BubbleCount; i++) _bubbles[i].Transform = Create(root, "Bulle", bubbleMesh, bubbleMaterial);
+
             var boltMaterial = materials.Lit("Éclair", Color.white, 0f, 0f, 0f);
             boltMaterial.SetFloat(MaterialLibrary.VertexEmission, 3f);
             boltMaterial.SetColor(MaterialLibrary.EmissionColor, Palette.Hex("#AFC4FF") * 2f);
@@ -87,6 +109,14 @@ namespace PuffyBird.Rendering
             r.receiveShadows = false;
             go.SetActive(false);
             return go.transform;
+        }
+
+        /// <summary>Feuille tropicale : limbe allongé et nervure centrale plus sombre.</summary>
+        static MeshBuilder BuildLeaf(Color blade, Color rib)
+        {
+            return new MeshBuilder()
+                .AddEllipsoid(Vector3.zero, new Vector3(1f, 0.12f, 0.42f), blade, 10, 5)
+                .AddBox(new Vector3(0.1f, 0.1f, 0f), new Vector3(1.9f, 0.06f, 0.06f), rib);
         }
 
         /// <summary>Éclair ramifié : segments fins en zigzag, du haut (y = 0) vers le bas.</summary>
@@ -130,6 +160,8 @@ namespace PuffyBird.Rendering
             SetActive(_rain, _weather == Palette.Weather.Rain);
             SetActive(_snow, _weather == Palette.Weather.Snow);
             SetActive(_petals, _weather == Palette.Weather.Petals);
+            SetActive(_leaves, _weather == Palette.Weather.Leaves);
+            SetActive(_bubbles, _weather == Palette.Weather.Bubbles);
             for (int i = 0; i < _bolts.Length; i++) _bolts[i].gameObject.SetActive(false);
             Flash = 0f;
             _strikeAge = -1f;
@@ -141,6 +173,8 @@ namespace PuffyBird.Rendering
             Scatter(_rain, anywhere: true);
             Scatter(_snow, anywhere: true);
             Scatter(_petals, anywhere: true);
+            Scatter(_leaves, anywhere: true);
+            Scatter(_bubbles, anywhere: true);
         }
 
         static void SetActive(Flake[] flakes, bool active)
@@ -160,7 +194,8 @@ namespace PuffyBird.Rendering
             float z = Random.Range(NearZ, FarZ);
             float halfWidth = CameraRig.HalfWidthAt(z, SpawnFov, CameraRig.MaxAspect) + 0.5f;
             float top = TopAt(z);
-            float y = anywhere ? Random.Range(0f, top) : top + Random.Range(0f, 1f);
+            bool rising = _weather == Palette.Weather.Bubbles;
+            float y = anywhere ? Random.Range(0f, top) : rising ? -Random.Range(0f, 0.6f) : top + Random.Range(0f, 1f);
             var t = f.Transform;
             t.localPosition = new Vector3(Random.Range(-halfWidth, halfWidth * 1.3f), y, z);
             f.Phase = Random.Range(0f, 100f);
@@ -175,6 +210,21 @@ namespace PuffyBird.Rendering
                     f.Velocity = new Vector3(-0.15f, -Random.Range(0.35f, 0.7f), 0f);
                     float s = Random.Range(0.012f, 0.028f);
                     t.localScale = new Vector3(s, s, s);
+                    break;
+                case Palette.Weather.Bubbles:
+                    // Les grosses bulles montent plus vite que les petites.
+                    float b = Random.Range(0.008f, 0.026f);
+                    f.Velocity = new Vector3(0f, 0.35f + b * 30f, 0f) * Random.Range(0.85f, 1.15f);
+                    f.Spin = 0f;
+                    t.localScale = new Vector3(b, b, b);
+                    t.localRotation = Quaternion.identity;
+                    break;
+                case Palette.Weather.Leaves:
+                    f.Velocity = new Vector3(-Random.Range(0.2f, 0.45f), -Random.Range(0.35f, 0.6f), 0f);
+                    f.Spin = Random.Range(-160f, 160f);
+                    float l = Random.Range(0.03f, 0.05f);
+                    t.localScale = new Vector3(l, l, l);
+                    t.localRotation = Random.rotation;
                     break;
                 default:
                     f.Velocity = new Vector3(-Random.Range(0.25f, 0.55f), -Random.Range(0.28f, 0.5f), 0f);
@@ -203,6 +253,8 @@ namespace PuffyBird.Rendering
                 case Palette.Weather.Rain: Fall(_rain, scroll, deltaTime, time, sway: 0f); break;
                 case Palette.Weather.Snow: Fall(_snow, scroll, deltaTime, time, sway: 0.25f); break;
                 case Palette.Weather.Petals: Fall(_petals, scroll, deltaTime, time, sway: 0.35f); break;
+                case Palette.Weather.Leaves: Fall(_leaves, scroll, deltaTime, time, sway: 0.5f); break;
+                case Palette.Weather.Bubbles: Fall(_bubbles, scroll, deltaTime, time, sway: 0.18f); break;
             }
             if (_lightning) UpdateLightning(deltaTime);
         }
@@ -219,7 +271,8 @@ namespace PuffyBird.Rendering
                 if (sway > 0f) p.x += Mathf.Sin(time * 1.3f + f.Phase) * sway * dt;
                 if (f.Spin != 0f) t.Rotate(f.Spin * dt, f.Spin * 0.6f * dt, 0f, Space.Self);
                 float halfWidth = CameraRig.HalfWidthAt(p.z, SpawnFov, CameraRig.MaxAspect) + 0.6f;
-                if (p.y < 0f || p.x < -halfWidth)
+                bool gone = f.Velocity.y > 0f ? p.y > TopAt(p.z) + 0.5f : p.y < 0f;
+                if (gone || p.x < -halfWidth)
                 {
                     Respawn(ref f, anywhere: false);
                     continue;

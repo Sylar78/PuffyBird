@@ -29,6 +29,9 @@ namespace PuffyBird.Core
         Japan,
         Storm,
         Snow,
+        Jungle,
+        Sky,
+        Ocean,
     }
 
     public enum Medal
