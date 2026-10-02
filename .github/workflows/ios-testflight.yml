@@ -45,6 +45,19 @@ jobs:
           large-packages: true
           tool-cache: true
 
+      # Unity tourne dans un conteneur limité à ~7,5 Go sur une machine sans mémoire d'échange :
+      # un pic de mémoire (compilation, IL2CPP) le fait tuer par le système (code 137).
+      # Un fichier d'échange donne de la marge ; le conteneur Docker peut l'utiliser.
+      - name: Ajouter de la mémoire d'échange (évite le code 137)
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 12G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -m
+          df -h /
+
       - uses: actions/checkout@v4
 
       - uses: actions/cache@v4
