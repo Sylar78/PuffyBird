@@ -84,21 +84,21 @@ namespace PuffyBird.UI
             for (int d = 0; d < 10; d++) _digitMeshes[d] = VoxelFont.Build(d.ToString(), TextAlign.Left, Color.white, outline);
 
             _title = Text("PUFFYBIRD", TextAlign.Center, Palette.Hex("#F8C82A"), outline);
-            _tapToPlay = Text(Lang.T("TOUCHE POUR JOUER", "TAP TO PLAY"), TextAlign.Center, Color.white, outline);
-            _titleBestLabel = Text(Lang.T("RECORD", "BEST"), TextAlign.Right, Palette.PanelLabel, outline);
+            _tapToPlay = Text(Lang.T("TOUCHE POUR JOUER", "TAP TO PLAY", "TOCA PARA JUGAR", "TIPPEN ZUM SPIELEN", "TOQUE PARA JOGAR"), TextAlign.Center, Color.white, outline);
+            _titleBestLabel = Text(Lang.T("RECORD", "BEST", "RÉCORD", "REKORD", "RECORDE"), TextAlign.Right, Palette.PanelLabel, outline);
             _titleBest = CreateNumber(TextAlign.Left, 5);
-            _getReady = Text(Lang.T("PRÊT ?", "GET READY!"), TextAlign.Center, Palette.GetReady, outline);
+            _getReady = Text(Lang.T("PRÊT ?", "GET READY!", "¡PREPARADO!", "BEREIT?", "PREPARE-SE!"), TextAlign.Center, Palette.GetReady, outline);
             _tapArrow = Text("^", TextAlign.Center, Color.white, outline);
-            _tapLabel = Text(Lang.T("TOUCHE", "TAP"), TextAlign.Center, Color.white, outline);
+            _tapLabel = Text(Lang.T("TOUCHE", "TAP", "TOCA", "TIPPEN", "TOQUE"), TextAlign.Center, Color.white, outline);
             _score = CreateNumber(TextAlign.Center, 6);
-            _gameOver = Text(Lang.T("PERDU !", "GAME OVER"), TextAlign.Center, Palette.GameOver, outline);
+            _gameOver = Text(Lang.T("PERDU !", "GAME OVER", "FIN DEL JUEGO", "SPIEL VORBEI", "FIM DE JOGO"), TextAlign.Center, Palette.GameOver, outline);
 
             _panelBorder = Solid(Palette.Outline);
             _panel = Solid(Palette.PanelEdge);
             _panelInner = Solid(Palette.Panel);
-            _medalLabel = Text(Lang.T("MÉDAILLE", "MEDAL"), TextAlign.Left, Palette.PanelLabel, Palette.Panel);
-            _scoreLabel = Text("SCORE", TextAlign.Right, Palette.PanelLabel, Palette.Panel);
-            _bestLabel = Text(Lang.T("RECORD", "BEST"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
+            _medalLabel = Text(Lang.T("MÉDAILLE", "MEDAL", "MEDALLA", "MEDAILLE", "MEDALHA"), TextAlign.Left, Palette.PanelLabel, Palette.Panel);
+            _scoreLabel = Text(Lang.T("SCORE", "SCORE", "PUNTOS", "PUNKTE", "PONTOS"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
+            _bestLabel = Text(Lang.T("RECORD", "BEST", "RÉCORD", "REKORD", "RECORDE"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
             _panelScore = CreateNumber(TextAlign.Right, 6);
             _panelBest = CreateNumber(TextAlign.Right, 6);
 
@@ -114,10 +114,10 @@ namespace PuffyBird.UI
             _sparkle = Create("Étincelle", sparkleMesh, _sparkleMaterial);
 
             _newTag = Solid(Palette.NewTag);
-            _newLabel = Text(Lang.T("NOUVEAU", "NEW"), TextAlign.Center, Color.white, Palette.NewTag);
-            _retry = Text(Lang.T("TOUCHE POUR REJOUER", "TAP TO RETRY"), TextAlign.Center, Color.white, outline);
-            _pause = Text("PAUSE", TextAlign.Center, Color.white, outline);
-            _pauseTap = Text(Lang.T("TOUCHE POUR REPRENDRE", "TAP TO RESUME"), TextAlign.Center, Color.white, outline);
+            _newLabel = Text(Lang.T("NOUVEAU", "NEW", "NUEVO", "NEU", "NOVO"), TextAlign.Center, Color.white, Palette.NewTag);
+            _retry = Text(Lang.T("TOUCHE POUR REJOUER", "TAP TO RETRY", "TOCA PARA REINTENTAR", "ERNEUT TIPPEN", "TOQUE PARA TENTAR"), TextAlign.Center, Color.white, outline);
+            _pause = Text(Lang.T("PAUSE", "PAUSE", "PAUSA", "PAUSE", "PAUSA"), TextAlign.Center, Color.white, outline);
+            _pauseTap = Text(Lang.T("TOUCHE POUR REPRENDRE", "TAP TO RESUME", "TOCA PARA SEGUIR", "ZUM FORTSETZEN TIPPEN", "TOQUE PARA CONTINUAR"), TextAlign.Center, Color.white, outline);
             _pauseButton = ui.CreateButton(VoxelFont.PauseIcon, Palette.GameOver, Color.white);
         }
 

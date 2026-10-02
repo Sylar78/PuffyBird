@@ -75,10 +75,12 @@ namespace PuffyBird.UI
             {
                 var skin = Skins.Get(i);
                 if (includePaid || skin.Unlock != SkinUnlock.Purchase) _browsable[count++] = i;
-                _names[i] = ui.Text(Lang.T(skin.Name, skin.EnglishName), TextAlign.Center, Color.white, Palette.Outline);
+                _names[i] = ui.Text(skin.NameIn(Lang.Current), TextAlign.Center, Color.white, Palette.Outline);
                 if (skin.Unlock == SkinUnlock.Medal)
                 {
-                    string hint = Lang.French ? $"FAIS {Skins.RequiredScore(skin.Medal, _cfg)} POUR DÉBLOQUER" : $"BEST {Skins.RequiredScore(skin.Medal, _cfg)} TO UNLOCK";
+                    int required = Skins.RequiredScore(skin.Medal, _cfg);
+                    string hint = Lang.T($"FAIS {required} POUR DÉBLOQUER", $"BEST {required} TO UNLOCK", $"LLEGA A {required} PARA DESBLOQUEAR",
+                        $"SCHAFFE {required} ZUM FREISCHALTEN", $"CHEGUE A {required} PARA DESBLOQUEAR");
                     _hints[i] = ui.Text(hint, TextAlign.Center, Palette.PanelLabel, Palette.Panel);
                 }
             }
@@ -86,17 +88,17 @@ namespace PuffyBird.UI
             _panelBorder = ui.Solid(Palette.Outline);
             _panel = ui.Solid(Palette.PanelEdge);
             _panelInner = ui.Solid(Palette.Panel);
-            _unlocked = ui.Text(VoxelFont.CheckIcon + Lang.T(" DÉBLOQUÉ", " UNLOCKED"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _unlocked = ui.Text(VoxelFont.CheckIcon + Lang.T(" DÉBLOQUÉ", " UNLOCKED", " DESBLOQUEADO", " FREIGESCHALTET", " DESBLOQUEADO"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
             _premium = ui.Text("PREMIUM", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
-            _storeOffline = ui.Text(Lang.T("BOUTIQUE INDISPONIBLE", "STORE OFFLINE"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
-            _actionLabels[(int)ActionLabel.Use] = ui.Text(Lang.T("CHOISIR", "USE"), TextAlign.Center, Color.white, Palette.Outline);
-            _actionLabels[(int)ActionLabel.InUse] = ui.Text(VoxelFont.CheckIcon + Lang.T(" CHOISI", " IN USE"), TextAlign.Center, Color.white, Palette.Outline);
-            _actionLabels[(int)ActionLabel.Buy] = ui.Text(Lang.T("ACHETER", "BUY"), TextAlign.Center, Color.white, Palette.Outline);
-            _actionLabels[(int)ActionLabel.Locked] = ui.Text(VoxelFont.LockIcon + Lang.T(" BLOQUÉ", " LOCKED"), TextAlign.Center, Color.white, Palette.Outline);
+            _storeOffline = ui.Text(Lang.T("BOUTIQUE INDISPONIBLE", "STORE OFFLINE", "TIENDA NO DISPONIBLE", "SHOP NICHT VERFÜGBAR", "LOJA INDISPONÍVEL"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _actionLabels[(int)ActionLabel.Use] = ui.Text(Lang.T("CHOISIR", "USE", "ELEGIR", "WÄHLEN", "USAR"), TextAlign.Center, Color.white, Palette.Outline);
+            _actionLabels[(int)ActionLabel.InUse] = ui.Text(VoxelFont.CheckIcon + Lang.T(" CHOISI", " IN USE", " ELEGIDO", " GEWÄHLT", " EM USO"), TextAlign.Center, Color.white, Palette.Outline);
+            _actionLabels[(int)ActionLabel.Buy] = ui.Text(Lang.T("ACHETER", "BUY", "COMPRAR", "KAUFEN", "COMPRAR"), TextAlign.Center, Color.white, Palette.Outline);
+            _actionLabels[(int)ActionLabel.Locked] = ui.Text(VoxelFont.LockIcon + Lang.T(" BLOQUÉ", " LOCKED", " BLOQUEADO", " GESPERRT", " BLOQUEADO"), TextAlign.Center, Color.white, Palette.Outline);
             _previous = ui.CreateButton("<", Palette.Hex("#4EA6D8"), Color.white);
             _next = ui.CreateButton(">", Palette.Hex("#4EA6D8"), Color.white);
             _action = ui.CreateButton(null, Palette.GetReady, Color.white);
-            _back = ui.CreateButton(Lang.T("RETOUR", "BACK"), Palette.GameOver, Color.white);
+            _back = ui.CreateButton(Lang.T("RETOUR", "BACK", "VOLVER", "ZURÜCK", "VOLTAR"), Palette.GameOver, Color.white);
         }
 
         /// <summary>Oiseau affiché dans le menu (indice du catalogue).</summary>
@@ -135,7 +137,7 @@ namespace PuffyBird.UI
             {
                 if (i != browsed) UiLayer.Hide(_names[i]);
             }
-            _ui.Place(_names[browsed], cx, NameY - VoxelFont.GlyphHeight * 1.2f, 2.4f);
+            _ui.Place(_names[browsed], cx, NameY - VoxelFont.GlyphHeight * 1.2f, 2.4f, maxWidth: PanelWidth - 96f);
             _ui.PlaceButton(_previous, UiAction.SkinPrevious, left + 26f, NameY, 30f, 26f, 2f, hitMargin: 6f);
             _ui.PlaceButton(_next, UiAction.SkinNext, left + PanelWidth - 26f, NameY, 30f, 26f, 2f, hitMargin: 6f);
 
@@ -165,7 +167,7 @@ namespace PuffyBird.UI
             }
 
             HideStatuses(status);
-            _ui.Place(status, cx, StatusY - VoxelFont.GlyphHeight * 0.8f, 1.6f);
+            _ui.Place(status, cx, StatusY - VoxelFont.GlyphHeight * 0.8f, 1.6f, maxWidth: PanelWidth - 16f);
 
             for (int i = 0; i < _actionLabels.Length; i++)
             {

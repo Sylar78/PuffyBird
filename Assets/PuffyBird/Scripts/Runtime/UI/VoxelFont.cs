@@ -14,7 +14,7 @@ namespace PuffyBird.UI
     /// Police 5 × 7 (§14.5) transformée en texte en volume : chaque pixel allumé devient un petit
     /// cube éclairé, doublé d'un cube sombre en retrait qui fait office de contour. Aucune police
     /// ni atlas à importer. Les maillages sont construits une fois au chargement.
-    /// Les lettres accentuées du français dépassent au-dessus de la ligne (accent sur deux rangées
+    /// Les lettres accentuées (français, espagnol, allemand, portugais) dépassent au-dessus de la ligne (accent sur deux rangées
     /// plus une rangée vide), la cédille au-dessous : la largeur et l'alignement ne changent pas.
     /// </summary>
     public static class VoxelFont
@@ -83,6 +83,9 @@ namespace PuffyBird.UI
             ['€'] = new[] { "..###", ".#...", "####.", ".#...", "####.", ".#...", "..###" },
             ['$'] = new[] { "..#..", ".####", "#.#..", ".###.", "..#.#", "####.", "..#.." },
             ['£'] = new[] { "..##.", ".#..#", ".#...", "###..", ".#...", ".#...", "#####" },
+            // Ponctuation espagnole : le point d'exclamation et le point d'interrogation retournés.
+            ['¡'] = new[] { "..#..", ".....", "..#..", "..#..", "..#..", "..#..", "..#.." },
+            ['¿'] = new[] { "..#..", ".....", "..#..", ".##..", "#....", "#...#", ".###." },
             // Icônes de l'interface (caractères à usage privé, voir les constantes plus bas).
             ['\uE000'] = new[] { "##.##", "##.##", "##.##", "##.##", "##.##", "##.##", "##.##" },
             ['\uE001'] = new[] { "#.#.#", ".###.", "##.##", "#...#", "##.##", ".###.", "#.#.#" },
@@ -101,6 +104,7 @@ namespace PuffyBird.UI
         static readonly string[] Grave = { ".#...", "..#..", "....." };
         static readonly string[] Circumflex = { "..#..", ".#.#.", "....." };
         static readonly string[] Diaeresis = { ".....", ".#.#.", "....." };
+        static readonly string[] Tilde = { ".##.#", "#..#.", "....." };
         static readonly string[] Cedilla = { "..#..", ".#..." };
 
         /// <summary>Rangées sous la ligne de base (cédille) ; les autres rangées en trop sont au-dessus.</summary>
@@ -120,6 +124,16 @@ namespace PuffyBird.UI
             AddAccented('Ù', 'U', Grave);
             AddAccented('Û', 'U', Circumflex);
             AddAccented('Ü', 'U', Diaeresis);
+            // Espagnol, allemand, portugais.
+            AddAccented('Á', 'A', Acute);
+            AddAccented('Í', 'I', Acute);
+            AddAccented('Ó', 'O', Acute);
+            AddAccented('Ú', 'U', Acute);
+            AddAccented('Ñ', 'N', Tilde);
+            AddAccented('Ã', 'A', Tilde);
+            AddAccented('Õ', 'O', Tilde);
+            AddAccented('Ä', 'A', Diaeresis);
+            AddAccented('Ö', 'O', Diaeresis);
             var c = Glyphs['C'];
             var cedilla = new string[c.Length + Cedilla.Length];
             c.CopyTo(cedilla, 0);

@@ -15,22 +15,22 @@ namespace PuffyBird.Core
     public sealed class SkinInfo
     {
         public readonly string Id;
-        /// <summary>Nom affiché en français.</summary>
-        public readonly string Name;
-        /// <summary>Nom affiché en anglais (téléphone dans une autre langue que le français).</summary>
-        public readonly string EnglishName;
+        /// <summary>Noms affichés, dans l'ordre de <see cref="Language"/>.</summary>
+        readonly string[] _names;
         public readonly SkinUnlock Unlock;
         /// <summary>Médaille à obtenir (meilleur score) si <see cref="Unlock"/> vaut <see cref="SkinUnlock.Medal"/>.</summary>
         public readonly Medal Medal;
 
-        public SkinInfo(string id, string name, string englishName, SkinUnlock unlock, Medal medal = Medal.None)
+        public SkinInfo(string id, string[] names, SkinUnlock unlock, Medal medal = Medal.None)
         {
             Id = id;
-            Name = name;
-            EnglishName = englishName;
+            _names = names;
             Unlock = unlock;
             Medal = medal;
         }
+
+        /// <summary>Nom de l'oiseau dans la langue donnée.</summary>
+        public string NameIn(Language language) => _names[(int)language];
 
         /// <summary>Identifiant du produit dans les boutiques, ou null si l'oiseau ne s'achète pas.</summary>
         public string ProductId => Unlock == SkinUnlock.Purchase ? Products.SkinPrefix + Id : null;
@@ -58,16 +58,20 @@ namespace PuffyBird.Core
 
         static readonly SkinInfo[] All =
         {
-            new SkinInfo(DefaultId, "PHÉNIX", "PHOENIX", SkinUnlock.Free),
-            new SkinInfo("blue", "AZUR", "AZURE", SkinUnlock.Free),
-            new SkinInfo("cherry", "BRAISE", "EMBER", SkinUnlock.Medal, Medal.Bronze),
-            new SkinInfo("mint", "JADE", "JADE", SkinUnlock.Medal, Medal.Silver),
-            new SkinInfo("cool", "AURORE", "DAWN", SkinUnlock.Medal, Medal.Gold),
-            new SkinInfo("pearl", "NACRE", "PEARL", SkinUnlock.Medal, Medal.Platinum),
-            new SkinInfo("ninja", "OMBRE", "SHADOW", SkinUnlock.Purchase),
-            new SkinInfo("robot", "CHROME", "CHROME", SkinUnlock.Purchase),
-            new SkinInfo("galaxy", "COSMOS", "COSMOS", SkinUnlock.Purchase),
+            new SkinInfo(DefaultId, Names("PHÉNIX", "PHOENIX", "FÉNIX", "PHÖNIX", "FÊNIX"), SkinUnlock.Free),
+            new SkinInfo("blue", Names("AZUR", "AZURE", "AZUL", "AZUR", "AZUL"), SkinUnlock.Free),
+            new SkinInfo("cherry", Names("BRAISE", "EMBER", "ASCUA", "GLUT", "BRASA"), SkinUnlock.Medal, Medal.Bronze),
+            new SkinInfo("mint", Names("JADE", "JADE", "JADE", "JADE", "JADE"), SkinUnlock.Medal, Medal.Silver),
+            new SkinInfo("cool", Names("AURORE", "DAWN", "AURORA", "MORGENROT", "AURORA"), SkinUnlock.Medal, Medal.Gold),
+            new SkinInfo("pearl", Names("NACRE", "PEARL", "NÁCAR", "PERLMUTT", "PÉROLA"), SkinUnlock.Medal, Medal.Platinum),
+            new SkinInfo("ninja", Names("OMBRE", "SHADOW", "SOMBRA", "SCHATTEN", "SOMBRA"), SkinUnlock.Purchase),
+            new SkinInfo("robot", Names("CHROME", "CHROME", "CROMO", "CHROM", "CROMO"), SkinUnlock.Purchase),
+            new SkinInfo("galaxy", Names("COSMOS", "COSMOS", "COSMOS", "KOSMOS", "COSMOS"), SkinUnlock.Purchase),
         };
+
+        /// <summary>Noms dans l'ordre de <see cref="Language"/> : français, anglais, espagnol, allemand, portugais.</summary>
+        static string[] Names(string french, string english, string spanish, string german, string portuguese)
+            => new[] { french, english, spanish, german, portuguese };
 
         public static int Count => All.Length;
 

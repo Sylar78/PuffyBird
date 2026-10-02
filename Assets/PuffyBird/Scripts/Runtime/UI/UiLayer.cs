@@ -50,6 +50,8 @@ namespace PuffyBird.UI
             public Transform Transform;
             public MeshRenderer Renderer;
             public MeshFilter Filter;
+            /// <summary>Largeur du texte en voxels (0 si l'élément n'est pas un texte construit par <see cref="Text"/>).</summary>
+            public float TextWidth;
         }
 
         /// <summary>Bouton dessiné : cadre sombre, fond coloré, libellé.</summary>
@@ -107,7 +109,11 @@ namespace PuffyBird.UI
         }
 
         public Element Text(string text, TextAlign align, Color front, Color outline)
-            => Create(text, VoxelFont.Build(text, align, front, outline), TextMaterial);
+        {
+            var e = Create(text, VoxelFont.Build(text, align, front, outline), TextMaterial);
+            e.TextWidth = VoxelFont.Width(text);
+            return e;
+        }
 
         public Element Solid(Color color)
         {
@@ -135,8 +141,20 @@ namespace PuffyBird.UI
 
         // ───────── placement (chaque image) ─────────
 
-        public void Place(Element e, float px, float py, float voxelPx, float z = HudZ)
+        /// <summary>
+        /// Taille de voxel d'un texte réduite si besoin pour qu'il tienne dans <paramref name="maxWidth"/>
+        /// (par défaut l'écran moins une marge) : les traductions n'ont pas toutes la longueur du français.
+        /// </summary>
+        float Fit(Element e, float voxelPx, float maxWidth)
         {
+            if (e.TextWidth <= 0f) return voxelPx;
+            float limit = maxWidth > 0f ? maxWidth : _space.Config.Width - 16f;
+            return e.TextWidth * voxelPx > limit ? limit / e.TextWidth : voxelPx;
+        }
+
+        public void Place(Element e, float px, float py, float voxelPx, float z = HudZ, float maxWidth = 0f)
+        {
+            voxelPx = Fit(e, voxelPx, maxWidth);
             var p = _space.OnScreen(px, py, z, out float t);
             float s = voxelPx / WorldSpace.PixelsPerUnit * t;
             e.Transform.localPosition = p;
@@ -164,7 +182,11 @@ namespace PuffyBird.UI
             PlaceBox(b.Border, left - 2f, top - 2f, width + 4f, height + 4f, HudZ + 0.12f);
             PlaceBox(b.Fill, left, top, width, height, HudZ + 0.08f);
             var text = label ?? b.Label;
-            if (text != null) Place(text, cx, cy - VoxelFont.GlyphHeight * labelVoxelPx * 0.5f, labelVoxelPx);
+            if (text != null)
+            {
+                float fitted = Fit(text, labelVoxelPx, width - 10f);
+                Place(text, cx, cy - VoxelFont.GlyphHeight * fitted * 0.5f, fitted);
+            }
             AddButton(action, cx, cy, width + hitMargin * 2f, height + hitMargin * 2f);
         }
 

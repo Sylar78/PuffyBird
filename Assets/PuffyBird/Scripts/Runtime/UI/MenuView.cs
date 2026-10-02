@@ -76,16 +76,16 @@ namespace PuffyBird.UI
             _panelBorder = ui.Solid(Palette.Outline);
             _panel = ui.Solid(Palette.PanelEdge);
             _panelInner = ui.Solid(Palette.Panel);
-            _settingsTitle = ui.Text(Lang.T("PARAMÈTRES", "SETTINGS"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _settingsTitle = ui.Text(Lang.T("PARAMÈTRES", "SETTINGS", "AJUSTES", "EINSTELLUNGEN", "CONFIGURAÇÕES"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
             _gearButton = ui.CreateButton(VoxelFont.SettingsIcon, Palette.GameOver, Color.white);
-            _backButton = ui.CreateButton(Lang.T("RETOUR", "BACK"), Palette.GetReady, Color.white);
-            _homeButton = ui.CreateButton(Lang.T("ACCUEIL", "HOME"), Palette.GameOver, Color.white);
+            _backButton = ui.CreateButton(Lang.T("RETOUR", "BACK", "VOLVER", "ZURÜCK", "VOLTAR"), Palette.GetReady, Color.white);
+            _homeButton = ui.CreateButton(Lang.T("ACCUEIL", "HOME", "INICIO", "MENÜ", "INÍCIO"), Palette.GameOver, Color.white);
             _trophyButton = ui.CreateButton(VoxelFont.TrophyIcon, Palette.GetReady, Color.white);
-            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + Lang.T(" CLASSEMENT", " RANKING"), Palette.GetReady, Color.white);
-            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + Lang.T(" PARTAGER", " SHARE"), Palette.Hex("#4EA6D8"), Color.white);
-            _skinsButton = ui.CreateButton(Lang.T("OISEAUX", "BIRDS"), Palette.GameOver, Color.white);
-            _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" CONTINUER (PUB)", " CONTINUE (AD)"), Palette.GetReady, Color.white);
-            _newSkin = ui.Text(Lang.T("NOUVEL OISEAU DÉBLOQUÉ !", "NEW BIRD UNLOCKED!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
+            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + Lang.T(" CLASSEMENT", " RANKING", " RANKING", " RANGLISTE", " RANKING"), Palette.GetReady, Color.white);
+            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + Lang.T(" PARTAGER", " SHARE", " COMPARTIR", " TEILEN", " COMPARTILHAR"), Palette.Hex("#4EA6D8"), Color.white);
+            _skinsButton = ui.CreateButton(Lang.T("OISEAUX", "BIRDS", "PÁJAROS", "VÖGEL", "AVES"), Palette.GameOver, Color.white);
+            _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" CONTINUER (PUB)", " CONTINUE (AD)", " CONTINUAR (ANUNCIO)", " WEITER (WERBUNG)", " CONTINUAR (ANÚNCIO)"), Palette.GetReady, Color.white);
+            _newSkin = ui.Text(Lang.T("NOUVEL OISEAU DÉBLOQUÉ !", "NEW BIRD UNLOCKED!", "¡NUEVO PÁJARO DESBLOQUEADO!", "NEUER VOGEL FREIGESCHALTET!", "NOVA AVE DESBLOQUEADA!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
         }
 
         /// <summary>Menu des oiseaux (bouton OISEAUX de l'écran titre) ; null = pas de bouton.</summary>

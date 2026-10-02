@@ -1,4 +1,6 @@
 using System;
+using PuffyBird.Core;
+using PuffyBird.UI;
 using UnityEngine;
 #if UNITY_IOS && !UNITY_EDITOR
 using System.Runtime.InteropServices;
@@ -16,14 +18,25 @@ namespace PuffyBird.Social
         [DllImport("__Internal")] static extern void _Share_Text(string text, string url);
 #endif
 
-        /// <summary>Message de partage, en français si l'appareil l'est, sinon en anglais.</summary>
-        public static string ScoreMessage(int score)
+        /// <summary>Message de partage, dans la langue de l'interface (anglais si elle n'est pas gérée).</summary>
+        public static string ScoreMessage(int score) => ScoreMessage(score, Lang.Current);
+
+        public static string ScoreMessage(int score, Language language)
         {
-            bool french = Application.systemLanguage == SystemLanguage.French;
-            string points = score == 1 ? "point" : "points";
-            return french
-                ? $"J'ai fait {score} {points} à PuffyBird ! Tu fais mieux ?"
-                : $"I scored {score} {points} in PuffyBird! Can you beat it?";
+            bool one = score == 1;
+            switch (language)
+            {
+                case Language.French:
+                    return $"J'ai fait {score} {(one ? "point" : "points")} à PuffyBird ! Tu fais mieux ?";
+                case Language.Spanish:
+                    return $"¡Conseguí {score} {(one ? "punto" : "puntos")} en PuffyBird! ¿Puedes superarlo?";
+                case Language.German:
+                    return $"Ich habe {score} {(one ? "Punkt" : "Punkte")} bei PuffyBird! Schaffst du mehr?";
+                case Language.Portuguese:
+                    return $"Fiz {score} {(one ? "ponto" : "pontos")} no PuffyBird! Será que você consegue mais?";
+                default:
+                    return $"I scored {score} {(one ? "point" : "points")} in PuffyBird! Can you beat it?";
+            }
         }
 
         public static void ShareScore(int score)

@@ -114,14 +114,16 @@ namespace PuffyBird
             }
             _menu.LeaderboardAvailable = _leaderboard.Available;
             _menu.ContinueAvailable = () => _sim.CanContinue && _rewarded.IsReady;
-            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, Lang.T("MUSIQUE : OUI", "MUSIC ON"), Lang.T("MUSIQUE : NON", "MUSIC OFF"));
-            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, Lang.T("SONS : OUI", "SOUND ON"), Lang.T("SONS : NON", "SOUND OFF"));
-            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, Lang.T("VIBRATIONS : OUI", "VIBRATION ON"), Lang.T("VIBRATIONS : NON", "VIBRATION OFF"));
+            _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, Lang.T("MUSIQUE : OUI", "MUSIC ON", "MÚSICA: SÍ", "MUSIK: AN", "MÚSICA: SIM"), Lang.T("MUSIQUE : NON", "MUSIC OFF", "MÚSICA: NO", "MUSIK: AUS", "MÚSICA: NÃO"));
+            _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, Lang.T("SONS : OUI", "SOUND ON", "SONIDO: SÍ", "TON: AN", "SOM: SIM"), Lang.T("SONS : NON", "SOUND OFF", "SONIDO: NO", "TON: AUS", "SOM: NÃO"));
+            _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, Lang.T("VIBRATIONS : OUI", "VIBRATION ON", "VIBRACIÓN: SÍ", "VIBRATION: AN", "VIBRAÇÃO: SIM"), Lang.T("VIBRATIONS : NON", "VIBRATION OFF", "VIBRACIÓN: NO", "VIBRATION: AUS", "VIBRAÇÃO: NÃO"));
             _menu.AddSettingsRow(UiAction.CycleQuality, () => (int)CurrentQuality, null, 
-                Lang.T("QUALITÉ : BASSE", "QUALITY: LOW"), Lang.T("QUALITÉ : MOYENNE", "QUALITY: MEDIUM"), Lang.T("QUALITÉ : HAUTE", "QUALITY: HIGH"));
-            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => PrivacyConsentNeeded, Lang.T("CONFIDENTIALITÉ", "PRIVACY"));
-            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), Lang.T("SUPPRIMER LES PUBS", "REMOVE ADS"));
-            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), Lang.T("RESTAURER LES ACHATS", "RESTORE PURCHASES"));
+                Lang.T("QUALITÉ : BASSE", "QUALITY: LOW", "CALIDAD: BAJA", "QUALITÄT: NIEDRIG", "QUALIDADE: BAIXA"),
+                Lang.T("QUALITÉ : MOYENNE", "QUALITY: MEDIUM", "CALIDAD: MEDIA", "QUALITÄT: MITTEL", "QUALIDADE: MÉDIA"),
+                Lang.T("QUALITÉ : HAUTE", "QUALITY: HIGH", "CALIDAD: ALTA", "QUALITÄT: HOCH", "QUALIDADE: ALTA"));
+            _menu.AddSettingsRow(UiAction.OpenPrivacy, null, () => PrivacyConsentNeeded, Lang.T("CONFIDENTIALITÉ", "PRIVACY", "PRIVACIDAD", "DATENSCHUTZ", "PRIVACIDADE"));
+            _menu.AddSettingsRow(UiAction.RemoveAds, null, () => AdServices.AdsEnabled && _store.Ready && !_store.Owns(Products.NoAds), Lang.T("SUPPRIMER LES PUBS", "REMOVE ADS", "QUITAR ANUNCIOS", "WERBUNG ENTFERNEN", "REMOVER ANÚNCIOS"));
+            _menu.AddSettingsRow(UiAction.RestorePurchases, null, () => !(_store is NoStore), Lang.T("RESTAURER LES ACHATS", "RESTORE PURCHASES", "RESTAURAR COMPRAS", "KÄUFE WIEDERHERSTELLEN", "RESTAURAR COMPRAS"));
             _sfx = new SfxPlayer(world);
             _sfx.Muted = _sim.Muted;
             _music = MusicPlayer.Create(world);

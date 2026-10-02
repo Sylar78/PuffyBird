@@ -23,6 +23,23 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void EverySkinHasAnUppercaseNameInEveryLanguage()
+        {
+            // La police du jeu n'a que des capitales : un nom en minuscules serait rendu en capitales
+            // par VoxelFont, mais un nom vide ou manquant ferait un bouton sans titre.
+            for (int i = 0; i < Skins.Count; i++)
+            {
+                foreach (Language language in System.Enum.GetValues(typeof(Language)))
+                {
+                    string name = Skins.Get(i).NameIn(language);
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(name), $"{Skins.Get(i).Id} / {language}");
+                    Assert.AreEqual(name.ToUpperInvariant(), name, $"{Skins.Get(i).Id} / {language}");
+                    Assert.LessOrEqual(name.Length, 9, $"{Skins.Get(i).Id} / {language} : trop long pour le menu");
+                }
+            }
+        }
+
+        [Test]
         public void PhoenixIsTheFreeStartingBird()
         {
             // Aucun oiseau choisi (préférence vide) : le phénix. Le bleu reste gratuit pour qui l'avait choisi.
