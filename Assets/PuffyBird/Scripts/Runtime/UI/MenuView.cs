@@ -32,7 +32,10 @@ namespace PuffyBird.UI
         const float RowGap = 6f;
         const float PanelTop = 112f;
         const float PanelWidth = 240f;
-        const float OverButtonsY = 338f;
+        const float OverNewSkinY = 304f;
+        const float OverContinueY = 330f;
+        const float OverButtonsY = 366f;
+        const float ContinueButtonWidth = 190f;
         const float OverButtonWidth = 124f;
         const float SkinsButtonWidth = 100f;
         const float OverButtonHeight = 26f;
@@ -60,6 +63,7 @@ namespace PuffyBird.UI
         readonly UiLayer.Button _overRankingButton;
         readonly UiLayer.Button _overShareButton;
         readonly UiLayer.Button _skinsButton;
+        readonly UiLayer.Button _continueButton;
         readonly Element _newSkin;
         SkinsView _skins;
         MenuScreen _returnTo;
@@ -72,15 +76,16 @@ namespace PuffyBird.UI
             _panelBorder = ui.Solid(Palette.Outline);
             _panel = ui.Solid(Palette.PanelEdge);
             _panelInner = ui.Solid(Palette.Panel);
-            _settingsTitle = ui.Text("PARAMÈTRES", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _settingsTitle = ui.Text(Lang.T("PARAMÈTRES", "SETTINGS"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
             _gearButton = ui.CreateButton(VoxelFont.SettingsIcon, Palette.GameOver, Color.white);
-            _backButton = ui.CreateButton("RETOUR", Palette.GetReady, Color.white);
-            _homeButton = ui.CreateButton("ACCUEIL", Palette.GameOver, Color.white);
+            _backButton = ui.CreateButton(Lang.T("RETOUR", "BACK"), Palette.GetReady, Color.white);
+            _homeButton = ui.CreateButton(Lang.T("ACCUEIL", "HOME"), Palette.GameOver, Color.white);
             _trophyButton = ui.CreateButton(VoxelFont.TrophyIcon, Palette.GetReady, Color.white);
-            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + " CLASSEMENT", Palette.GetReady, Color.white);
-            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + " PARTAGER", Palette.Hex("#4EA6D8"), Color.white);
-            _skinsButton = ui.CreateButton("OISEAUX", Palette.GameOver, Color.white);
-            _newSkin = ui.Text("NOUVEL OISEAU DÉBLOQUÉ !", TextAlign.Center, Palette.GetReady, Palette.Outline);
+            _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + Lang.T(" CLASSEMENT", " RANKING"), Palette.GetReady, Color.white);
+            _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + Lang.T(" PARTAGER", " SHARE"), Palette.Hex("#4EA6D8"), Color.white);
+            _skinsButton = ui.CreateButton(Lang.T("OISEAUX", "BIRDS"), Palette.GameOver, Color.white);
+            _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" CONTINUER (PUB)", " CONTINUE (AD)"), Palette.GetReady, Color.white);
+            _newSkin = ui.Text(Lang.T("NOUVEL OISEAU DÉBLOQUÉ !", "NEW BIRD UNLOCKED!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
         }
 
         /// <summary>Menu des oiseaux (bouton OISEAUX de l'écran titre) ; null = pas de bouton.</summary>
@@ -98,6 +103,9 @@ namespace PuffyBird.UI
 
         /// <summary>La partie qui vient de finir a débloqué un oiseau : annonce sur l'écran de fin.</summary>
         public bool NewSkinUnlocked { get; set; }
+
+        /// <summary>Seconde chance proposée sur l'écran de fin (partie pas encore relancée, vidéo prête).</summary>
+        public Func<bool> ContinueAvailable { get; set; }
 
         /// <summary>Un classement en ligne existe sur cette plateforme : boutons trophée affichés.</summary>
         public bool LeaderboardAvailable { get; set; }
@@ -166,7 +174,7 @@ namespace PuffyBird.UI
                 UiLayer.Hide(_skinsButton);
             }
 
-            // Fin de partie : partage et classement entre le panneau et « TAP TO RETRY ».
+            // Fin de partie : seconde chance, partage et classement entre le panneau et « TOUCHE POUR REJOUER ».
             bool overButtons = sim.State == GameState.Over && !sim.IsFadingOut && OverScreenTimeline.ButtonsVisible(sim.StateTime, _cfg);
             if (overButtons)
             {
@@ -188,7 +196,10 @@ namespace PuffyBird.UI
                 UiLayer.Hide(_overShareButton);
                 UiLayer.Hide(_overRankingButton);
             }
-            if (overButtons && NewSkinUnlocked) _ui.Place(_newSkin, _cfg.Width * 0.5f, OverButtonsY - 30f, 1.4f);
+            if (overButtons && ContinueAvailable != null && ContinueAvailable())
+                _ui.PlaceButton(_continueButton, UiAction.Continue, _cfg.Width * 0.5f, OverContinueY, ContinueButtonWidth, OverButtonHeight, 1.6f);
+            else UiLayer.Hide(_continueButton);
+            if (overButtons && NewSkinUnlocked) _ui.Place(_newSkin, _cfg.Width * 0.5f, OverNewSkinY, 1.4f);
             else UiLayer.Hide(_newSkin);
 
             if (Screen == MenuScreen.Settings) DrawSettings();

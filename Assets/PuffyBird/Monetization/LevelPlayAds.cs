@@ -22,6 +22,7 @@ namespace PuffyBird.Monetization
         static LevelPlayAds _instance;
 
         readonly LevelPlayBanner _banner = new LevelPlayBanner();
+        readonly LevelPlayRewarded _rewarded = new LevelPlayRewarded();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Register()
@@ -31,6 +32,7 @@ namespace PuffyBird.Monetization
             DontDestroyOnLoad(go);
             _instance = go.AddComponent<LevelPlayAds>();
             AdServices.BannerFactory = () => _instance._banner;
+            if (AdIds.RewardedAdUnitId.Length > 0) AdServices.RewardedFactory = () => _instance._rewarded;
         }
 
         IEnumerator Start()
@@ -71,11 +73,13 @@ namespace PuffyBird.Monetization
             LevelPlay.OnInitSuccess -= OnInitSuccess;
             LevelPlay.OnInitFailed -= OnInitFailed;
             _banner.Destroy();
+            _rewarded.Destroy();
         }
 
         void OnInitSuccess(LevelPlayConfiguration configuration)
         {
             _banner.Create(AdIds.BannerAdUnitId, this);
+            if (AdIds.RewardedAdUnitId.Length > 0) _rewarded.Create(AdIds.RewardedAdUnitId, this);
         }
 
         void OnInitFailed(LevelPlayInitError error)
@@ -170,6 +174,96 @@ namespace PuffyBird.Monetization
         void OnAdDisplayFailed(LevelPlayAdInfo info, LevelPlayAdError error)
         {
             Debug.Log($"LevelPlay : affichage de la bannière impossible ({error.ErrorMessage}).");
+        }
+    }
+
+    /// <summary>
+    /// Vidéo récompensée de la seconde chance : chargée après l'initialisation, rechargée après
+    /// chaque affichage. Certaines régies annoncent la récompense après la fermeture de la vidéo :
+    /// le résultat est donné au plus tard <see cref="RewardGrace"/> secondes après la fermeture.
+    /// </summary>
+    sealed class LevelPlayRewarded : IRewardedAds
+    {
+        const float RewardGrace = 0.5f;
+
+        LevelPlayRewardedAd _ad;
+        LevelPlayAds _owner;
+        System.Action<bool> _onFinished;
+        bool _rewarded;
+
+        public bool IsReady => _ad != null && _onFinished == null && _ad.IsAdReady();
+
+        public void Create(string adUnitId, LevelPlayAds owner)
+        {
+            _owner = owner;
+            _ad = new LevelPlayRewardedAd(adUnitId);
+            _ad.OnAdLoadFailed += OnAdLoadFailed;
+            _ad.OnAdDisplayFailed += OnAdDisplayFailed;
+            _ad.OnAdRewarded += OnAdRewarded;
+            _ad.OnAdClosed += OnAdClosed;
+            _ad.LoadAd();
+        }
+
+        public void Show(System.Action<bool> onFinished)
+        {
+            if (!IsReady)
+            {
+                onFinished(false);
+                return;
+            }
+            _onFinished = onFinished;
+            _rewarded = false;
+            _ad.ShowAd();
+        }
+
+        public void Destroy()
+        {
+            if (_ad == null) return;
+            _ad.OnAdLoadFailed -= OnAdLoadFailed;
+            _ad.OnAdDisplayFailed -= OnAdDisplayFailed;
+            _ad.OnAdRewarded -= OnAdRewarded;
+            _ad.OnAdClosed -= OnAdClosed;
+            _ad.DestroyAd();
+            _ad = null;
+        }
+
+        void Finish()
+        {
+            var callback = _onFinished;
+            _onFinished = null;
+            callback?.Invoke(_rewarded);
+        }
+
+        void OnAdLoadFailed(LevelPlayAdError error)
+        {
+            Debug.Log($"LevelPlay : vidéo récompensée indisponible ({error.ErrorMessage}), nouvel essai plus tard.");
+            _owner.RetryLater(() => _ad?.LoadAd());
+        }
+
+        void OnAdDisplayFailed(LevelPlayAdInfo info, LevelPlayAdError error)
+        {
+            Debug.Log($"LevelPlay : affichage de la vidéo récompensée impossible ({error.ErrorMessage}).");
+            _rewarded = false;
+            Finish();
+            _ad?.LoadAd();
+        }
+
+        void OnAdRewarded(LevelPlayAdInfo info, LevelPlayReward reward)
+        {
+            _rewarded = true;
+        }
+
+        void OnAdClosed(LevelPlayAdInfo info)
+        {
+            _ad?.LoadAd();
+            if (_rewarded) Finish();
+            else _owner.StartCoroutine(FinishAfterGrace());
+        }
+
+        IEnumerator FinishAfterGrace()
+        {
+            yield return new WaitForSecondsRealtime(RewardGrace);
+            Finish();
         }
     }
 

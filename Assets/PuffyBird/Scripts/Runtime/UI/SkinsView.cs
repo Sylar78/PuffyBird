@@ -75,10 +75,10 @@ namespace PuffyBird.UI
             {
                 var skin = Skins.Get(i);
                 if (includePaid || skin.Unlock != SkinUnlock.Purchase) _browsable[count++] = i;
-                _names[i] = ui.Text(skin.Name, TextAlign.Center, Color.white, Palette.Outline);
+                _names[i] = ui.Text(Lang.T(skin.Name, skin.EnglishName), TextAlign.Center, Color.white, Palette.Outline);
                 if (skin.Unlock == SkinUnlock.Medal)
                 {
-                    string hint = $"FAIS {Skins.RequiredScore(skin.Medal, _cfg)} POUR DÉBLOQUER";
+                    string hint = Lang.French ? $"FAIS {Skins.RequiredScore(skin.Medal, _cfg)} POUR DÉBLOQUER" : $"BEST {Skins.RequiredScore(skin.Medal, _cfg)} TO UNLOCK";
                     _hints[i] = ui.Text(hint, TextAlign.Center, Palette.PanelLabel, Palette.Panel);
                 }
             }
@@ -86,17 +86,17 @@ namespace PuffyBird.UI
             _panelBorder = ui.Solid(Palette.Outline);
             _panel = ui.Solid(Palette.PanelEdge);
             _panelInner = ui.Solid(Palette.Panel);
-            _unlocked = ui.Text(VoxelFont.CheckIcon + " DÉBLOQUÉ", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _unlocked = ui.Text(VoxelFont.CheckIcon + Lang.T(" DÉBLOQUÉ", " UNLOCKED"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
             _premium = ui.Text("PREMIUM", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
-            _storeOffline = ui.Text("BOUTIQUE INDISPONIBLE", TextAlign.Center, Palette.PanelLabel, Palette.Panel);
-            _actionLabels[(int)ActionLabel.Use] = ui.Text("CHOISIR", TextAlign.Center, Color.white, Palette.Outline);
-            _actionLabels[(int)ActionLabel.InUse] = ui.Text(VoxelFont.CheckIcon + " CHOISI", TextAlign.Center, Color.white, Palette.Outline);
-            _actionLabels[(int)ActionLabel.Buy] = ui.Text("ACHETER", TextAlign.Center, Color.white, Palette.Outline);
-            _actionLabels[(int)ActionLabel.Locked] = ui.Text(VoxelFont.LockIcon + " BLOQUÉ", TextAlign.Center, Color.white, Palette.Outline);
+            _storeOffline = ui.Text(Lang.T("BOUTIQUE INDISPONIBLE", "STORE OFFLINE"), TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            _actionLabels[(int)ActionLabel.Use] = ui.Text(Lang.T("CHOISIR", "USE"), TextAlign.Center, Color.white, Palette.Outline);
+            _actionLabels[(int)ActionLabel.InUse] = ui.Text(VoxelFont.CheckIcon + Lang.T(" CHOISI", " IN USE"), TextAlign.Center, Color.white, Palette.Outline);
+            _actionLabels[(int)ActionLabel.Buy] = ui.Text(Lang.T("ACHETER", "BUY"), TextAlign.Center, Color.white, Palette.Outline);
+            _actionLabels[(int)ActionLabel.Locked] = ui.Text(VoxelFont.LockIcon + Lang.T(" BLOQUÉ", " LOCKED"), TextAlign.Center, Color.white, Palette.Outline);
             _previous = ui.CreateButton("<", Palette.Hex("#4EA6D8"), Color.white);
             _next = ui.CreateButton(">", Palette.Hex("#4EA6D8"), Color.white);
             _action = ui.CreateButton(null, Palette.GetReady, Color.white);
-            _back = ui.CreateButton("RETOUR", Palette.GameOver, Color.white);
+            _back = ui.CreateButton(Lang.T("RETOUR", "BACK"), Palette.GameOver, Color.white);
         }
 
         /// <summary>Oiseau affiché dans le menu (indice du catalogue).</summary>

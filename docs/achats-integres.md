@@ -14,7 +14,7 @@ Dans le jeu : bouton **OISEAUX** de l'écran titre (oiseaux, avec leur prix et *
 ## 1. Installer le package Unity IAP (une fois, sur le PC)
 
 1. Unity > **Window > Package Manager** > **Unity Registry** > **In App Purchasing** (version 5.x) > **Install**.
-2. Rien d'autre à régler : à la recompilation, `Editor/PurchasingDefine` active le code de la boutique (symbole `PUFFYBIRD_IAP`). Sans le package, le jeu compile et tourne sans boutique.
+2. Rien d'autre à régler : à la recompilation, `Editor/PackageDefines` active le code de la boutique (symbole `PUFFYBIRD_IAP`). Sans le package, le jeu compile et tourne sans boutique.
 3. Envoyer sur GitHub (Upload files) les deux fichiers modifiés : `Packages/manifest.json` et `Packages/packages-lock.json`. Les builds de la CI activeront alors les achats.
 
 ## 2. App Store Connect (iOS)

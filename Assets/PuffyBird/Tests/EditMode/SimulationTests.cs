@@ -87,6 +87,63 @@ namespace PuffyBird.Tests
             Assert.AreEqual(GameState.Title, sim.State);
         }
 
+        static void DieOnGround(GameSimulation sim, GameConfig cfg)
+        {
+            int guard = 0;
+            while (sim.State != GameState.Over && guard++ < 2000) sim.Step();
+        }
+
+        [Test]
+        public void ContinueKeepsScoreAndRestartsFromReadyOnce()
+        {
+            var sim = NewReadySim();
+            sim.Press();
+            sim.Step();
+            sim.ForceScore(7);
+            DieOnGround(sim, _cfg);
+            Assert.AreEqual(GameState.Over, sim.State);
+            Assert.IsTrue(sim.CanContinue);
+            int run = sim.RunId;
+
+            sim.ContinueRun();
+            Assert.AreEqual(GameState.Ready, sim.State);
+            Assert.AreEqual(7, sim.Score);
+            Assert.AreEqual(run, sim.RunId);
+            Assert.AreEqual(0, sim.Pipes.Count);
+            Assert.AreEqual(_cfg.BirdStartY, sim.Bird.Y);
+
+            // Le tap suivant relance la partie avec une nouvelle paire de tuyaux.
+            sim.Press();
+            sim.Step();
+            Assert.AreEqual(GameState.Playing, sim.State);
+            Assert.AreEqual(1, sim.Pipes.Count);
+            Assert.AreEqual(7, sim.Score);
+
+            // Une seule seconde chance par partie.
+            DieOnGround(sim, _cfg);
+            Assert.IsFalse(sim.CanContinue);
+            sim.ContinueRun();
+            Assert.AreEqual(GameState.Over, sim.State);
+
+            // La partie suivante y a de nouveau droit.
+            Run(sim, _cfg.OverInputDelay + 0.05f);
+            sim.Press();
+            Run(sim, _cfg.FadeTime + 0.05f);
+            Assert.AreEqual(GameState.Ready, sim.State);
+            Assert.AreEqual(0, sim.Score);
+            Assert.IsFalse(sim.Continued);
+        }
+
+        [Test]
+        public void ContinueIsOnlyPossibleOnTheOverScreen()
+        {
+            var sim = NewReadySim();
+            Assert.IsFalse(sim.CanContinue);
+            sim.ContinueRun();
+            Assert.AreEqual(GameState.Ready, sim.State);
+            Assert.IsFalse(sim.Continued);
+        }
+
         [Test]
         public void ReadyBirdFloatsWithoutFalling()
         {

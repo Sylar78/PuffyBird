@@ -93,6 +93,7 @@ namespace PuffyBird.UI
             ['\uE006'] = new[] { ".###.", "#.#.#", ".#.#.", "#.#.#", ".#.#.", "#.#.#", ".###." },
             ['\uE007'] = new[] { ".###.", "#...#", "#...#", "#####", "##.##", "##.##", "#####" },
             ['\uE008'] = new[] { ".....", "....#", "...##", "#.##.", "###..", ".#...", "....." },
+            ['\uE009'] = new[] { ".#...", ".##..", ".###.", ".####", ".###.", ".##..", ".#..." },
         };
 
         // Accents : deux rangées au-dessus de la lettre, puis une rangée vide.
@@ -143,6 +144,7 @@ namespace PuffyBird.UI
         public const string VibrationIcon = "\uE006";
         public const string LockIcon = "\uE007";
         public const string CheckIcon = "\uE008";
+        public const string PlayIcon = "\uE009";
 
         public static float Width(string text) => text.Length == 0 ? 0f : text.Length * Advance - 1;
 
