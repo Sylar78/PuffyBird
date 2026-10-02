@@ -13,6 +13,7 @@ namespace PuffyBird.Rendering
     {
         const int TrailCount = 56;
         const int BurstCount = 14;
+        const int SparkCount = 28;
         const float EmitRate = 80f;
         const float TrailLife = 0.5f;
         const float TrailSize = 0.055f;
@@ -32,6 +33,9 @@ namespace PuffyBird.Rendering
         readonly Mesh[] _colorMeshes;
         readonly Particle[] _trail = new Particle[TrailCount];
         readonly Particle[] _burst = new Particle[BurstCount];
+        readonly Particle[] _sparks = new Particle[SparkCount];
+        readonly Mesh[] _sparkMeshes = new Mesh[2 + 4];
+        int _nextSpark;
         int _nextTrail;
         int _emitted;
         float _emitAccumulator;
@@ -51,6 +55,17 @@ namespace PuffyBird.Rendering
 
             for (int i = 0; i < TrailCount; i++) _trail[i] = CreateParticle(root, material);
             for (int i = 0; i < BurstCount; i++) _burst[i] = CreateParticle(root, material);
+
+            // Étincelles des frôlements (blanc, cyan) et des paliers (bronze, argent, or, platine).
+            var sparkColors = new[]
+            {
+                Color.white, Palette.Hex("#8FE6FF"),
+                Palette.MedalColor(Medal.Bronze), Palette.MedalColor(Medal.Silver),
+                Palette.MedalColor(Medal.Gold), Palette.MedalColor(Medal.Platinum),
+            };
+            for (int c = 0; c < _sparkMeshes.Length; c++)
+                _sparkMeshes[c] = new MeshBuilder().AddSphere(Vector3.zero, 1f, sparkColors[c], 10, 6).Build("Étincelle " + c);
+            for (int i = 0; i < SparkCount; i++) _sparks[i] = CreateParticle(root, material);
         }
 
         Particle CreateParticle(Transform parent, Material material)
@@ -85,6 +100,42 @@ namespace PuffyBird.Rendering
             }
         }
 
+        /// <summary>Petite gerbe blanche et cyan quand l'oiseau frôle un tuyau.</summary>
+        public void OnNearMiss(Vector3 birdPosition)
+        {
+            const int count = 8;
+            for (int i = 0; i < count; i++)
+            {
+                float a = (i + Random.value * 0.6f) / count * Mathf.PI * 2f;
+                Spark(birdPosition + new Vector3(0.05f, 0f, 0.05f), a, Random.Range(0.8f, 1.4f), i % 2, Random.Range(0.02f, 0.032f), Random.Range(0.25f, 0.4f));
+            }
+        }
+
+        /// <summary>Couronne d'étincelles aux couleurs de la médaille qui vient d'être atteinte.</summary>
+        public void OnMilestone(Vector3 birdPosition, Medal medal)
+        {
+            int color = 2 + Mathf.Clamp((int)medal - (int)Medal.Bronze, 0, 3);
+            const int count = 20;
+            for (int i = 0; i < count; i++)
+            {
+                float a = (i + Random.value * 0.3f) / count * Mathf.PI * 2f;
+                Spark(birdPosition, a, Random.Range(1.3f, 1.9f), i % 5 == 0 ? 0 : color, Random.Range(0.03f, 0.05f), Random.Range(0.5f, 0.75f));
+            }
+        }
+
+        void Spark(Vector3 origin, float angle, float speed, int mesh, float size, float life)
+        {
+            ref var p = ref _sparks[_nextSpark];
+            _nextSpark = (_nextSpark + 1) % SparkCount;
+            p.Velocity = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), Random.Range(-0.2f, 0.2f)) * speed;
+            p.Age = 0f;
+            p.Life = life;
+            p.Size = size;
+            p.Filter.sharedMesh = _sparkMeshes[mesh];
+            p.Transform.position = origin;
+            p.Transform.gameObject.SetActive(true);
+        }
+
         public void Update(GameSimulation sim, Vector3 birdPosition, float deltaTime, float time)
         {
             float amount = Mathf.Clamp01(sim.BoostAmount);
@@ -107,6 +158,7 @@ namespace PuffyBird.Rendering
 
             UpdateTrail(deltaTime);
             UpdateBurst(deltaTime);
+            UpdateBurst(_sparks, deltaTime);
         }
 
         void Emit(Vector3 birdPosition, float amount, float scroll, float time)
@@ -136,11 +188,13 @@ namespace PuffyBird.Rendering
             }
         }
 
-        void UpdateBurst(float dt)
+        void UpdateBurst(float dt) => UpdateBurst(_burst, dt);
+
+        static void UpdateBurst(Particle[] pool, float dt)
         {
-            for (int i = 0; i < BurstCount; i++)
+            for (int i = 0; i < pool.Length; i++)
             {
-                ref var p = ref _burst[i];
+                ref var p = ref pool[i];
                 p.Velocity *= Mathf.Max(0f, 1f - 4f * dt);
                 if (!Tick(ref p, dt)) continue;
                 float t = p.Age / p.Life;

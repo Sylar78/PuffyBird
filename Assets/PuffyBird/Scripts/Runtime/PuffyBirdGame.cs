@@ -55,6 +55,10 @@ namespace PuffyBird
         SkinsView _skins;
         int _shownSkin = -1;
         int _bestAtRunStart;
+        /// <summary>L'oiseau de la série est déjà débloqué : inutile de compter plus loin.</summary>
+        bool _streakSkinOwned;
+        /// <summary>La série de 30 jours vient d'être atteinte pendant cette partie.</summary>
+        bool _streakUnlockedThisRun;
         IBannerAds _banner;
         IRewardedAds _rewarded;
         IGameMetrics _metrics;
@@ -72,6 +76,7 @@ namespace PuffyBird
 
             _cfg = GameConfig.CreateDefault();
             _prefs = new GamePrefs();
+            _streakSkinOwned = _prefs.LongestStreak >= _cfg.StreakDaysForSkin;
             _haptics = new Haptics { Enabled = _prefs.Haptics };
             _sim = new GameSimulation(_cfg, new PlayerPrefsScoreStorage(), (uint)System.Environment.TickCount);
             _clock = new FixedStepClock(_cfg.Step, _cfg.MaxFrameDelta);
@@ -105,7 +110,7 @@ namespace PuffyBird
             _menu = new MenuView(_ui);
             _leaderboard = new Leaderboard();
             _store = StoreServices.Create();
-            _skins = new SkinsView(_ui, _store, !(_store is NoStore), IsSkinUnlocked, () => SelectedSkin);
+            _skins = new SkinsView(_ui, _store, !(_store is NoStore), IsSkinUnlocked, () => SelectedSkin, CurrentStreakDays);
             _menu.Skins = _skins;
             if (PrivacyConsentNeeded)
             {
@@ -200,7 +205,7 @@ namespace PuffyBird
             UpdateBanner();
             // Meilleur score envoyé au classement dès qu'il monte (à la mort) et que le joueur est connecté.
             _leaderboard.SubmitBest(_sim.Best);
-            _menu.NewSkinUnlocked = Skins.NewlyUnlocked(_bestAtRunStart, _sim.Best, _cfg) > 0;
+            _menu.NewSkinUnlocked = _streakUnlockedThisRun || Skins.NewlyUnlocked(_bestAtRunStart, _sim.Best, _cfg) > 0;
             _leaderboard.Update();
             // Musique baissée pendant la pause.
             _music.SetVolume(!_prefs.Music ? 0f : (_sim.State == GameState.Paused ? 0.4f : 1f));
@@ -310,6 +315,13 @@ namespace PuffyBird
             ? (GraphicsLevel)_prefs.Quality
             : GraphicsQuality.Auto();
 
+        /// <summary>Jours de suite joués, tel qu'affiché (0 si un jour a été manqué ; bloqué à l'objectif une fois atteint).</summary>
+        int CurrentStreakDays()
+        {
+            if (_streakSkinOwned) return _cfg.StreakDaysForSkin;
+            return DailyStreak.Current(_prefs.StreakDay, _prefs.Streak, DailyStreak.DayNumber(System.DateTime.Now));
+        }
+
         /// <summary>Oiseau choisi par le joueur (préférence), même s'il n'est pas encore disponible.</summary>
         int SelectedSkin => Skins.IndexOf(_prefs.Skin);
 
@@ -317,7 +329,7 @@ namespace PuffyBird
         {
             var skin = Skins.Get(index);
             string product = skin.ProductId;
-            return Skins.IsUnlocked(skin, _sim.Best, _cfg, product != null && _store.Owns(product));
+            return Skins.IsUnlocked(skin, _sim.Best, _cfg, product != null && _store.Owns(product), _prefs.LongestStreak);
         }
 
         /// <summary>
@@ -340,6 +352,15 @@ namespace PuffyBird
         void React(GameEvents events)
         {
             _sfx.Play(events);
+            if ((events & GameEvents.RunStarted) != 0 && !_streakSkinOwned)
+            {
+                _prefs.RecordPlayDay(DailyStreak.DayNumber(System.DateTime.Now));
+                if (_prefs.LongestStreak >= _cfg.StreakDaysForSkin)
+                {
+                    _streakSkinOwned = true;
+                    _streakUnlockedThisRun = true;
+                }
+            }
             if ((events & GameEvents.Flap) != 0)
             {
                 _bird.OnFlap();
@@ -349,6 +370,18 @@ namespace PuffyBird
             {
                 _trail.OnStar(_bird.Position);
                 _haptics.Play(HapticKind.Medium);
+            }
+            if ((events & GameEvents.NearMiss) != 0)
+            {
+                _trail.OnNearMiss(_bird.Position);
+                _haptics.Play(HapticKind.Medium);
+            }
+            if ((events & GameEvents.Milestone) != 0)
+            {
+                _trail.OnMilestone(_bird.Position, Medals.For(_sim.Score, _cfg));
+                _hud.PulseScore();
+                _haptics.Play(HapticKind.Medium);
+                if (!reduceFlash) _cameraRig.Shake(0.02f, 0.2f);
             }
             if ((events & GameEvents.Hit) != 0)
             {
@@ -373,6 +406,7 @@ namespace PuffyBird
         {
             _shownRun = _sim.RunId;
             _bestAtRunStart = _sim.Best;
+            _streakUnlockedThisRun = false;
             var theme = Palette.Theme(_sim.Theme);
             _lighting.ApplyTheme(theme);
             _scenery.ApplyTheme(theme);

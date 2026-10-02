@@ -1,3 +1,4 @@
+using PuffyBird.Core;
 using UnityEngine;
 
 namespace PuffyBird
@@ -14,6 +15,9 @@ namespace PuffyBird
         const string QualityKey = "puffybird.quality";
         const string ConsentKey = "puffybird.consent";
         const string SkinKey = "puffybird.skin";
+        const string StreakKey = "puffybird.streak";
+        const string StreakDayKey = "puffybird.streakday";
+        const string LongestStreakKey = "puffybird.streakbest";
 
         /// <summary>Consentement aux pubs personnalisées pas encore demandé.</summary>
         public const int ConsentUnknown = -1;
@@ -25,6 +29,9 @@ namespace PuffyBird
         int _quality;
         int _consent;
         string _skin;
+        int _streak;
+        int _streakDay;
+        int _longestStreak;
 
         public GamePrefs()
         {
@@ -33,6 +40,41 @@ namespace PuffyBird
             _quality = PlayerPrefs.GetInt(QualityKey, -1);
             _consent = PlayerPrefs.GetInt(ConsentKey, ConsentUnknown);
             _skin = PlayerPrefs.GetString(SkinKey, "");
+            _streak = PlayerPrefs.GetInt(StreakKey, 0);
+            _streakDay = PlayerPrefs.GetInt(StreakDayKey, 0);
+            _longestStreak = PlayerPrefs.GetInt(LongestStreakKey, 0);
+        }
+
+        /// <summary>Série de jours consécutifs en cours (à relire avec <see cref="DailyStreak.Current"/> pour l'affichage).</summary>
+        public int Streak => _streak;
+
+        /// <summary>Numéro du dernier jour joué (0 = jamais).</summary>
+        public int StreakDay => _streakDay;
+
+        /// <summary>Plus longue série atteinte : ne baisse jamais.</summary>
+        public int LongestStreak => _longestStreak;
+
+        /// <summary>Note une partie lancée le jour <paramref name="today"/>. Retourne vrai si la plus longue série vient de grandir.</summary>
+        public bool RecordPlayDay(int today)
+        {
+            int streak = DailyStreak.Advance(_streakDay, _streak, today);
+            int day = DailyStreak.LastDayAfter(_streakDay, today);
+            if (streak != _streak || day != _streakDay)
+            {
+                _streak = streak;
+                _streakDay = day;
+                PlayerPrefs.SetInt(StreakKey, _streak);
+                PlayerPrefs.SetInt(StreakDayKey, _streakDay);
+            }
+            if (_streak <= _longestStreak)
+            {
+                PlayerPrefs.Save();
+                return false;
+            }
+            _longestStreak = _streak;
+            PlayerPrefs.SetInt(LongestStreakKey, _longestStreak);
+            PlayerPrefs.Save();
+            return true;
         }
 
         /// <summary>Vibrations (activées par défaut).</summary>

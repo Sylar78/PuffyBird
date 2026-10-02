@@ -36,6 +36,9 @@ namespace PuffyBird.UI
         readonly IStore _store;
         readonly Func<int, bool> _isUnlocked;
         readonly Func<int> _selected;
+        readonly Func<int> _streakDays;
+        Element _streakHint;
+        int _streakShown = -1;
         readonly int[] _browsable;
         readonly Element _panelBorder;
         readonly Element _panel;
@@ -56,8 +59,9 @@ namespace PuffyBird.UI
         int _storeVersion = -1;
 
         /// <param name="includePaid">Une boutique existe : les oiseaux payants sont proposés.</param>
-        public SkinsView(UiLayer ui, IStore store, bool includePaid, Func<int, bool> isUnlocked, Func<int> selected)
+        public SkinsView(UiLayer ui, IStore store, bool includePaid, Func<int, bool> isUnlocked, Func<int> selected, Func<int> streakDays)
         {
+            _streakDays = streakDays;
             _ui = ui;
             _cfg = ui.Space.Config;
             _store = store;
@@ -150,6 +154,11 @@ namespace PuffyBird.UI
                 status = _unlocked;
                 action = inUse ? ActionLabel.InUse : ActionLabel.Use;
             }
+            else if (skin.Unlock == SkinUnlock.Streak)
+            {
+                status = RefreshStreakHint();
+                action = ActionLabel.Locked;
+            }
             else if (skin.Unlock == SkinUnlock.Medal)
             {
                 status = _hints[browsed];
@@ -205,8 +214,31 @@ namespace PuffyBird.UI
             UiLayer.Hide(_back);
         }
 
+        /// <summary>Texte « SÉRIE : n / 30 JOURS », reconstruit seulement quand n change (au plus une fois par jour, hors partie).</summary>
+        Element RefreshStreakHint()
+        {
+            int days = _streakDays();
+            if (days == _streakShown && _streakHint != null) return _streakHint;
+            _streakShown = days;
+            int goal = _cfg.StreakDaysForSkin;
+            string text = Lang.T($"SÉRIE : {days} / {goal} JOURS", $"STREAK: {days} / {goal} DAYS", $"RACHA: {days} / {goal} DÍAS",
+                $"SERIE: {days} / {goal} TAGE", $"SÉRIE: {days} / {goal} DIAS");
+            var mesh = VoxelFont.Build(text, TextAlign.Center, Palette.PanelLabel, Palette.Panel);
+            if (_streakHint == null)
+            {
+                _streakHint = _ui.Create("Série", mesh, _ui.TextMaterial);
+            }
+            else
+            {
+                UnityEngine.Object.Destroy(_streakHint.Filter.sharedMesh);
+                _streakHint.Filter.sharedMesh = mesh;
+            }
+            return _streakHint;
+        }
+
         void HideStatuses(Element keep)
         {
+            if (_streakHint != keep) UiLayer.Hide(_streakHint);
             for (int i = 0; i < Skins.Count; i++)
             {
                 if (_hints[i] != keep) UiLayer.Hide(_hints[i]);

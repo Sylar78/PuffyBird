@@ -25,6 +25,27 @@ namespace PuffyBird.Core
                 || CircleRect(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
         }
 
+        /// <summary>
+        /// Écart entre le bord du cercle et le rectangle (0 s'ils se touchent ou se recouvrent).
+        /// </summary>
+        public static float CircleRectGap(float cx, float cy, float r, float rx, float ry, float rw, float rh)
+        {
+            float nx = cx < rx ? rx : (cx > rx + rw ? rx + rw : cx);
+            float ny = cy < ry ? ry : (cy > ry + rh ? ry + rh : cy);
+            float dx = cx - nx;
+            float dy = cy - ny;
+            float gap = (float)System.Math.Sqrt(dx * dx + dy * dy) - r;
+            return gap > 0f ? gap : 0f;
+        }
+
+        /// <summary>Écart entre l'oiseau et le tuyau le plus proche d'une paire (même géométrie que <see cref="HitsPipe"/>).</summary>
+        public static float PipeGap(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg)
+        {
+            float top = CircleRectGap(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop);
+            float bottom = CircleRectGap(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
+            return top < bottom ? top : bottom;
+        }
+
         public static bool CircleCircle(float ax, float ay, float ar, float bx, float by, float br)
         {
             float dx = ax - bx;

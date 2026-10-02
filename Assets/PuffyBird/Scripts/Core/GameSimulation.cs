@@ -247,12 +247,26 @@ namespace PuffyBird.Core
                     p.Scored = true;
                     Score++;
                     _events |= GameEvents.Point;
+                    if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
                 }
                 if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg))
                 {
                     HitPipeId = p.Id;
                     Die(false);
                     return;
+                }
+                if (p.GrazeReported) continue;
+                // Frôlement : tuyau approché à moins de NearMissDistance pendant la traversée, signalé
+                // quand l'oiseau l'a dépassé sans le toucher.
+                if (cx + _cfg.BirdRadius > p.X && cx - _cfg.BirdRadius < p.X + _cfg.PipeWidth
+                    && Collision.PipeGap(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg) <= _cfg.NearMissDistance)
+                {
+                    p.Grazed = true;
+                }
+                if (p.Grazed && cx - _cfg.BirdRadius >= p.X + _cfg.PipeWidth)
+                {
+                    p.GrazeReported = true;
+                    _events |= GameEvents.NearMiss;
                 }
             }
         }
@@ -302,6 +316,7 @@ namespace PuffyBird.Core
                     break;
                 case GameState.Ready:
                     SetState(GameState.Playing);
+                    _events |= GameEvents.RunStarted;
                     _pipes.SpawnRandom(_cfg.FirstPipeX, _rng, _cfg);
                     OnPairSpawned();
                     Flap();

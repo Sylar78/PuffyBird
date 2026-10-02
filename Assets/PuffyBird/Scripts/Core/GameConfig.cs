@@ -96,6 +96,12 @@ namespace PuffyBird.Core
         public int MedalGold = 30;
         public int MedalPlatinum = 40;
 
+        /// <summary>Jours de suite à jouer pour gagner l'oiseau de la série.</summary>
+        public int StreakDaysForSkin = 30;
+
+        /// <summary>Distance max (px) entre l'oiseau et un tuyau pour compter comme un frôlement.</summary>
+        public float NearMissDistance = 5f;
+
         public float BirdCenterX => BirdX + BirdWidth * 0.5f;
 
         /// <summary>Réglages de référence (mode Normal).</summary>

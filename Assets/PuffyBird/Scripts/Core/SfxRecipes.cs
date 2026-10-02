@@ -10,6 +10,10 @@ namespace PuffyBird.Core
         Die,
         Swoosh,
         Star,
+        /// <summary>Frôlement d'un tuyau : « tink » aigu et bref.</summary>
+        Graze,
+        /// <summary>Palier de médaille : petite fanfare.</summary>
+        Milestone,
     }
 
     /// <summary>
@@ -63,6 +67,26 @@ namespace PuffyBird.Core
                     float[] notes = { 1046.5f, 1318.5f, 1568f, 2093f };
                     for (int i = 0; i < notes.Length; i++)
                         Tone(buf, sampleRate, i * 0.055f, 0.25f, Wave.Triangle, 0.22f, notes[i], notes[i] * 1.01f);
+                    return buf;
+                }
+                case SoundId.Graze:
+                {
+                    var buf = Alloc(0.14f, sampleRate);
+                    Tone(buf, sampleRate, 0f, 0.14f, Wave.Triangle, 0.2f, 2637f, 3520f);
+                    Tone(buf, sampleRate, 0.03f, 0.1f, Wave.Triangle, 0.1f, 3951f, 3951f);
+                    return buf;
+                }
+                case SoundId.Milestone:
+                {
+                    // Fanfare (extension, hors spec) : sol, do, mi, sol aigu tenu.
+                    var buf = Alloc(0.75f, sampleRate);
+                    float[] notes = { 784f, 1046.5f, 1318.5f, 1568f };
+                    for (int i = 0; i < notes.Length; i++)
+                    {
+                        float length = i == notes.Length - 1 ? 0.45f : 0.16f;
+                        Tone(buf, sampleRate, i * 0.1f, length, Wave.Square, 0.07f, notes[i], notes[i]);
+                        Tone(buf, sampleRate, i * 0.1f, length, Wave.Triangle, 0.15f, notes[i] * 2f, notes[i] * 2f);
+                    }
                     return buf;
                 }
                 default:

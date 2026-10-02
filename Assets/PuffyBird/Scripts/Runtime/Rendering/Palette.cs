@@ -217,6 +217,14 @@ namespace PuffyBird.Rendering
                     look.VertexEmission = 0.8f;
                     return look;
                 }
+                case "streak": // Éclipse : corps presque noir cerclé d'une couronne d'or (série de jours).
+                {
+                    var look = PhoenixLook(Plumage("#0B0B16", "#3A2A10", "#FFD76A", "#FFF2B0", "#FF9F1C", "#FF6A00", "#FFF6C8",
+                        "#FFF2B0", "#FFD76A", "#1A1204", "#FFB02E", "#FFD76A", "#FFF2B0"), "#FFD76A", "#FFB02E");
+                    look.Glitter = 0.7f;
+                    look.Emission = Hex("#FF9F1C") * 0.1f;
+                    return look;
+                }
                 case "ninja": // Ombre : noir aux flammes violettes, œil rouge.
                     return PhoenixLook(Plumage("#0A0A12", "#2A2440", "#8A6AC8", "#9B4DFF", "#5A2AFF", "#3A0A6A", "#B06BFF",
                         "#C8A0FF", "#FF3A6A", "#120A1A", "#8A7AB0", "#3A3448", "#FF3A3A"), "#B06BFF", "#5A2AFF");

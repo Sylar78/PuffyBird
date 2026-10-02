@@ -11,6 +11,10 @@ namespace PuffyBird.Core
         /// <summary>Haut de l'ouverture au moment de l'apparition ; l'ouverture réelle est décalée de <see cref="Shift"/>.</summary>
         public int GapTop;
         public bool Scored;
+        /// <summary>L'oiseau est passé à moins de <see cref="GameConfig.NearMissDistance"/> d'un tuyau de cette paire.</summary>
+        public bool Grazed;
+        /// <summary>Le frôlement a déjà été signalé (une seule fois par paire).</summary>
+        public bool GrazeReported;
         /// <summary>Amplitude du mouvement vertical en px (0 = paire fixe).</summary>
         public float MoveAmplitude;
         public float MovePhase;

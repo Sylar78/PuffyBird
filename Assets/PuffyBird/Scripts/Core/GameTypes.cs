@@ -59,6 +59,12 @@ namespace PuffyBird.Core
         NewRun = 1 << 5,
         StateChanged = 1 << 6,
         Star = 1 << 7,
+        /// <summary>L'oiseau a frôlé un tuyau sans le toucher.</summary>
+        NearMiss = 1 << 8,
+        /// <summary>Le score vient d'atteindre le seuil d'une médaille.</summary>
+        Milestone = 1 << 9,
+        /// <summary>Premier tap d'une partie : READY devient PLAYING.</summary>
+        RunStarted = 1 << 10,
     }
 
     public static class Medals

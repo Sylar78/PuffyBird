@@ -10,7 +10,7 @@ namespace PuffyBird.Feedback
     {
         /// <summary>Battement d'ailes : à peine perceptible.</summary>
         Light,
-        /// <summary>Étoile ramassée.</summary>
+        /// <summary>Étoile ramassée, frôlement d'un tuyau ou palier de médaille.</summary>
         Medium,
         /// <summary>Choc contre un tuyau ou le sol.</summary>
         Heavy,

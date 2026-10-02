@@ -9,6 +9,8 @@ namespace PuffyBird.Core
         Medal,
         /// <summary>Achat intégré (cosmétique seulement).</summary>
         Purchase,
+        /// <summary>Série de jours consécutifs (<see cref="GameConfig.StreakDaysForSkin"/>).</summary>
+        Streak,
     }
 
     /// <summary>Un oiseau du catalogue : apparence seulement, aucune influence sur le jeu.</summary>
@@ -64,6 +66,7 @@ namespace PuffyBird.Core
             new SkinInfo("mint", Names("JADE", "JADE", "JADE", "JADE", "JADE"), SkinUnlock.Medal, Medal.Silver),
             new SkinInfo("cool", Names("AURORE", "DAWN", "AURORA", "MORGENROT", "AURORA"), SkinUnlock.Medal, Medal.Gold),
             new SkinInfo("pearl", Names("NACRE", "PEARL", "NÁCAR", "PERLMUTT", "PÉROLA"), SkinUnlock.Medal, Medal.Platinum),
+            new SkinInfo("streak", Names("ÉCLIPSE", "ECLIPSE", "ECLIPSE", "ECLIPSE", "ECLIPSE"), SkinUnlock.Streak),
             new SkinInfo("ninja", Names("OMBRE", "SHADOW", "SOMBRA", "SCHATTEN", "SOMBRA"), SkinUnlock.Purchase),
             new SkinInfo("robot", Names("CHROME", "CHROME", "CROMO", "CHROM", "CROMO"), SkinUnlock.Purchase),
             new SkinInfo("galaxy", Names("COSMOS", "COSMOS", "COSMOS", "KOSMOS", "COSMOS"), SkinUnlock.Purchase),
@@ -101,12 +104,14 @@ namespace PuffyBird.Core
         }
 
         /// <param name="purchased">Le produit de l'oiseau a été acheté (sans effet sur les autres oiseaux).</param>
-        public static bool IsUnlocked(SkinInfo skin, int best, GameConfig cfg, bool purchased)
+        /// <param name="longestStreak">Plus longue série de jours consécutifs jamais atteinte.</param>
+        public static bool IsUnlocked(SkinInfo skin, int best, GameConfig cfg, bool purchased, int longestStreak = 0)
         {
             switch (skin.Unlock)
             {
                 case SkinUnlock.Free: return true;
                 case SkinUnlock.Medal: return best >= RequiredScore(skin.Medal, cfg);
+                case SkinUnlock.Streak: return longestStreak >= cfg.StreakDaysForSkin;
                 default: return purchased;
             }
         }

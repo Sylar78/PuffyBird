@@ -19,6 +19,8 @@ namespace PuffyBird.UI
         /// <summary>Bouton pause : coin haut gauche, sous l'encoche, à la hauteur du score.</summary>
         const float PauseButtonX = 22f;
         const float PauseButtonSize = 26f;
+        const float PulseTime = 0.45f;
+        const float PulseGrowth = 0.6f;
 
         sealed class Number
         {
@@ -58,6 +60,7 @@ namespace PuffyBird.UI
         readonly Element _medal;
         readonly Element _sparkle;
         readonly Element _newTag;
+        float _pulse;
         readonly Element _newLabel;
         readonly Element _retry;
         readonly Element _pause;
@@ -148,6 +151,9 @@ namespace PuffyBird.UI
 
         // ───────── placement ─────────
 
+        /// <summary>Fait gonfler un instant le score en jeu (palier de médaille).</summary>
+        public void PulseScore() => _pulse = PulseTime;
+
         void Place(Element e, float px, float py, float voxelPx, float z = HudZ) => _ui.Place(e, px, py, voxelPx, z);
 
         void PlaceBox(Element e, float left, float top, float width, float height, float z) => _ui.PlaceBox(e, left, top, width, height, z);
@@ -200,6 +206,7 @@ namespace PuffyBird.UI
         public void Update(GameSimulation sim, float realTime, float deltaTime, float safeTopPx, bool menuOpen, bool menuCoversTitle)
         {
             var state = sim.State;
+            if (_pulse > 0f) _pulse -= deltaTime;
             float t = sim.StateTime;
             float bob = Mathf.Sin(realTime * Mathf.PI * 2f * 0.6f) * 3f;
 
@@ -245,7 +252,12 @@ namespace PuffyBird.UI
 
             // Score en jeu : tout en haut de l'écran visible, sous l'encoche, pour dégager la vue.
             bool showScore = state == GameState.Ready || state == GameState.Playing || state == GameState.Dying || state == GameState.Paused;
-            if (showScore) PlaceNumber(_score, sim.Score, 144f, safeTopPx + _cfg.ScoreTopMargin, 4f);
+            if (showScore)
+            {
+                // Gonflement bref puis retour : courbe en cloche, pic au milieu.
+                float k = _pulse > 0f ? Mathf.Sin(Mathf.Clamp01(1f - _pulse / PulseTime) * Mathf.PI) : 0f;
+                PlaceNumber(_score, sim.Score, 144f, safeTopPx + _cfg.ScoreTopMargin, 4f * (1f + PulseGrowth * k));
+            }
             else Hide(_score);
 
             // Bouton pause, seulement pendant la partie (un tap ailleurs fait sauter l'oiseau).
