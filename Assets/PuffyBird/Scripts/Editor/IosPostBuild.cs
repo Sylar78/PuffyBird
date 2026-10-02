@@ -93,7 +93,8 @@ namespace PuffyBird.Editor
                 Directory.CreateDirectory(folderPath);
                 File.WriteAllText(Path.Combine(folderPath, "InfoPlist.strings"),
                     "\"NSUserTrackingUsageDescription\" = \"" + localization.Tracking + "\";\n", new UTF8Encoding(false));
-                string guid = project.AddFolderReference(folderPath, folder);
+                // Chemin relatif à la racine du projet Xcode (comme EntitlementsFile), pas le chemin du disque.
+                string guid = project.AddFolderReference(folder, folder);
                 project.AddFileToBuild(main, guid);
             }
             project.WriteToFile(projectPath);
