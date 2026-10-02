@@ -87,9 +87,10 @@ namespace PuffyBird.Rendering
                 _looks[i] = Palette.Skin(skin.Id);
                 if (_looks[i].Shape == Palette.BodyShape.Phoenix)
                 {
-                    _bodyMeshes[i] = BuildPhoenixBody(Palette.Phoenix).Build("Oiseau " + skin.Id);
-                    _wingMeshes[i] = BuildPhoenixWing(Palette.Phoenix).Build("Aile " + skin.Id);
-                    _tailMeshes[i] = BuildPhoenixTail(Palette.Phoenix).Build("Queue " + skin.Id);
+                    var plumage = _looks[i].Phoenix;
+                    _bodyMeshes[i] = BuildPhoenixBody(plumage).Build("Oiseau " + skin.Id);
+                    _wingMeshes[i] = BuildPhoenixWing(plumage).Build("Aile " + skin.Id);
+                    _tailMeshes[i] = BuildPhoenixTail(plumage).Build("Queue " + skin.Id);
                 }
                 else
                 {

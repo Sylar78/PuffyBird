@@ -5,9 +5,11 @@ Tout est **non consommable** (acheté une fois, gardé pour toujours, restauré 
 | ID du produit (identique sur les deux stores) | Contenu | Prix conseillé |
 |---|---|---|
 | `fr.puffybird.app.noads` | Retire la bannière publicitaire | 1,99 € |
-| `fr.puffybird.app.skin.ninja` | Oiseau NINJA (bandeau rouge) | 0,99 € |
-| `fr.puffybird.app.skin.robot` | Oiseau ROBOT (métal, antenne) | 0,99 € |
-| `fr.puffybird.app.skin.galaxy` | Oiseau GALAXY (violet pailleté) | 0,99 € |
+| `fr.puffybird.app.skin.ninja` | Phénix OMBRE (noir, flammes violettes) | 0,99 € |
+| `fr.puffybird.app.skin.robot` | Phénix CHROME (métal, flammes électriques) | 0,99 € |
+| `fr.puffybird.app.skin.galaxy` | Phénix COSMOS (violet pailleté) | 0,99 € |
+
+Les identifiants des produits datent des premiers oiseaux (ninja, robot, galaxy) : ils restent tels quels, seuls les oiseaux sont devenus des phénix.
 
 Dans le jeu : bouton **OISEAUX** de l'écran titre (oiseaux, avec leur prix et **ACHETER**), et dans **PARAMÈTRES** les lignes **SUPPRIMER LES PUBS** et **RESTAURER LES ACHATS** (exigée par Apple). Les oiseaux payants et ces lignes n'apparaissent que si la boutique est disponible.
 
