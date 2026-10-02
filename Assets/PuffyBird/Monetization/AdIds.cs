@@ -13,11 +13,11 @@ namespace PuffyBird.Monetization
 #if UNITY_IOS
         public const string AppKey = "286c6f005";
         public const string BannerAdUnitId = "mcpqptymic0vwr00";
-        public const string RewardedAdUnitId = ""; // à créer : Ad units > Rewarded
+        public const string RewardedAdUnitId = "f7f01pntxarp2toz"; // « Puffy Rewarded Video 1 »
 #elif UNITY_ANDROID
         public const string AppKey = "2871b6fc5";
         public const string BannerAdUnitId = "35omvjrd6xncoif3"; // « Puffy Banner 1 »
-        public const string RewardedAdUnitId = ""; // à créer : Ad units > Rewarded
+        public const string RewardedAdUnitId = "60abel8gnmr1ppf1"; // « Puffy Rewarded Video 1 »
 #else
         public const string AppKey = "";
         public const string BannerAdUnitId = "";
