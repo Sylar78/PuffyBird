@@ -107,6 +107,7 @@ namespace PuffyBird.Tests
         [Test]
         public void BirdIsBlueAndEveryThemeShowsUp()
         {
+            Assert.AreEqual(System.Enum.GetValues(typeof(Theme)).Length, _cfg.ThemeCount, "tous les décors sont tirés");
             var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), 11, startOnTitle: false);
             var seen = new bool[_cfg.ThemeCount];
             for (int run = 0; run < 200; run++)

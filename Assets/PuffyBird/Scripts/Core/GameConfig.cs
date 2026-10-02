@@ -67,7 +67,7 @@ namespace PuffyBird.Core
         /// <summary>Couleur de l'oiseau, fixe (demande du 30/09/2026) au lieu du tirage de §6.8.</summary>
         public BirdColor BirdColor = BirdColor.Blue;
         /// <summary>Nombre de décors tirés au hasard à chaque partie (<see cref="Theme"/>).</summary>
-        public int ThemeCount = 6;
+        public int ThemeCount = 9;
         public float PipeMoveAmplitude = 30f;
         public float PipeMovePeriod = 2.6f;
 

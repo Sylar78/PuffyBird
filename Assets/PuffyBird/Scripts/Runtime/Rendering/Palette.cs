@@ -281,6 +281,9 @@ namespace PuffyBird.Rendering
             City,
             Japan,
             Winter,
+            Jungle,
+            Sky,
+            Ocean,
         }
 
         public enum Weather
@@ -289,6 +292,10 @@ namespace PuffyBird.Rendering
             Rain,
             Snow,
             Petals,
+            /// <summary>Feuilles tropicales qui tombent en tournoyant.</summary>
+            Leaves,
+            /// <summary>Bulles qui remontent vers la surface.</summary>
+            Bubbles,
         }
 
         /// <summary>Ambiance d'un thème : ciel, brouillard, lumière, décor, météo, post-traitement.</summary>
@@ -298,6 +305,8 @@ namespace PuffyBird.Rendering
             public Weather Weather;
             public bool Lightning;
             public bool Fireflies;
+            /// <summary>Nuages dans le ciel (absents sous la mer).</summary>
+            public bool Clouds;
             public Color SkyTop;
             public Color SkyHorizon;
             public Color Fog;
@@ -338,6 +347,7 @@ namespace PuffyBird.Rendering
             {
                 Set = SetPiece.Forest,
                 Weather = Weather.None,
+                Clouds = true,
                 FogStart = 18f,
                 FogEnd = 95f,
                 SunSize = 0.05f,
@@ -507,6 +517,103 @@ namespace PuffyBird.Rendering
                     t.BloomThreshold = 1.15f;
                     t.ColorFilter = Hex("#F2F7FF");
                     t.Vignette = 0.18f;
+                    break;
+
+                // Jungle tropicale : palmiers, fromagers à lianes, temple en ruine dans la brume.
+                case Core.Theme.Jungle:
+                    t.Set = SetPiece.Jungle;
+                    t.Weather = Weather.Leaves;
+                    t.SkyTop = Hex("#3FA7C9");
+                    t.SkyHorizon = Hex("#D2F2C8");
+                    t.Fog = Hex("#A4D4AE");
+                    t.FogStart = 10f;
+                    t.FogEnd = 70f;
+                    t.SunColor = Hex("#FFEFC2");
+                    t.SunIntensity = 1.25f;
+                    t.SunEuler = new Vector3(48f, -25f, 0f);
+                    t.AmbientSky = Hex("#8CCBB0");
+                    t.AmbientEquator = Hex("#A8D8A0");
+                    t.AmbientGround = Hex("#4E7A3A");
+                    t.HillFar = Hex("#5AA07E");
+                    t.HillNear = Hex("#2F8F4E");
+                    t.Foliage = Hex("#2FA84A");
+                    t.Cloud = Hex("#FFFFFF");
+                    t.SunScreenPos = new Vector2(0.78f, 0.82f);
+                    t.SunDisc = Hex("#FFF4C8");
+                    t.Grass = Hex("#6FD24A");
+                    t.Dirt = new Color(0.85f, 0.75f, 0.6f);
+                    t.Wind = 1.1f;
+                    t.BloomIntensity = 0.55f;
+                    t.ColorFilter = Hex("#F4FFF0");
+                    t.Vignette = 0.24f;
+                    break;
+
+                // Ciel : au-dessus d'une mer de nuages, îles flottantes, montgolfières, arc-en-ciel.
+                case Core.Theme.Sky:
+                    t.Set = SetPiece.Sky;
+                    t.SkyTop = Hex("#2F74D8");
+                    t.SkyHorizon = Hex("#D6EBFF");
+                    t.Fog = Hex("#E2EEFF");
+                    t.FogStart = 30f;
+                    t.FogEnd = 160f;
+                    t.SunColor = Hex("#FFF3DC");
+                    t.SunIntensity = 1.4f;
+                    t.SunEuler = new Vector3(35f, 30f, 0f);
+                    t.AmbientSky = Hex("#A9CBFF");
+                    t.AmbientEquator = Hex("#E2EEFF");
+                    t.AmbientGround = Hex("#D2DEF2");
+                    t.HillFar = Hex("#F2F7FF");
+                    t.HillNear = Hex("#FFFFFF");
+                    t.Foliage = Hex("#FFFFFF");
+                    t.Cloud = Hex("#FFFFFF");
+                    t.SunScreenPos = new Vector2(0.72f, 0.8f);
+                    t.SunSize = 0.06f;
+                    t.SunDisc = Hex("#FFFBE6");
+                    t.Grass = Hex("#F6F9FF");
+                    t.Dirt = new Color(0.93f, 0.95f, 1f);
+                    t.Wind = 0.6f;
+                    t.Flowers = false;
+                    t.BloomIntensity = 0.6f;
+                    t.BloomThreshold = 1f;
+                    t.ColorFilter = Hex("#F6F9FF");
+                    t.Vignette = 0.15f;
+                    break;
+
+                // Fond marin : sable, algues géantes, coraux, bancs de poissons, méduses, bulles.
+                case Core.Theme.Ocean:
+                    t.Set = SetPiece.Ocean;
+                    t.Weather = Weather.Bubbles;
+                    t.Clouds = false;
+                    t.SkyTop = Hex("#43C8E2");
+                    t.SkyHorizon = Hex("#0C3D68");
+                    t.Fog = Hex("#16607E");
+                    t.FogStart = 6f;
+                    t.FogEnd = 48f;
+                    t.SunColor = Hex("#BFF4FF");
+                    t.SunIntensity = 1f;
+                    t.SunEuler = new Vector3(70f, 10f, 0f);
+                    t.AmbientSky = Hex("#4FB8D0");
+                    t.AmbientEquator = Hex("#1F6E8C");
+                    t.AmbientGround = Hex("#2A4A5A");
+                    t.HillFar = Hex("#1B4F6E");
+                    t.HillNear = Hex("#2C6E7E");
+                    t.Foliage = Hex("#E8738A");
+                    t.Cloud = Hex("#FFFFFF");
+                    // Lumière de la surface : grand disque pâle tout en haut.
+                    t.SunScreenPos = new Vector2(0.5f, 1f);
+                    t.SunSize = 0.09f;
+                    t.SunDisc = Hex("#DFFBFF");
+                    t.Grass = Hex("#E2CF98");
+                    t.Dirt = new Color(0.9f, 0.85f, 0.7f);
+                    t.SceneTint = new Color(0.85f, 0.95f, 1f);
+                    t.Wind = 0.7f;
+                    t.Flowers = false;
+                    t.BloomIntensity = 0.9f;
+                    t.BloomThreshold = 0.85f;
+                    t.BloomTint = Hex("#BFF4FF");
+                    t.ColorFilter = Hex("#DDF4FF");
+                    t.Vignette = 0.3f;
+                    t.Exposure = 0.05f;
                     break;
 
                 default:
