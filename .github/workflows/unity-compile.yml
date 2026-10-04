@@ -5,7 +5,10 @@
 name: Compilation Unity
 
 on:
+  # Push sur la branche principale seulement : sur une branche de PR, l'événement
+  # pull_request suffit (sinon deux compilations par push).
   push:
+    branches: [claude/init-claude-md-jrskg2]
     paths:
       - "Assets/**"
       - "Packages/**"
@@ -63,6 +66,8 @@ jobs:
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
+          free -m
+          df -h /
 
       - uses: actions/checkout@v4
         if: steps.license.outputs.ok == 'true'
@@ -72,9 +77,7 @@ jobs:
         with:
           path: Library
           key: Library-Compile-${{ hashFiles('Packages/manifest.json') }}
-          restore-keys: |
-            Library-Compile-
-            Library-Android-
+          restore-keys: Library-Compile-
 
       # CompileCheck.Run compile les scripts du jeu pour Android avec les symboles des packages
       # installés et quitte en erreur s'il y en a une.
@@ -92,3 +95,11 @@ jobs:
           buildName: PuffyBird
           buildMethod: PuffyBird.Editor.CompileCheck.Run
           versioning: None
+
+      # Code 137 = Unity tué par le système : dire si c'est la mémoire ou le disque.
+      - name: Diagnostic machine (en cas d'échec)
+        if: failure()
+        run: |
+          free -m
+          df -h / /home/runner/work
+          sudo dmesg | grep -iE 'out of memory|killed process|oom' | tail -n 20 || true

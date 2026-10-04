@@ -4,7 +4,9 @@
 name: Tests
 
 on:
+  # Branche principale et pull requests : une branche de PR n'est testée qu'une fois par push.
   push:
+    branches: [claude/init-claude-md-jrskg2]
   pull_request:
   workflow_dispatch:
 
