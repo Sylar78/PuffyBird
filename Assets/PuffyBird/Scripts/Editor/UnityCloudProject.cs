@@ -16,10 +16,10 @@ namespace PuffyBird.Editor
     public static class UnityCloudProject
     {
         /// <summary>ID du projet (cloud.unity.com > Projects > PuffyBird > Project ID, de la forme d'un GUID).</summary>
-        public const string ProjectId = "";
+        public const string ProjectId = "292c88a1-e813-4d71-8e4c-4071970cd872";
 
         /// <summary>ID de l'organisation (cloud.unity.com > Administration > Organization ID).</summary>
-        public const string OrganizationId = "";
+        public const string OrganizationId = "293156";
 
         public const string ProjectName = "PuffyBird";
 
@@ -48,7 +48,11 @@ namespace PuffyBird.Editor
             }
             var so = new SerializedObject(assets[0]);
             bool changed = SetString(so, "cloudProjectId", ProjectId);
-            if (OrganizationId.Length > 0) changed |= SetString(so, "organizationId", OrganizationId);
+            // L'organisation n'est écrite que si rien n'est relié : une liaison faite dans l'éditeur
+            // (Services) garde la sienne. Seul l'ID du projet compte pour les services en jeu.
+            var organization = so.FindProperty("organizationId");
+            if (OrganizationId.Length > 0 && organization != null && string.IsNullOrEmpty(organization.stringValue))
+                changed |= SetString(so, "organizationId", OrganizationId);
             changed |= SetString(so, "projectName", ProjectName);
             if (changed)
             {
