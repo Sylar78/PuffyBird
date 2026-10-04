@@ -5,6 +5,9 @@ using PuffyBird.Metrics;
 using Unity.Services.Analytics;
 using Unity.Services.Core;
 using UnityEngine;
+#if UNITY_6000_2_OR_NEWER
+using UnityEngine.UnityConsent;
+#endif
 
 namespace PuffyBird.Monetization
 {
@@ -21,6 +24,7 @@ namespace PuffyBird.Monetization
 
         bool _ready;
         bool _collecting;
+        bool _applied;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Register()
@@ -33,6 +37,9 @@ namespace PuffyBird.Monetization
 
         IEnumerator Start()
         {
+            // Consentement d'abord (écran du premier lancement) : avec Unity 6.2 et plus, la collecte
+            // démarre dès l'initialisation si l'accord est déjà déclaré.
+            yield return new WaitUntil(() => AdServices.Consent.HasValue);
             var init = UnityServices.InitializeAsync();
             yield return new WaitUntil(() => init.IsCompleted);
             if (init.IsFaulted)
@@ -41,7 +48,6 @@ namespace PuffyBird.Monetization
                 yield break;
             }
             _ready = true;
-            yield return new WaitUntil(() => AdServices.Consent.HasValue);
             Apply(AdServices.Consent.Value);
             AdServices.ConsentChanged += Apply;
         }
@@ -53,10 +59,20 @@ namespace PuffyBird.Monetization
 
         void Apply(bool granted)
         {
-            if (!_ready || granted == _collecting) return;
+            // Toujours appliqué la première fois : un accord retiré doit l'emporter sur l'état gardé par Unity.
+            if (!_ready || (_applied && granted == _collecting)) return;
+            _applied = true;
             _collecting = granted;
+#if UNITY_6000_2_OR_NEWER
+            // Unity 6.2 et plus (Analytics 6.1+) : la collecte suit le consentement déclaré au
+            // module UnityConsent ; StartDataCollection / StopDataCollection n'existent plus.
+            var state = EndUserConsent.GetConsentState();
+            state.AnalyticsIntent = granted ? ConsentStatus.Granted : ConsentStatus.Denied;
+            EndUserConsent.SetConsentState(state);
+#else
             if (granted) AnalyticsService.Instance.StartDataCollection();
             else AnalyticsService.Instance.StopDataCollection();
+#endif
         }
 
         public void PlayerDied(int score, string theme, float seconds, bool continued)

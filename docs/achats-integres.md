@@ -13,11 +13,11 @@ Les identifiants des produits datent des premiers oiseaux (ninja, robot, galaxy)
 
 Dans le jeu : bouton **OISEAUX** de l'écran titre (oiseaux, avec leur prix et **ACHETER**), et dans **PARAMÈTRES** les lignes **SUPPRIMER LES PUBS** et **RESTAURER LES ACHATS** (exigée par Apple). Les oiseaux payants et ces lignes n'apparaissent que si la boutique est disponible.
 
-## 1. Installer le package Unity IAP (une fois, sur le PC)
+## 1. Package Unity IAP
 
-1. Unity > **Window > Package Manager** > **Unity Registry** > **In App Purchasing** (version 5.x) > **Install**.
-2. Rien d'autre à régler : à la recompilation, `Editor/PackageDefines` active le code de la boutique (symbole `PUFFYBIRD_IAP`). Sans le package, le jeu compile et tourne sans boutique.
-3. Envoyer sur GitHub (Upload files) les deux fichiers modifiés : `Packages/manifest.json` et `Packages/packages-lock.json`. Les builds de la CI activeront alors les achats.
+Le package **In App Purchasing** (`com.unity.purchasing` 5.4.3) est déclaré dans `Packages/manifest.json` : Unity l'installe tout seul à l'ouverture du projet, et les builds de la CI aussi. À la compilation, `Editor/PackageDefines` active le code de la boutique (symbole `PUFFYBIRD_IAP`). Rien à faire dans Unity ; pousser simplement le `Packages/packages-lock.json` que Unity met à jour à l'ouverture.
+
+La boutique n'apparaît dans le jeu qu'une fois les produits créés et validés sur les stores (étapes 2 et 3) : avant cela, aucun prix ne remonte et les oiseaux payants restent cachés.
 
 ## 2. App Store Connect (iOS)
 

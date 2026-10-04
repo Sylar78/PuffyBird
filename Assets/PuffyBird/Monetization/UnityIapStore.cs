@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using PuffyBird.Core;
 using PuffyBird.Store;
+using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.Purchasing;
 
@@ -79,6 +80,17 @@ namespace PuffyBird.Monetization
 
         async void Start()
         {
+            // Unity Gaming Services d'abord, comme le recommande Unity IAP. Sans projet Unity Cloud,
+            // l'initialisation échoue mais la boutique fonctionne quand même.
+            try
+            {
+                if (UnityServices.State == ServicesInitializationState.Uninitialized) await UnityServices.InitializeAsync();
+            }
+            catch (Exception e)
+            {
+                Debug.Log($"PuffyBird : Unity Gaming Services non initialisés ({e.Message}), boutique sans eux.");
+            }
+
             try
             {
                 _store = UnityIAPServices.StoreController();

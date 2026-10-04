@@ -1,0 +1,94 @@
+# Compile tout le projet dans Unity avec les vrais packages (Unity IAP, Analytics, LevelPlay…)
+# et les symboles PUFFYBIRD_IAP / PUFFYBIRD_ANALYTICS, sans faire de build : une erreur de
+# compilation (scripts, éditeur, code de la boutique) apparaît ici plutôt que dans un build
+# TestFlight ou Google Play. Lancé quand le code ou les packages changent.
+name: Compilation Unity
+
+on:
+  push:
+    paths:
+      - "Assets/**"
+      - "Packages/**"
+      - ".github/workflows/unity-compile.yml"
+  pull_request:
+    paths:
+      - "Assets/**"
+      - "Packages/**"
+      - ".github/workflows/unity-compile.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: unity-compile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Même version que les workflows de build.
+  UNITY_VERSION: 6000.6.3f1
+
+jobs:
+  compile:
+    name: Scripts Android (Unity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Licence Unity présente ?
+        id: license
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        run: |
+          if [ -z "$UNITY_LICENSE" ] && [ -z "$UNITY_SERIAL" ]; then
+            echo "::notice::Pas de licence Unity dans les secrets : compilation Unity sautée."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # L'image Unity et le cache Library ne tiennent pas ensemble sur le disque par défaut.
+      - name: Libérer de l'espace disque (image Unity volumineuse)
+        if: steps.license.outputs.ok == 'true'
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          tool-cache: true
+
+      - name: Ajouter de la mémoire d'échange (évite le code 137)
+        if: steps.license.outputs.ok == 'true'
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 12G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
+      - uses: actions/checkout@v4
+        if: steps.license.outputs.ok == 'true'
+
+      - uses: actions/cache@v4
+        if: steps.license.outputs.ok == 'true'
+        with:
+          path: Library
+          key: Library-Compile-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: |
+            Library-Compile-
+            Library-Android-
+
+      # CompileCheck.Run compile les scripts du jeu pour Android avec les symboles des packages
+      # installés et quitte en erreur s'il y en a une.
+      - name: Compiler dans Unity
+        if: steps.license.outputs.ok == 'true'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: Android
+          buildName: PuffyBird
+          buildMethod: PuffyBird.Editor.CompileCheck.Run
+          versioning: None

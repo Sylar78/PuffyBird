@@ -1,0 +1,28 @@
+# Tests de la simulation (PuffyBird.Core et tests EditMode) hors de Unity, à chaque push et
+# pull request : une régression du gameplay est signalée en quelques minutes, avant tout build
+# mobile. Même commande qu'en local : dotnet test tools/CoreTests
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Simulation (dotnet test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Tests de la simulation
+        run: dotnet test tools/CoreTests --logger "console;verbosity=normal"

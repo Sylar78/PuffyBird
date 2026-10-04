@@ -55,6 +55,7 @@ namespace PuffyBird.Editor
             QualitySettings.SetQualityLevel(current, false);
 
             ConfigurePlayer();
+            UnityCloudProject.Apply();
             EnsureScene(openScene);
             AssetDatabase.SaveAssets();
             Debug.Log("PuffyBird : projet configuré (URP mobile, iOS, Android, scène principale).");
