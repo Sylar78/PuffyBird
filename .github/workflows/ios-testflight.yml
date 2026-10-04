@@ -58,8 +58,11 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-iOS-${{ hashFiles('Packages/manifest.json') }}
-          restore-keys: Library-iOS-
+          # v2 : le Library sauvé par le run 21 (iOS) fait tuer Unity au chargement des scripts
+          # (code 137, mémoire libre) ; même symptôme qu'avec le cache Android dans la
+          # compilation Unity. Repartir d'un Library neuf.
+          key: Library-iOS-v2-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-iOS-v2-
 
       - name: Build Unity iOS
         uses: game-ci/unity-builder@v4

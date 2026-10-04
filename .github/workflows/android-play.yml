@@ -75,8 +75,10 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Android-${{ hashFiles('Packages/manifest.json') }}
-          restore-keys: Library-Android-
+          # v2 : l'ancien Library fait tuer Unity au chargement des scripts (code 137, mémoire
+          # libre), constaté dans la compilation Unity et le build iOS. Repartir d'un Library neuf.
+          key: Library-Android-v2-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-Android-v2-
 
       # GameCI décode la clé dans le projet sous le nom androidKeystoreName et transmet les
       # mots de passe à BuildScript.BuildAndroid, qui signe le bundle avec.
