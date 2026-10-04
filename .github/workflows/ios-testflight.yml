@@ -36,14 +36,11 @@ jobs:
           done
           exit $missing
 
+      - uses: actions/checkout@v4
+
+      # Dossiers supprimés en parallèle : ≈ 1 min, contre ≈ 6 avec l'action free-disk-space.
       - name: Libérer de l'espace disque (image Unity volumineuse)
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          tool-cache: true
+        run: bash ci/free-disk-space.sh
 
       # Unity tourne dans un conteneur limité à ~7,5 Go sur une machine sans mémoire d'échange :
       # un pic de mémoire (compilation, IL2CPP) le fait tuer par le système (code 137).
@@ -57,8 +54,6 @@ jobs:
           sudo swapon /swapfile
           free -m
           df -h /
-
-      - uses: actions/checkout@v4
 
       - uses: actions/cache@v4
         with:
@@ -138,11 +133,14 @@ jobs:
       - name: Cache des pods
         uses: actions/cache@v4
         with:
+          # ~/.cocoapods : index des specs (CDN trunk), sinon retéléchargé à chaque build.
           path: |
             build/PuffyBird/Pods
             build/PuffyBird/Podfile.lock
             ~/Library/Caches/CocoaPods
-          key: pods-${{ hashFiles('build/PuffyBird/Podfile') }}
+            ~/.cocoapods
+          key: pods-v2-${{ hashFiles('build/PuffyBird/Podfile') }}
+          restore-keys: pods-v2-
 
       - name: Pods CocoaPods (SDK pub)
         working-directory: build/PuffyBird
@@ -169,7 +167,8 @@ jobs:
             -archivePath "$RUNNER_TEMP/PuffyBird.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" \
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Envoi sur App Store Connect (TestFlight)
         env:

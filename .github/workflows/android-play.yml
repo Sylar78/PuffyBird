@@ -50,17 +50,14 @@ jobs:
           done
           exit $missing
 
+      - uses: actions/checkout@v4
+
       # L'image Unity (une vingtaine de Go décompressée) et le cache Library ne tiennent pas
       # ensemble sur le disque par défaut : run 2 arrêté par « no space left on device ».
       # Unity tourne dans Docker, les outils préinstallés de la machine ne servent pas.
+      # Dossiers supprimés en parallèle : ≈ 1 min, contre ≈ 6 avec l'action free-disk-space.
       - name: Libérer de l'espace disque (image Unity volumineuse)
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          tool-cache: true
+        run: bash ci/free-disk-space.sh
 
       # Unity tourne dans un conteneur limité à ~7,5 Go sur une machine sans mémoire d'échange :
       # un pic de mémoire (compilation, IL2CPP) le fait tuer par le système (code 137).
@@ -74,8 +71,6 @@ jobs:
           sudo swapon /swapfile
           free -m
           df -h /
-
-      - uses: actions/checkout@v4
 
       - uses: actions/cache@v4
         with:

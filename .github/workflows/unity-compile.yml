@@ -47,16 +47,14 @@ jobs:
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - uses: actions/checkout@v4
+        if: steps.license.outputs.ok == 'true'
+
       # L'image Unity et le cache Library ne tiennent pas ensemble sur le disque par défaut.
+      # Dossiers supprimés en parallèle : ≈ 1 min, contre ≈ 6 avec l'action free-disk-space.
       - name: Libérer de l'espace disque (image Unity volumineuse)
         if: steps.license.outputs.ok == 'true'
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          tool-cache: true
+        run: bash ci/free-disk-space.sh
 
       - name: Ajouter de la mémoire d'échange (évite le code 137)
         if: steps.license.outputs.ok == 'true'
@@ -68,9 +66,6 @@ jobs:
           sudo swapon /swapfile
           free -m
           df -h /
-
-      - uses: actions/checkout@v4
-        if: steps.license.outputs.ok == 'true'
 
       - uses: actions/cache@v4
         if: steps.license.outputs.ok == 'true'
