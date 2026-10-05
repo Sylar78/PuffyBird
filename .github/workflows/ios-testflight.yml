@@ -64,7 +64,31 @@ jobs:
           key: Library-iOS-v2-${{ hashFiles('Packages/manifest.json') }}
           restore-keys: Library-iOS-v2-
 
+      # Un Library restauré du cache fait parfois tuer Unity au chargement des scripts
+      # (code 137, mémoire libre) : en cas d'échec, un second essai repart sans Library.
       - name: Build Unity iOS
+        id: unity
+        continue-on-error: true
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: iOS
+          buildName: PuffyBird
+          buildMethod: PuffyBird.Editor.BuildScript.BuildIOS
+          versioning: None
+          customParameters: -buildNumber ${{ github.run_number }} -appleTeamId ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Repartir sans le cache Library
+        if: steps.unity.outcome == 'failure'
+        run: sudo rm -rf Library
+
+      - name: Build Unity iOS (second essai)
+        if: steps.unity.outcome == 'failure'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
