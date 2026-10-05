@@ -59,7 +59,7 @@ Les 9 succès, leurs conditions et les icônes prêtes à envoyer (512 × 512, d
 | `puffybird.ach.star` | `star.png` | Étoile filante / Shooting star | Attraper une étoile de vitesse | 10 |
 | `puffybird.ach.closecalls` | `closecalls.png` | Sang-froid / Cool nerves | Frôler 5 tuyaux dans une même partie | 20 |
 | `puffybird.ach.streak7` | `streak7.png` | Une semaine de vol / A week in flight | Jouer 7 jours de suite | 20 |
-| `puffybird.ach.streak30` | `streak30.png` | Phénix éternel / Eternal phoenix | Jouer 30 jours de suite (débloque aussi l'oiseau ÉCLIPSE) | 50 |
+| `puffybird.ach.streak30` | `streak30.png` | Phénix éternel / Eternal phoenix | Jouer 30 jours de suite (débloque aussi le phénix LUMIÈRE) | 50 |
 | `puffybird.ach.daily` | `daily.png` | Défi relevé / Challenge accepted | Lancer le défi du jour | 10 |
 
 Total : 200 points (Apple en accepte 1000 par app). Aucun n'est « caché ».

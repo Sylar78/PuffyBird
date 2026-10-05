@@ -29,8 +29,8 @@ CE QUI REND PUFFYBIRD UNIQUE
 • Défi du jour : la même partie pour tout le monde, chaque jour. Bats ton meilleur score du jour !
 • 9 décors tirés au hasard : jour, nuit, ville au crépuscule, Japon médiéval, orage, neige, jungle, ciel et fond marin, chacun avec sa musique.
 • Des tuyaux qui bougent dès 15 points.
-• Des étoiles de vitesse : attrape-les pour filer dans un arc-en-ciel.
-• 10 phénix à débloquer : par médailles, en jouant 30 jours de suite, ou en boutique. Des looks uniquement, jamais d'avantage en jeu.
+• Des étoiles de vitesse : attrape-les pour filer dans une traînée aux couleurs de ton phénix.
+• 5 phénix en armure, un par élément (feu, eau, vent, lumière, ténèbres) : par médailles, en jouant 30 jours de suite, ou en boutique. Des looks uniquement, jamais d'avantage en jeu.
 • Classement et succès en ligne.
 • Disponible en français, anglais, espagnol, allemand et portugais.
 
@@ -65,8 +65,8 @@ WHAT MAKES PUFFYBIRD DIFFERENT
 • Daily challenge: the same run for every player, every day. Beat your best of the day!
 • 9 random scenes: day, night, dusk city, medieval Japan, thunderstorm, snow, jungle, sky and underwater, each with its own music.
 • Moving pipes from 15 points.
-• Speed stars: grab them to dash through a rainbow.
-• 10 phoenixes to unlock: by medals, by playing 30 days in a row, or in the shop. Looks only, never an advantage in the game.
+• Speed stars: grab them to dash ahead in a trail of your phoenix's colors.
+• 5 armored phoenixes, one per element (fire, water, wind, light, dark): by medals, by playing 30 days in a row, or in the shop. Looks only, never an advantage in the game.
 • Online leaderboard and achievements.
 • Available in English, French, Spanish, German and Portuguese.
 
@@ -101,8 +101,8 @@ LO QUE HACE ÚNICO A PUFFYBIRD
 • Reto del día: la misma partida para todos los jugadores, cada día. ¡Supera tu mejor puntuación de hoy!
 • 9 escenarios al azar: día, noche, ciudad al atardecer, Japón medieval, tormenta, nieve, selva, cielo y fondo marino, cada uno con su música.
 • Tubos que se mueven a partir de 15 puntos.
-• Estrellas de velocidad: atrápalas para salir disparado en un arcoíris.
-• 10 fénix por desbloquear: con medallas, jugando 30 días seguidos o en la tienda. Solo aspecto, nunca una ventaja en el juego.
+• Estrellas de velocidad: atrápalas para salir disparado en una estela de los colores de tu fénix.
+• 5 fénix con armadura, uno por elemento (fuego, agua, viento, luz, tinieblas): con medallas, jugando 30 días seguidos o en la tienda. Solo aspecto, nunca una ventaja en el juego.
 • Ranking y logros en línea.
 • Disponible en español, inglés, francés, alemán y portugués.
 
@@ -137,8 +137,8 @@ DAS MACHT PUFFYBIRD BESONDERS
 • Tagesaufgabe: jeden Tag dieselbe Runde für alle Spieler. Schlage deine Tagesbestleistung!
 • 9 zufällige Welten: Tag, Nacht, Stadt in der Dämmerung, mittelalterliches Japan, Gewitter, Schnee, Dschungel, Himmel und Unterwasser, jede mit eigener Musik.
 • Bewegliche Röhren ab 15 Punkten.
-• Tempo-Sterne: Schnapp sie dir und rase durch einen Regenbogen.
-• 10 Phönixe zum Freischalten: mit Medaillen, durch 30 Tage in Folge oder im Shop. Nur Optik, nie ein Vorteil im Spiel.
+• Tempo-Sterne: Schnapp sie dir und rase mit einer Spur in den Farben deines Phönix davon.
+• 5 Phönixe in Rüstung, einer pro Element (Feuer, Wasser, Wind, Licht, Finsternis): mit Medaillen, durch 30 Tage in Folge oder im Shop. Nur Optik, nie ein Vorteil im Spiel.
 • Online-Rangliste und Erfolge.
 • Verfügbar auf Deutsch, Englisch, Französisch, Spanisch und Portugiesisch.
 
@@ -173,8 +173,8 @@ O QUE TORNA O PUFFYBIRD ÚNICO
 • Desafio do dia: a mesma partida para todos os jogadores, todos os dias. Supere o seu melhor de hoje!
 • 9 cenários sorteados: dia, noite, cidade ao entardecer, Japão medieval, tempestade, neve, selva, céu e fundo do mar, cada um com a sua música.
 • Canos que se mexem a partir de 15 pontos.
-• Estrelas de velocidade: pegue-as para disparar num arco-íris.
-• 10 fênix para desbloquear: com medalhas, jogando 30 dias seguidos ou na loja. Só visual, nunca uma vantagem no jogo.
+• Estrelas de velocidade: pegue-as para disparar num rastro com as cores do seu fênix.
+• 5 fênix de armadura, um por elemento (fogo, água, vento, luz, trevas): com medalhas, jogando 30 dias seguidos ou na loja. Só visual, nunca uma vantagem no jogo.
 • Ranking e conquistas online.
 • Disponível em português, inglês, francês, espanhol e alemão.
 

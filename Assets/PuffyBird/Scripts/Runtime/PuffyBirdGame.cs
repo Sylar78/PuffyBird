@@ -558,6 +558,7 @@ namespace PuffyBird
             {
                 _shownSkin = skin;
                 _bird.SetSkin(skin);
+                _trail.SetSkin(skin);
             }
             _bird.SetPreview(_menu.Screen == MenuScreen.Skins);
             _bird.Update(_sim, alpha, dt);

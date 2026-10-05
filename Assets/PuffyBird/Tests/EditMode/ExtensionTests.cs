@@ -84,7 +84,7 @@ namespace PuffyBird.Tests
             Assert.AreEqual(_cfg.StarBoostFactor, sim.SpeedFactor, 1e-5f);
             double before = sim.ScrollDistance;
             sim.Step();
-            Assert.AreEqual(_cfg.ScrollSpeed * 1.3f * _cfg.Step, sim.ScrollDistance - before, 1e-4);
+            Assert.AreEqual(_cfg.ScrollSpeed * 1.15f * _cfg.Step, sim.ScrollDistance - before, 1e-4);
 
             // 5 s après la prise (montée et retour compris), la vitesse est redevenue normale.
             int elapsed = (int)(_cfg.StarBoostRamp / _cfg.Step) + 3;

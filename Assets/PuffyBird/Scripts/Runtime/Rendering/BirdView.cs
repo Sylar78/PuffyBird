@@ -6,7 +6,8 @@ namespace PuffyBird.Rendering
 {
     /// <summary>
     /// L'oiseau en volume : corps dodu, ventre clair, yeux, bec, houppette et deux ailes animées,
-    /// ou phénix (cou, grandes ailes de plumes lumineuses, queue de feu à ocelles qui ondule).
+    /// ou phénix en armure (heaume à couronne de pointes, ailes à épaulières et médaillons,
+    /// plumes sombres cerclées de flammes, queue de rubans et de feu qui ondule).
     /// Le battement suit la séquence haut → milieu → bas → milieu de la spec (§6.6), en continu ;
     /// les plumes du bout des ailes fléchissent dans le vertex shader. Petits nuages de « puff »
     /// à chaque battement, plumes qui volent à l'impact. Tout est purement visuel : la hitbox
@@ -157,108 +158,174 @@ namespace PuffyBird.Rendering
             b.Append(piece, Matrix4x4.TRS(center, Quaternion.LookRotation(dir, normal), Vector3.one));
         }
 
-        /// <summary>Corps du phénix : buste effilé, cou et tête irisés, collier d'or, crête de feu, bec ivoire.</summary>
+        /// <summary>Pointe conique de la base <paramref name="basePos"/> vers <paramref name="dir"/>.</summary>
+        static void AddSpike(MeshBuilder b, Vector3 basePos, Vector3 dir, float radius, float length, Color color, int segments = 8)
+        {
+            b.Append(new MeshBuilder().AddCone(Vector3.zero, radius, length, color, segments),
+                Matrix4x4.TRS(basePos, Quaternion.FromToRotation(Vector3.up, dir.normalized), Vector3.one));
+        }
+
+        /// <summary>
+        /// Ruban qui se courbe dans le plan de profil : direction de <paramref name="fromDeg"/> à
+        /// <paramref name="toDeg"/> (degrés, 0 = vers le bec, 90 = vers le haut), largeur et couleur
+        /// interpolées de la base au bout. Aplati face à la caméra. Renvoie la position du bout.
+        /// </summary>
+        static Vector3 AddCurve(MeshBuilder b, Vector3 start, float fromDeg, float toDeg, float length,
+            float width0, float width1, Color color0, Color color1, float thickness = 0.006f, int segments = 6)
+        {
+            var previous = start;
+            float step = length / segments;
+            for (int i = 1; i <= segments; i++)
+            {
+                float u = (float)i / segments;
+                float a = Mathf.Lerp(fromDeg, toDeg, (i - 0.5f) / segments) * Mathf.Deg2Rad;
+                var dir = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f);
+                AddSegment(b, previous, dir, Vector3.back, -0.006f, step + 0.006f, Mathf.Lerp(width0, width1, u), thickness,
+                    Color.Lerp(color0, color1, u));
+                previous += dir * step;
+            }
+            return previous;
+        }
+
+        static Vector3 Direction(float degrees)
+        {
+            float a = degrees * Mathf.Deg2Rad;
+            return new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f);
+        }
+
+        /// <summary>
+        /// Corps du phénix en armure : buste sombre au ventre de feu, plastron à gemme, cou lumineux,
+        /// heaume au bec de métal et aux yeux de gemme, couronne de pointes, deux rubans qui
+        /// tombent de la tête et serres de feu.
+        /// </summary>
         static MeshBuilder BuildPhoenixBody(Palette.PhoenixColors c)
         {
             var b = new MeshBuilder();
-            b.AddEllipsoid(new Vector3(-0.02f, 0f, 0f), new Vector3(0.12f, 0.075f, 0.075f), c.Body, 22, 14);
-            b.AddEllipsoid(new Vector3(0.04f, -0.015f, 0f), new Vector3(0.07f, 0.06f, 0.068f), c.Sheen, 18, 12);
-            // Cou penché vers l'avant et tête.
-            b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.04f, 0.07f, 0.042f), c.Sheen, 16, 10),
-                Matrix4x4.TRS(new Vector3(0.095f, 0.055f, 0f), Quaternion.Euler(0f, 0f, -40f), Vector3.one));
-            b.AddSphere(new Vector3(0.14f, 0.11f, 0f), 0.042f, c.Sheen, 16, 12);
-            // Collier de perles d'or à la base du cou.
-            var neck = new Vector3(Mathf.Sin(40f * Mathf.Deg2Rad), Mathf.Cos(40f * Mathf.Deg2Rad), 0f);
-            var across = new Vector3(neck.y, -neck.x, 0f);
-            for (int k = 0; k < 10; k++)
-            {
-                float a = k * Mathf.PI * 2f / 10f;
-                var p = new Vector3(0.07f, 0.02f, 0f) + (Vector3.forward * Mathf.Cos(a) + across * Mathf.Sin(a)) * 0.05f;
-                b.AddSphere(p, 0.01f, c.Gold, 8, 6);
-            }
-            // Crête : trois flammèches inclinées vers l'arrière.
-            for (int k = 0; k < 3; k++)
-            {
-                var flame = new MeshBuilder().AddCone(Vector3.zero, 0.014f, 0.07f - k * 0.01f, k == 1 ? c.TipA : c.Gold, 10);
-                b.Append(flame, Matrix4x4.TRS(new Vector3(0.135f - k * 0.012f, 0.145f, 0f), Quaternion.Euler(0f, 0f, 10f + k * 20f), Vector3.one));
-            }
-            // Yeux dorés des deux côtés.
+            b.AddEllipsoid(new Vector3(-0.02f, 0f, 0f), new Vector3(0.11f, 0.072f, 0.068f), c.Body, 22, 14);
+            b.AddEllipsoid(new Vector3(-0.005f, -0.04f, 0f), new Vector3(0.075f, 0.04f, 0.056f), c.Plume, 16, 10);
+            // Plastron : plaque d'armure bordée de deux arêtes claires, gemme au centre.
+            b.AddEllipsoid(new Vector3(0.048f, 0.005f, 0f), new Vector3(0.056f, 0.066f, 0.062f), c.Armor, 18, 12);
+            for (int side = -1; side <= 1; side += 2)
+                AddSegment(b, new Vector3(0.07f, 0.05f, 0.042f * side), new Vector3(0.25f, -1f, -0.35f * side).normalized, Vector3.right,
+                    0f, 0.09f, 0.008f, 0.01f, c.ArmorTrim);
+            b.AddSphere(new Vector3(0.1f, 0.0f, 0f), 0.017f, c.Gem, 12, 10);
+            b.AddSphere(new Vector3(0.112f, 0.004f, 0f), 0.008f, c.GemCore, 8, 6);
+            // Cou lumineux penché vers l'avant, collier d'armure.
+            b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.034f, 0.062f, 0.036f), c.Plume, 14, 10),
+                Matrix4x4.TRS(new Vector3(0.095f, 0.06f, 0f), Quaternion.Euler(0f, 0f, -35f), Vector3.one));
+            b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.042f, 0.022f, 0.048f), c.Armor, 14, 8),
+                Matrix4x4.TRS(new Vector3(0.082f, 0.045f, 0f), Quaternion.Euler(0f, 0f, -35f), Vector3.one));
+
+            // Heaume, bec de métal légèrement crochu.
+            var head = new Vector3(0.135f, 0.11f, 0f);
+            b.AddSphere(head, 0.038f, c.Armor, 16, 12);
+            b.AddEllipsoid(head + new Vector3(0.012f, -0.012f, 0f), new Vector3(0.026f, 0.02f, 0.03f), c.Body, 12, 8);
+            AddSpike(b, head + new Vector3(0.03f, -0.002f, 0f), Direction(-14f), 0.014f, 0.062f, c.ArmorTrim, 10);
+            AddSpike(b, head + new Vector3(0.03f, -0.014f, 0f), Direction(-40f), 0.008f, 0.03f, c.Armor, 8);
+            // Yeux en fente, lumineux, des deux côtés.
             for (int side = -1; side <= 1; side += 2)
             {
-                b.AddSphere(new Vector3(0.15f, 0.12f, 0.034f * side), 0.011f, c.Eye, 10, 8);
-                b.AddSphere(new Vector3(0.157f, 0.122f, 0.042f * side), 0.006f, Palette.Pupil, 8, 6);
+                b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.014f, 0.0055f, 0.006f), c.Gem, 10, 6),
+                    Matrix4x4.TRS(head + new Vector3(0.018f, 0.006f, 0.032f * side), Quaternion.Euler(0f, 0f, 12f), Vector3.one));
             }
-            // Bec fin légèrement crochu.
-            b.Append(new MeshBuilder().AddCone(Vector3.zero, 0.016f, 0.055f, c.Beak, 12),
-                Matrix4x4.TRS(new Vector3(0.172f, 0.105f, 0f), Quaternion.Euler(0f, 0f, -100f), Vector3.one));
+            // Couronne : éventail de pointes vers le haut et l'arrière, flammes au milieu, gemme frontale.
+            const int crest = 7;
+            for (int k = 0; k < crest; k++)
+            {
+                float t = (float)k / (crest - 1);
+                float angle = Mathf.Lerp(70f, 175f, t);
+                float length = Mathf.Lerp(0.07f, 0.1f, Mathf.Sin(t * Mathf.PI));
+                var color = k == 2 || k == 4 ? c.FlameA : (k % 2 == 0 ? c.Armor : c.ArmorTrim);
+                AddSpike(b, head + new Vector3(-0.005f, 0.025f, 0f), Direction(angle), 0.011f, length, color);
+            }
+            for (int side = -1; side <= 1; side += 2)
+                AddSpike(b, head + new Vector3(-0.01f, 0.012f, 0.03f * side), new Vector3(-0.7f, 0.55f, 0.45f * side), 0.01f, 0.07f, c.ArmorTrim);
+            b.AddSphere(head + new Vector3(0.02f, 0.03f, 0f), 0.01f, c.Gem, 8, 6);
+            // Rubans qui tombent de l'arrière de la tête.
+            for (int side = -1; side <= 1; side += 2)
+                AddCurve(b, head + new Vector3(-0.02f, -0.01f, 0.026f * side), -95f, -150f, 0.17f, 0.009f, 0.004f, c.Ribbon, c.FlameTip, 0.005f);
+
+            // Pattes d'armure et serres de feu.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var hip = new Vector3(0.005f, -0.055f, 0.026f * side);
+                AddSegment(b, hip, Direction(-75f), Vector3.back, 0f, 0.05f, 0.014f, 0.014f, c.Armor);
+                var foot = hip + Direction(-75f) * 0.05f;
+                for (int k = -1; k <= 1; k++)
+                    AddSpike(b, foot, new Vector3(0.6f, -1f, 0.35f * k), 0.005f, 0.026f, c.FlameTip, 6);
+            }
             return b;
         }
 
         /// <summary>
-        /// Aile du phénix au repos : à plat (plan xz), étendue vers −z depuis l'épaule. Neuf rémiges en
-        /// éventail, sombres à la base, rose ou violet lumineux au milieu, bout doré.
+        /// Aile du phénix au repos : à plat (plan xz), étendue vers −z depuis l'épaule. Bras et
+        /// épaulière d'armure à cornes, médaillon à gemme rayonnant, puis onze longues plumes
+        /// sombres en éventail, cerclées de flammes, sur un voile lumineux.
         /// </summary>
         static MeshBuilder BuildPhoenixWing(Palette.PhoenixColors c)
         {
             var b = new MeshBuilder();
-            AddSegment(b, Vector3.zero, new Vector3(-0.25f, 0f, -1f).normalized, Vector3.up, 0f, 0.13f, 0.045f, 0.018f, c.Sheen, 12, 8);
-            const int count = 9;
+            var arm = new Vector3(-0.2f, 0f, -1f).normalized;
+            AddSegment(b, Vector3.zero, arm, Vector3.up, 0f, 0.21f, 0.028f, 0.02f, c.Armor, 12, 8);
+            // Épaulière bombée et arête claire du bord d'attaque.
+            b.AddEllipsoid(new Vector3(0.005f, 0.012f, -0.05f), new Vector3(0.058f, 0.024f, 0.06f), c.Armor, 16, 10);
+            AddSegment(b, new Vector3(0.04f, 0.016f, 0f), new Vector3(0.1f, 0f, -1f).normalized, Vector3.up, 0f, 0.19f, 0.011f, 0.018f, c.ArmorTrim);
+            // Cornes : une vers l'avant à l'épaule, une lame au bout de l'aile.
+            AddSpike(b, new Vector3(0.03f, 0.02f, -0.06f), new Vector3(0.9f, 0.35f, -0.35f), 0.016f, 0.09f, c.ArmorTrim, 10);
+            AddSpike(b, new Vector3(-0.045f, 0.004f, -0.205f), new Vector3(-0.1f, 0f, -1f), 0.016f, 0.085f, c.ArmorTrim, 10);
+            // Médaillon : gemme sertie d'armure, rayons fins tout autour, petite gemme voisine.
+            var medal = new Vector3(-0.025f, 0.028f, -0.125f);
+            b.AddEllipsoid(medal - new Vector3(0f, 0.006f, 0f), new Vector3(0.03f, 0.012f, 0.03f), c.Armor, 14, 8);
+            b.AddSphere(medal, 0.019f, c.Gem, 12, 10);
+            b.AddSphere(medal + new Vector3(0.004f, 0.015f, 0f), 0.008f, c.GemCore, 8, 6);
+            for (int k = 0; k < 10; k++)
+            {
+                float a = k * Mathf.PI * 2f / 10f;
+                AddSpike(b, medal, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)), 0.0045f, 0.055f, c.ArmorTrim, 6);
+            }
+            b.AddSphere(new Vector3(0.012f, 0.024f, -0.165f), 0.011f, c.Gem, 10, 8);
+
+            // Voile lumineux sous les plumes.
+            b.AddEllipsoid(new Vector3(-0.08f, -0.008f, -0.12f), new Vector3(0.09f, 0.004f, 0.11f), c.Plume, 16, 8);
+            // Plumes : de la pointe de l'aile (vers l'extérieur) jusqu'au corps (vers l'arrière).
+            const int count = 11;
             for (int k = 0; k < count; k++)
             {
                 float t = (float)k / (count - 1);
-                var root = Vector3.Lerp(new Vector3(-0.01f, 0f, -0.11f), new Vector3(-0.03f, 0f, -0.02f), t) + Vector3.up * (0.002f * k);
-                float a = Mathf.Lerp(15f, 85f, t) * Mathf.Deg2Rad;
+                var root = Vector3.Lerp(new Vector3(-0.045f, 0f, -0.205f), new Vector3(-0.02f, 0f, -0.025f), t);
+                float a = Mathf.Lerp(18f, 95f, t) * Mathf.Deg2Rad;
                 var dir = new Vector3(-Mathf.Sin(a), 0f, -Mathf.Cos(a));
-                float length = Mathf.Lerp(0.2f, 0.12f, t);
-                AddSegment(b, root, dir, Vector3.up, 0f, length * 0.5f, 0.02f, 0.006f, c.Body);
-                AddSegment(b, root, dir, Vector3.up, length * 0.3f, length * 0.9f, 0.022f, 0.008f, k % 2 == 0 ? c.TipA : c.TipB);
-                AddSegment(b, root, dir, Vector3.up, length * 0.78f, length, 0.018f, 0.01f, c.Gold);
+                float length = Mathf.Lerp(0.26f, 0.14f, t);
+                var flame = k % 2 == 0 ? c.FlameA : c.FlameB;
+                // Flamme large dessous, plume sombre étroite dessus, pointe sombre effilée.
+                AddSegment(b, root + Vector3.down * 0.002f, dir, Vector3.up, length * 0.1f, length * 0.9f, 0.03f, 0.006f, flame);
+                AddSegment(b, root + Vector3.up * 0.002f, dir, Vector3.up, 0f, length * 0.75f, 0.016f, 0.006f, c.Body);
+                AddSegment(b, root + Vector3.up * 0.003f, dir, Vector3.up, length * 0.6f, length * 1.04f, 0.009f, 0.006f, c.Body);
+                AddSegment(b, root + Vector3.up * 0.004f, dir, Vector3.up, length * 0.82f, length * 0.98f, 0.005f, 0.006f, c.FlameTip);
             }
             return b;
         }
 
         /// <summary>
-        /// Queue du phénix vers −x : longues plumes de feu, du rouge-orangé au jaune, terminées par un
-        /// ocelle (anneau bleu-vert), et deux fines plumes pâles dessous. Plumes aplaties face à la caméra.
+        /// Queue du phénix vers −x : un long ruban fin qui ondule et quatre traînes de flammes
+        /// assombries au centre, de la couleur des flammes vers leur pointe claire.
         /// </summary>
         static MeshBuilder BuildPhoenixTail(Palette.PhoenixColors c)
         {
             var b = new MeshBuilder();
-            // Angle (degrés, positif = vers le haut), longueur, décalage en profondeur, ocelle.
-            AddStreamer(b, c, 14f, 0.18f, 0.015f, true);
-            AddStreamer(b, c, 2f, 0.22f, -0.01f, true);
-            AddStreamer(b, c, -10f, 0.2f, 0.02f, true);
-            AddStreamer(b, c, -22f, 0.16f, -0.015f, true);
-            AddStreamer(b, c, -32f, 0.15f, 0f, false);
-            AddStreamer(b, c, -40f, 0.12f, 0.01f, false);
+            AddCurve(b, new Vector3(0f, 0f, 0.01f), 192f, 222f, 0.32f, 0.012f, 0.003f, c.Ribbon, c.FlameTip, 0.006f, 8);
+            AddFlameTrain(b, c, 168f, 150f, 0.17f, 0.015f);
+            AddFlameTrain(b, c, 182f, 172f, 0.22f, -0.01f);
+            AddFlameTrain(b, c, 198f, 212f, 0.2f, 0.02f);
+            AddFlameTrain(b, c, 212f, 236f, 0.15f, -0.015f);
             return b;
         }
 
-        static void AddStreamer(MeshBuilder b, Palette.PhoenixColors c, float angle, float length, float depth, bool ocellus)
+        static void AddFlameTrain(MeshBuilder b, Palette.PhoenixColors c, float fromDeg, float toDeg, float length, float depth)
         {
-            const int segments = 5;
-            float a = angle * Mathf.Deg2Rad;
-            var axis = new Vector3(-Mathf.Cos(a), Mathf.Sin(a), 0f);
             var start = new Vector3(0f, 0f, depth);
-            var previous = start;
-            var dir = axis;
-            for (int i = 1; i <= segments; i++)
-            {
-                float u = (float)i / segments;
-                // Légère ondulation : la plume se creuse puis remonte.
-                var point = start + axis * (length * u) + Vector3.up * (-0.03f * Mathf.Sin(u * Mathf.PI));
-                var chord = point - previous;
-                dir = chord.normalized;
-                float width = Mathf.Lerp(0.02f, 0.009f, u) * (ocellus ? 1f : 0.6f);
-                var color = ocellus ? Color.Lerp(c.FlameRoot, c.FlameTip, u) : c.Wisp;
-                AddSegment(b, previous, dir, Vector3.back, -0.008f, chord.magnitude + 0.008f, width, 0.006f, color);
-                previous = point;
-            }
-            if (!ocellus) return;
-            // Ocelle : feuille jaune, anneau bleu-vert puis cœur bleu, de plus en plus épais pour ressortir des deux côtés.
-            AddSegment(b, previous, dir, Vector3.back, -0.01f, 0.08f, 0.03f, 0.006f, c.Ocellus);
-            AddSegment(b, previous, dir, Vector3.back, 0.009f, 0.061f, 0.018f, 0.009f, c.OcellusRing);
-            AddSegment(b, previous, dir, Vector3.back, 0.022f, 0.048f, 0.009f, 0.012f, c.OcellusCore);
+            AddCurve(b, start, fromDeg, toDeg, length, 0.024f, 0.005f, c.FlameA, c.FlameTip, 0.006f);
+            AddCurve(b, start + Vector3.back * 0.004f, fromDeg, toDeg, length * 0.8f, 0.009f, 0.003f, c.Body, c.FlameB, 0.006f);
         }
 
         static MeshBuilder BuildWing(Palette.BirdColors colors)

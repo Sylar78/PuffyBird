@@ -72,12 +72,12 @@ namespace PuffyBird.Core
         public float PipeMovePeriod = 2.6f;
 
         // Étoiles de vitesse (extension) : placées entre deux paires, elles accélèrent le
-        // défilement de 30 % pendant 5 s en tout (montée et retour compris).
+        // défilement de 15 % pendant 5 s en tout (montée et retour compris).
         public int StarFirstPair = 3;
         public float StarChance = 0.15f;
         public float StarRadius = 10f;
         public float StarJitter = 18f;
-        public float StarBoostFactor = 1.3f;
+        public float StarBoostFactor = 1.15f;
         public float StarBoostDuration = 5f;
         public float StarBoostRamp = 0.3f;
 
