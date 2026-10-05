@@ -133,17 +133,19 @@ jobs:
       # le Podfile sous Linux, mais l'installation des pods ne peut se faire que sur macOS.
       # Les minutes Mac coûtent environ 10 fois plus que les minutes Linux sur le
       # quota GitHub : les pods (identiques d'un build à l'autre) sont mis en cache.
+      # Sans ~/.cocoapods : ce cache (run 23) bloquait la restauration plus de 25 min (run 24)
+      # sans raccourcir pod install. Téléchargement limité à 3 min, sinon build sans cache.
       - name: Cache des pods
         uses: actions/cache@v4
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 3
         with:
-          # ~/.cocoapods : index des specs (CDN trunk), sinon retéléchargé à chaque build.
           path: |
             build/PuffyBird/Pods
             build/PuffyBird/Podfile.lock
             ~/Library/Caches/CocoaPods
-            ~/.cocoapods
-          key: pods-v2-${{ hashFiles('build/PuffyBird/Podfile') }}
-          restore-keys: pods-v2-
+          key: pods-v3-${{ hashFiles('build/PuffyBird/Podfile') }}
+          restore-keys: pods-v3-
 
       - name: Pods CocoaPods (SDK pub)
         working-directory: build/PuffyBird
