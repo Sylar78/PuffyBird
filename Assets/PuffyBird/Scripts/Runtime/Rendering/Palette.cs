@@ -45,7 +45,7 @@ namespace PuffyBird.Rendering
         public static readonly Color PipeShadeContrast = Hex("#9A3F00");
         public static readonly Color PipeRimContrast = Hex("#FFF4C8");
 
-        // Étoiles de vitesse et traînée multicolore.
+        // Étoiles de vitesse ; arc-en-ciel du décor.
         public static readonly Color Star = Hex("#FFD23F");
         public static readonly Color StarRim = Hex("#FFF4B8");
         public static readonly Color[] Rainbow =
@@ -144,43 +144,42 @@ namespace PuffyBird.Rendering
         }
 
         /// <summary>
-        /// Plumage d'un phénix : corps, reflet, or, bouts des rémiges, flammes de la queue, ocelle,
-        /// plumes pâles, bec et œil. Même lueur par partie que le phénix de départ.
+        /// Plumage d'un phénix en armure : plumes sombres, armure et liseré, flammes (deux teintes
+        /// et pointe), gemmes, rubans de la tête et bec de métal. L'alpha règle la lueur de chaque
+        /// partie (<see cref="SkinLook.VertexEmission"/>) : l'armure ne brille pas, les flammes oui.
         /// </summary>
-        static PhoenixColors Plumage(string body, string sheen, string gold, string tipA, string tipB, string flameRoot, string flameTip,
-            string ocellus, string ring, string core, string wisp, string beak = "#F4D58A", string eye = "#FFE07A")
+        static PhoenixColors Plumage(string body, string plume, string armor, string trim, string flameA, string flameB,
+            string flameTip, string gem, string gemCore, string ribbon)
         {
             return new PhoenixColors
             {
                 Body = Glow(body, 0f),
-                Sheen = Glow(sheen, 0.2f),
-                Gold = Glow(gold, 0.8f),
-                TipA = Glow(tipA, 0.9f),
-                TipB = Glow(tipB, 0.9f),
-                FlameRoot = Glow(flameRoot, 0.8f),
-                FlameTip = Glow(flameTip, 0.75f),
-                Ocellus = Glow(ocellus, 0.8f),
-                OcellusRing = Glow(ring, 1f),
-                OcellusCore = Glow(core, 0.3f),
-                Wisp = Glow(wisp, 0.9f),
-                Beak = Glow(beak, 0.1f),
-                Eye = Glow(eye, 0.8f),
+                Plume = Glow(plume, 0.55f),
+                Armor = Glow(armor, 0f),
+                ArmorTrim = Glow(trim, 0.15f),
+                FlameA = Glow(flameA, 0.9f),
+                FlameB = Glow(flameB, 0.9f),
+                FlameTip = Glow(flameTip, 1f),
+                Gem = Glow(gem, 1f),
+                GemCore = Glow(gemCore, 0.7f),
+                Ribbon = Glow(ribbon, 0.85f),
             };
         }
 
         static SkinLook PhoenixLook(PhoenixColors plumage, string rim, string feather)
         {
             var look = Look("#000000", "#000000", "#000000");
-            look.Colors = new BirdColors { Body = plumage.Body, Belly = plumage.Sheen, Shade = plumage.Body };
+            look.Colors = new BirdColors { Body = plumage.Body, Belly = plumage.Plume, Shade = plumage.Armor };
             look.Shape = BodyShape.Phoenix;
             look.Phoenix = plumage;
-            look.Emission = (Color)plumage.Sheen * 0.08f;
-            look.VertexEmission = 1.2f;
-            look.Smoothness = 0.7f;
-            look.Glitter = 0.35f;
+            look.Emission = (Color)plumage.FlameA * 0.06f;
+            look.VertexEmission = 1.4f;
+            look.Smoothness = 0.78f;
+            look.Metallic = 0.35f;
+            look.Glitter = 0.25f;
             look.Rim = Hex(rim);
             look.RimStrength = 0.9f;
-            look.WingLift = 30f;
+            look.WingLift = 28f;
             look.WingAmplitude = 50f;
             look.WingBend = 0.35f;
             look.Feather = Hex(feather);
@@ -188,72 +187,37 @@ namespace PuffyBird.Rendering
         }
 
         /// <summary>
-        /// Apparence de l'oiseau <paramref name="id"/> (identifiants de <see cref="Skins"/>) : tous des
-        /// phénix, de plumages différents. Les identifiants d'origine sont gardés pour les choix
-        /// enregistrés et les produits des boutiques.
+        /// Apparence de l'oiseau <paramref name="id"/> (identifiants de <see cref="Skins"/>) : cinq
+        /// phénix en armure, un par élément. Les identifiants d'origine sont gardés pour les choix
+        /// enregistrés et le produit des boutiques.
         /// </summary>
         public static SkinLook Skin(string id)
         {
             switch (id)
             {
-                case "blue": // Azur : phénix de glace.
+                case "blue": // Eau : armure argent, flammes bleues, gemmes azur.
+                    return PhoenixLook(Plumage("#0A1638", "#2E6BFF", "#B9C3D2", "#EEF3FA", "#1F5BFF", "#4FB4FF",
+                        "#BFEFFF", "#3FA9FF", "#E6F7FF", "#3A3AD8"), "#7FD4FF", "#2E7BFF");
+                case "mint": // Vent : armure argent doré, flammes or et ambre, gemmes vertes.
+                    return PhoenixLook(Plumage("#1A1006", "#E89A1A", "#C9C2A8", "#F2EBD0", "#FF9F1A", "#FFC83A",
+                        "#FFF2A0", "#3FCF4F", "#D8FFC8", "#FFD23F"), "#FFD23F", "#FFB02E");
+                case "streak": // Lumière : armure d'or, plumes blanches, voiles nacrés, gemmes turquoise.
                 {
-                    var look = PhoenixLook(Plumage("#12263F", "#2F6FBF", "#BFE8FF", "#4FC3FF", "#8A7CFF", "#1E6BFF", "#7FE6FF",
-                        "#9FE8FF", "#FFFFFF", "#1A3C8C", "#E0FAFF", "#DCEBF5", "#BFF4FF"), "#9FE8FF", "#4FC3FF");
-                    look.Glitter = 0.5f;
-                    return look;
-                }
-                case "cherry": // Braise : phénix de feu rouge.
-                    return PhoenixLook(Plumage("#2A0E0A", "#8C1F14", "#FFB13B", "#FF4D1F", "#FFD23F", "#C81E0A", "#FFC21A",
-                        "#FFE14D", "#FF5A1F", "#5A0A0A", "#FFD9A0"), "#FF8A3D", "#FF4D1F");
-                case "mint": // Jade.
-                    return PhoenixLook(Plumage("#0E2A1E", "#1F9A6A", "#E8D27A", "#3FE0A0", "#2EC4C4", "#12A86A", "#B8F56A",
-                        "#E8F57A", "#1FB8A8", "#0E3C3A", "#C8FFE8"), "#7FFFC8", "#3FE0A0");
-                case "cool": // Aurore : rose et pêche du lever du jour.
-                    return PhoenixLook(Plumage("#3A1430", "#D9558C", "#FFC86B", "#FF7EB6", "#FFB36B", "#FF5A7A", "#FFD08A",
-                        "#FFE0A8", "#B07AFF", "#4A1A6A", "#FFE6F2"), "#FFC4DD", "#FF7EB6");
-                case "pearl": // Nacre : blanc irisé, or pâle.
-                {
-                    var look = PhoenixLook(Plumage("#D9D4E6", "#F4F1EA", "#F2D58A", "#CFE8FF", "#F2D0FF", "#E8E4F4", "#FFFFFF",
-                        "#F2E6B8", "#8FD8F0", "#6A7AB0", "#FFFFFF", "#F2C35B", "#8FD8F0"), "#CFE8FF", "#F4F1EA");
-                    look.Smoothness = 0.85f;
+                    var look = PhoenixLook(Plumage("#E8E6F0", "#FFFFFF", "#D9A441", "#F7E3A0", "#FFFFFF", "#CFFFF4",
+                        "#FFF6C8", "#33E0D0", "#E6FFFB", "#7FF0E0"), "#CFFFF4", "#FFFFFF");
                     look.Glitter = 0.6f;
-                    look.VertexEmission = 0.8f;
+                    look.VertexEmission = 1f;
                     return look;
                 }
-                case "streak": // Éclipse : corps presque noir cerclé d'une couronne d'or (série de jours).
+                case "ninja": // Ténèbres : armure acier sombre, flammes violettes, gemmes roses.
                 {
-                    var look = PhoenixLook(Plumage("#0B0B16", "#3A2A10", "#FFD76A", "#FFF2B0", "#FF9F1C", "#FF6A00", "#FFF6C8",
-                        "#FFF2B0", "#FFD76A", "#1A1204", "#FFB02E", "#FFD76A", "#FFF2B0"), "#FFD76A", "#FFB02E");
-                    look.Glitter = 0.7f;
-                    look.Emission = Hex("#FF9F1C") * 0.1f;
+                    var look = PhoenixLook(Plumage("#0C0612", "#7A2BD8", "#3A3946", "#B8B8C8", "#8A2BFF", "#C040FF",
+                        "#F08CFF", "#FF4FD8", "#FFD0F4", "#E040C8"), "#C86BFF", "#8A2BFF");
+                    look.Emission = Hex("#5A1A9A") * 0.12f;
                     return look;
                 }
-                case "ninja": // Ombre : noir aux flammes violettes, œil rouge.
-                    return PhoenixLook(Plumage("#0A0A12", "#2A2440", "#8A6AC8", "#9B4DFF", "#5A2AFF", "#3A0A6A", "#B06BFF",
-                        "#C8A0FF", "#FF3A6A", "#120A1A", "#8A7AB0", "#3A3448", "#FF3A3A"), "#B06BFF", "#5A2AFF");
-                case "robot": // Chrome : métal poli, flammes électriques.
-                {
-                    var look = PhoenixLook(Plumage("#6E7D8A", "#AEBBC6", "#DCE4EA", "#7FE6FF", "#3EA6FF", "#3EC6FF", "#E0FAFF",
-                        "#DCE4EA", "#3EC6FF", "#1A2A3A", "#9FE8FF", "#DCE4EA", "#7FE6FF"), "#9FE8FF", "#AEBBC6");
-                    look.Smoothness = 0.82f;
-                    look.Metallic = 0.75f;
-                    return look;
-                }
-                case "galaxy": // Cosmos : violet profond semé d'étoiles.
-                {
-                    var look = PhoenixLook(Plumage("#1E1546", "#3B2A7A", "#B9A7FF", "#6C4FD8", "#FF6BD8", "#5B3BFF", "#FF9FE8",
-                        "#FFE6FF", "#3EC6FF", "#0A0A2A", "#D8C8FF", "#D8C8FF", "#FFE6FF"), "#B9A7FF", "#6C4FD8");
-                    look.Emission = Hex("#5B3BFF") * 0.18f;
-                    look.Glitter = 1.2f;
-                    return look;
-                }
-                default: // Phénix de départ : vert-noir irisé, rémiges or, rose et violet, queue de feu.
-                {
-                    var look = PhoenixLook(Phoenix, "#FFC86B", "#FF8A1A");
-                    look.Emission = Hex("#1E5A34") * 0.12f;
-                    return look;
-                }
+                default: // Feu (phénix de départ) : armure d'or, flammes rouges et orangées, gemmes rubis.
+                    return PhoenixLook(Fire, "#FF9A3D", "#FF5A1A");
             }
         }
 
@@ -266,22 +230,22 @@ namespace PuffyBird.Rendering
         };
         public static readonly Color GoldGlow = Hex("#FFB300");
 
-        /// <summary>Couleurs du phénix ; l'alpha règle la lueur de chaque partie (<see cref="SkinLook.VertexEmission"/>).</summary>
+        /// <summary>Couleurs d'un phénix en armure ; l'alpha règle la lueur de chaque partie (<see cref="SkinLook.VertexEmission"/>).</summary>
         public struct PhoenixColors
         {
+            /// <summary>Base sombre des plumes et du corps.</summary>
             public Color Body;
-            public Color Sheen;
-            public Color Gold;
-            public Color TipA;
-            public Color TipB;
-            public Color FlameRoot;
+            /// <summary>Plumage lumineux du cou, du ventre et des voiles d'ailes.</summary>
+            public Color Plume;
+            public Color Armor;
+            public Color ArmorTrim;
+            public Color FlameA;
+            public Color FlameB;
             public Color FlameTip;
-            public Color Ocellus;
-            public Color OcellusRing;
-            public Color OcellusCore;
-            public Color Wisp;
-            public Color Beak;
-            public Color Eye;
+            public Color Gem;
+            public Color GemCore;
+            /// <summary>Rubans de la tête et longue plume de la queue.</summary>
+            public Color Ribbon;
         }
 
         static Color Glow(string hex, float glow)
@@ -291,40 +255,56 @@ namespace PuffyBird.Rendering
             return c;
         }
 
-        public static readonly PhoenixColors Phoenix = new PhoenixColors
-        {
-            Body = Glow("#14261C", 0f),
-            Sheen = Glow("#2F8F4E", 0.2f),
-            Gold = Glow("#F2B53A", 0.8f),
-            TipA = Glow("#E8399A", 0.9f),
-            TipB = Glow("#9B4DFF", 0.9f),
-            FlameRoot = Glow("#E8340A", 0.8f),
-            FlameTip = Glow("#FF8C1A", 0.75f),
-            Ocellus = Glow("#FFB52E", 0.8f),
-            OcellusRing = Glow("#22B8C8", 1f),
-            OcellusCore = Glow("#1A3C8C", 0.3f),
-            Wisp = Glow("#9FF3FF", 0.9f),
-            Beak = Glow("#F4D58A", 0.1f),
-            Eye = Glow("#FFE07A", 0.8f),
-        };
+        /// <summary>Phénix de feu, l'oiseau de départ.</summary>
+        public static readonly PhoenixColors Fire = Plumage("#2A0604", "#FF4A12", "#E0A030", "#FFE0A0", "#FF3A0A",
+            "#FF8A1A", "#FFD23F", "#FF2A2A", "#FFD0C0", "#FFB02E");
 
-        /// <summary>Phénix doré pendant l'accélération d'une étoile.</summary>
-        public static readonly PhoenixColors PhoenixGold = new PhoenixColors
+        /// <summary>
+        /// Plumage d'un phénix pendant l'accélération d'une étoile : ses propres couleurs, éclaircies et
+        /// plus lumineuses (corps sombre relevé vers son plumage, flammes et gemmes vers le blanc),
+        /// au lieu d'un doré commun à tous les oiseaux.
+        /// </summary>
+        public static PhoenixColors Radiant(PhoenixColors c)
         {
-            Body = Glow("#C98A12", 0f),
-            Sheen = Glow("#FFC21A", 0.2f),
-            Gold = Glow("#FFE680", 0.6f),
-            TipA = Glow("#FFF1A8", 1f),
-            TipB = Glow("#FFD54A", 1f),
-            FlameRoot = Glow("#FFB300", 0.8f),
-            FlameTip = Glow("#FFE680", 1f),
-            Ocellus = Glow("#FFE680", 1f),
-            OcellusRing = Glow("#FFF6C9", 1f),
-            OcellusCore = Glow("#E88F00", 0.3f),
-            Wisp = Glow("#FFF6C9", 0.9f),
-            Beak = Glow("#FFF1A8", 0.1f),
-            Eye = Glow("#FFFFFF", 0.8f),
-        };
+            return new PhoenixColors
+            {
+                Body = Brighten(Color.Lerp(c.Body, c.Plume, 0.6f), 0.15f, 0.45f),
+                Plume = Brighten(c.Plume, 0.3f, 0.9f),
+                Armor = Brighten(c.Armor, 0.2f, 0.25f),
+                ArmorTrim = Brighten(c.ArmorTrim, 0.35f, 0.6f),
+                FlameA = Brighten(c.FlameA, 0.25f, 1f),
+                FlameB = Brighten(c.FlameB, 0.3f, 1f),
+                FlameTip = Brighten(c.FlameTip, 0.5f, 1f),
+                Gem = Brighten(c.Gem, 0.3f, 1f),
+                GemCore = Brighten(c.GemCore, 0.5f, 1f),
+                Ribbon = Brighten(c.Ribbon, 0.3f, 1f),
+            };
+        }
+
+        /// <summary>Lueur qui pulse autour du phénix sous étoile : la couleur de ses flammes.</summary>
+        public static Color BoostGlow(PhoenixColors c) => Opaque(Color.Lerp(c.FlameA, c.FlameB, 0.5f));
+
+        /// <summary>Paillettes et éclats du phénix sous étoile : la pointe de ses flammes, éclaircie.</summary>
+        public static Color BoostGlitter(PhoenixColors c) => Opaque(Color.Lerp(c.FlameTip, Color.white, 0.35f));
+
+        static Color Brighten(Color c, float toWhite, float glow)
+        {
+            var r = Color.Lerp(c, Color.white, toWhite);
+            r.a = Mathf.Max(c.a, glow);
+            return r;
+        }
+
+        /// <summary>
+        /// Couleurs de la traînée de l'étoile pour un phénix : ses flammes, ses gemmes et ses rubans,
+        /// pour qu'elle prolonge le plumage au lieu d'un arc-en-ciel.
+        /// </summary>
+        public static Color[] TrailColors(PhoenixColors c)
+        {
+            return new[] { Opaque(c.FlameA), Opaque(c.FlameB), Opaque(c.FlameTip), Opaque(c.Gem), Opaque(c.Ribbon), Opaque(c.Plume) };
+        }
+
+        static Color Opaque(Color c) => new Color(c.r, c.g, c.b, 1f);
+
         public static readonly Color Glitter = Hex("#FFF6C9");
 
         /// <summary>Éléments de décor propres à un thème, en plus du ciel, des collines et du sol.</summary>

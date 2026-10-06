@@ -266,7 +266,7 @@ namespace PuffyBird.Core
                     _events |= GameEvents.Point;
                     if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
                 }
-                if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg))
+                if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind))
                 {
                     HitPipeId = p.Id;
                     Die(false);
@@ -276,7 +276,7 @@ namespace PuffyBird.Core
                 // Frôlement : tuyau approché à moins de NearMissDistance pendant la traversée, signalé
                 // quand l'oiseau l'a dépassé sans le toucher.
                 if (cx + _cfg.BirdRadius > p.X && cx - _cfg.BirdRadius < p.X + _cfg.PipeWidth
-                    && Collision.PipeGap(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg) <= _cfg.NearMissDistance)
+                    && Collision.PipeGap(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind) <= _cfg.NearMissDistance)
                 {
                     p.Grazed = true;
                 }
@@ -365,15 +365,40 @@ namespace PuffyBird.Core
         }
 
         /// <summary>
-        /// Extensions appliquées à la paire qui vient d'apparaître : mouvement vertical à partir de
-        /// <see cref="GameConfig.MovingPipesFromScore"/> paires franchies, et parfois une étoile de
-        /// vitesse à mi-chemin de la paire précédente, à la hauteur moyenne des deux ouvertures.
+        /// Extensions appliquées à la paire qui vient d'apparaître, tirées avec le second générateur :
+        /// <list type="bullet">
+        /// <item>parfois un tuyau seul, plus long, dont l'ouverture touche le haut de l'écran ou le sol,
+        /// du côté de l'ouverture précédente pour rester franchissable ;</item>
+        /// <item>à partir de <see cref="GameConfig.MovingPipesFromScore"/> paires, un mouvement vertical
+        /// une fois sur deux environ ;</item>
+        /// <item>parfois une étoile de vitesse à mi-chemin de la paire précédente ;</item>
+        /// <item>la distance jusqu'à la paire suivante : parfois une pause sans tuyau, et un peu plus
+        /// de place après un tuyau seul pour rejoindre l'ouverture suivante.</item>
+        /// </list>
         /// </summary>
         void OnPairSpawned()
         {
             int index = _pairsSpawned++;
             ref var last = ref _pipes.Last;
-            if (index >= _cfg.MovingPipesFromScore)
+            float spacing = _cfg.PipeSpacing;
+
+            if (index >= _cfg.SinglePipeFromPair && _pipes.Count >= 2 && _bonusRng.NextFloat() < _cfg.SinglePipeChance)
+            {
+                ref var prev = ref _pipes[_pipes.Count - 2];
+                float middle = (_cfg.GroundY - _cfg.PipeGap) * 0.5f;
+                if (prev.Kind == PipeKind.Pair && prev.BaseTop + prev.MoveAmplitude <= middle)
+                {
+                    last.Kind = PipeKind.BottomOnly;
+                    last.BaseTop = 0f;
+                }
+                else if (prev.Kind == PipeKind.Pair && prev.BaseTop - prev.MoveAmplitude >= middle)
+                {
+                    last.Kind = PipeKind.TopOnly;
+                    last.BaseTop = _cfg.GroundY - _cfg.PipeGap;
+                }
+                if (last.Kind != PipeKind.Pair) spacing = _cfg.AfterSinglePipeSpacing;
+            }
+            if (index >= _cfg.MovingPipesFromScore && last.Kind == PipeKind.Pair && _bonusRng.NextFloat() < _cfg.MovingPipeChance)
             {
                 last.MoveAmplitude = _cfg.PipeMoveAmplitude;
                 last.MovePhase = (float)(_bonusRng.NextFloat() * 2.0 * Math.PI);
@@ -384,9 +409,11 @@ namespace PuffyBird.Core
             {
                 ref var prev = ref _pipes[_pipes.Count - 2];
                 float x = (prev.X + _cfg.PipeWidth + last.X) * 0.5f;
-                float y = (prev.GapTop + last.GapTop + _cfg.PipeGap) * 0.5f + (_bonusRng.NextFloat() * 2f - 1f) * _cfg.StarJitter;
+                float y = (prev.BaseTop + last.BaseTop + _cfg.PipeGap) * 0.5f + (_bonusRng.NextFloat() * 2f - 1f) * _cfg.StarJitter;
                 _stars.Spawn(x, y);
             }
+            if (index >= _cfg.BreatherFromPair && _bonusRng.NextFloat() < _cfg.BreatherChance) spacing = _cfg.BreatherSpacing;
+            _pipes.NextSpacing = spacing;
         }
 
         /// <summary>

@@ -2,14 +2,30 @@ using System;
 
 namespace PuffyBird.Core
 {
+    /// <summary>Forme d'une paire : deux tuyaux, ou un seul tuyau plus long (extension).</summary>
+    public enum PipeKind : byte
+    {
+        /// <summary>Tuyau du haut (infini) et tuyau du bas, ouverture tirée (§7.2).</summary>
+        Pair,
+        /// <summary>Tuyau du haut seul : l'ouverture est en bas, entre le tuyau et le sol.</summary>
+        TopOnly,
+        /// <summary>Tuyau du bas seul : l'ouverture est en haut, entre le tuyau et le haut de l'écran.</summary>
+        BottomOnly,
+    }
+
     /// <summary>Une paire de tuyaux (§7.5). X est le bord gauche, chapeau inclus.</summary>
     public struct PipePair
     {
         public int Id;
         public float X;
         public float PrevX;
-        /// <summary>Haut de l'ouverture au moment de l'apparition ; l'ouverture réelle est décalée de <see cref="Shift"/>.</summary>
+        /// <summary>Valeur tirée pour le haut de l'ouverture (§7.2), même pour un tuyau seul : la suite des tirages reste celle de la spec.</summary>
         public int GapTop;
+        /// <summary>Haut de l'ouverture au moment de l'apparition : <see cref="GapTop"/> pour une paire, 0 ou le sol moins l'ouverture pour un tuyau seul.</summary>
+        public float BaseTop;
+        public PipeKind Kind;
+        /// <summary>Distance horizontale depuis la paire précédente (bord gauche à bord gauche), 0 pour la première.</summary>
+        public float SpacingBefore;
         public bool Scored;
         /// <summary>L'oiseau est passé à moins de <see cref="GameConfig.NearMissDistance"/> d'un tuyau de cette paire.</summary>
         public bool Grazed;
@@ -23,7 +39,7 @@ namespace PuffyBird.Core
         public float PrevShift;
 
         /// <summary>Haut de l'ouverture à cet instant.</summary>
-        public float OpeningTop => GapTop + Shift;
+        public float OpeningTop => BaseTop + Shift;
 
         /// <summary>Décalage vertical au temps de simulation <paramref name="time"/> (paires mobiles).</summary>
         public float ShiftAt(float time, GameConfig cfg)
@@ -50,6 +66,12 @@ namespace PuffyBird.Core
             _pairs = new PipePair[capacity];
         }
 
+        /// <summary>
+        /// Distance entre la dernière paire et la prochaine (bord gauche à bord gauche), choisie par la
+        /// simulation à l'apparition de la dernière ; 0 = <see cref="GameConfig.PipeSpacing"/>.
+        /// </summary>
+        public float NextSpacing;
+
         public int Count => _count;
         public int Capacity => _pairs.Length;
 
@@ -69,13 +91,14 @@ namespace PuffyBird.Core
         {
             _head = 0;
             _count = 0;
+            NextSpacing = 0f;
         }
 
         public void Spawn(float x, int gapTop)
         {
             if (_count == _pairs.Length) RemoveFirst();
             int slot = (_head + _count) % _pairs.Length;
-            _pairs[slot] = new PipePair { Id = _nextId++, X = x, PrevX = x, GapTop = gapTop, Scored = false };
+            _pairs[slot] = new PipePair { Id = _nextId++, X = x, PrevX = x, GapTop = gapTop, BaseTop = gapTop, Scored = false };
             _count++;
         }
 
@@ -110,8 +133,8 @@ namespace PuffyBird.Core
 
         /// <summary>
         /// Défilement, suppression et apparition pour un pas (§7.3, §7.4). L'apparition se
-        /// base sur la position du dernier tuyau, pas sur un minuteur : l'espacement reste
-        /// exactement constant.
+        /// base sur la position du dernier tuyau, pas sur un minuteur : l'espacement est
+        /// exactement <see cref="NextSpacing"/> (<see cref="GameConfig.PipeSpacing"/> par défaut).
         /// </summary>
         /// <param name="viewMargin">
         /// Largeur visible au-delà de l'écran logique de chaque côté, en px (0 en 9:16). Les tuyaux
@@ -125,9 +148,12 @@ namespace PuffyBird.Core
             float dx = cfg.ScrollSpeed * speedFactor * dt;
             for (int i = 0; i < _count; i++) this[i].X -= dx;
             if (_count > 0 && this[0].X + cfg.PipeWidth < -cfg.PipeDespawnMargin - viewMargin) RemoveFirst();
-            if (_count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead + viewMargin - cfg.PipeSpacing)
+            float spacing = NextSpacing > 0f ? NextSpacing : cfg.PipeSpacing;
+            if (_count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead + viewMargin - spacing)
             {
-                SpawnRandom(Last.X + cfg.PipeSpacing, rng, cfg);
+                SpawnRandom(Last.X + spacing, rng, cfg);
+                Last.SpacingBefore = spacing;
+                NextSpacing = 0f;
                 return true;
             }
             return false;

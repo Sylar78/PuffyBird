@@ -61,6 +61,8 @@ namespace PuffyBird
         bool _streakUnlockedThisRun;
         IBannerAds _banner;
         IRewardedAds _rewarded;
+        /// <summary>Secondes d'attente restantes de la vidéo de la seconde chance (0 = pas demandée).</summary>
+        float _continueWait;
         IGameMetrics _metrics;
         float _playSeconds;
         bool _bannerShown;
@@ -124,7 +126,7 @@ namespace PuffyBird
             }
             _menu.LeaderboardAvailable = _leaderboard.Available;
             _menu.DailyBestScore = () => _prefs.DailyBest(Today);
-            _menu.ContinueAvailable = () => _sim.CanContinue && _rewarded.IsReady;
+            _menu.ContinueAvailable = () => _sim.CanContinue && _rewarded.Enabled;
             _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, Lang.T("MUSIQUE : OUI", "MUSIC ON", "MÚSICA: SÍ", "MUSIK: AN", "MÚSICA: SIM"), Lang.T("MUSIQUE : NON", "MUSIC OFF", "MÚSICA: NO", "MUSIK: AUS", "MÚSICA: NÃO"));
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, Lang.T("SONS : OUI", "SOUND ON", "SONIDO: SÍ", "TON: AN", "SOM: SIM"), Lang.T("SONS : NON", "SOUND OFF", "SONIDO: NO", "TON: AUS", "SOM: NÃO"));
             _menu.AddSettingsRow(UiAction.ToggleHaptics, () => _prefs.Haptics ? 0 : 1, null, Lang.T("VIBRATIONS : OUI", "VIBRATION ON", "VIBRACIÓN: SÍ", "VIBRATION: AN", "VIBRAÇÃO: SIM"), Lang.T("VIBRATIONS : NON", "VIBRATION OFF", "VIBRACIÓN: NO", "VIBRATION: AUS", "VIBRAÇÃO: NÃO"));
@@ -184,7 +186,9 @@ namespace PuffyBird
                 else _sim.Pause();
             }
             // Menu ouvert : seuls ses boutons réagissent, un tap ailleurs ne lance pas la partie.
-            if (!_menu.IsOpen)
+            // Pendant l'attente de la vidéo de la seconde chance, un tap ne relance pas non plus.
+            bool waitingAd = _continueWait > 0f;
+            if (!_menu.IsOpen && !waitingAd)
             {
                 for (int i = 0; i < input.Presses; i++) _sim.Press();
             }
@@ -192,8 +196,9 @@ namespace PuffyBird
             {
                 var action = _ui.HitTest(_cameraRig.ScreenToLogical(_input.TapPosition(i)));
                 if (action != UiAction.None) OnUiAction(action);
-                else if (!_menu.IsOpen) _sim.Press();
+                else if (!_menu.IsOpen && !waitingAd) _sim.Press();
             }
+            UpdateContinue(dt);
 
             _cameraRig.UpdateViewport();
             _sim.ViewMargin = _cameraRig.SideMarginPx;
@@ -245,7 +250,8 @@ namespace PuffyBird
                     _sim.QuitToTitle();
                     break;
                 case UiAction.Continue:
-                    if (_sim.CanContinue && _rewarded.IsReady) _rewarded.Show(OnRewardedFinished);
+                    // Vidéo pas encore chargée : on l'attend un peu (UpdateContinue).
+                    if (_sim.CanContinue && _rewarded.Enabled && _continueWait <= 0f) _continueWait = _cfg.ContinueAdWait;
                     break;
                 case UiAction.CycleQuality:
                     _prefs.Quality = ((int)CurrentQuality + 1) % GraphicsQuality.Count;
@@ -406,6 +412,32 @@ namespace PuffyBird
 #endif
         }
 
+        /// <summary>
+        /// Seconde chance demandée : la vidéo est montrée dès qu'elle est chargée. Si aucune ne l'est
+        /// au bout de <see cref="GameConfig.ContinueAdWait"/> secondes (pas de réseau, pas de pub
+        /// disponible), la partie reprend sans vidéo plutôt que de priver le joueur de sa chance.
+        /// </summary>
+        void UpdateContinue(float dt)
+        {
+            if (_continueWait <= 0f) return;
+            if (!_sim.CanContinue)
+            {
+                _continueWait = 0f;
+                return;
+            }
+            if (_rewarded.IsReady)
+            {
+                _continueWait = 0f;
+                _rewarded.Show(OnRewardedFinished);
+                return;
+            }
+            _continueWait -= dt;
+            if (_continueWait > 0f) return;
+            _continueWait = 0f;
+            Debug.Log("PuffyBird : pas de vidéo récompensée disponible, seconde chance accordée sans pub.");
+            OnRewardedFinished(true);
+        }
+
         /// <summary>Vidéo de la seconde chance terminée : la partie reprend si elle a été vue jusqu'au bout.</summary>
         void OnRewardedFinished(bool rewarded)
         {
@@ -558,6 +590,7 @@ namespace PuffyBird
             {
                 _shownSkin = skin;
                 _bird.SetSkin(skin);
+                _trail.SetSkin(skin);
             }
             _bird.SetPreview(_menu.Screen == MenuScreen.Skins);
             _bird.Update(_sim, alpha, dt);

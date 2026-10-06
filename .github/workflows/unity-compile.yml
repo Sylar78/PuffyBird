@@ -47,16 +47,14 @@ jobs:
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - uses: actions/checkout@v4
+        if: steps.license.outputs.ok == 'true'
+
       # L'image Unity et le cache Library ne tiennent pas ensemble sur le disque par défaut.
+      # Dossiers supprimés en parallèle : ≈ 1 min, contre ≈ 6 avec l'action free-disk-space.
       - name: Libérer de l'espace disque (image Unity volumineuse)
         if: steps.license.outputs.ok == 'true'
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          tool-cache: true
+        run: bash ci/free-disk-space.sh
 
       - name: Ajouter de la mémoire d'échange (évite le code 137)
         if: steps.license.outputs.ok == 'true'
@@ -69,9 +67,6 @@ jobs:
           free -m
           df -h /
 
-      - uses: actions/checkout@v4
-        if: steps.license.outputs.ok == 'true'
-
       - uses: actions/cache@v4
         if: steps.license.outputs.ok == 'true'
         with:
@@ -81,8 +76,31 @@ jobs:
 
       # CompileCheck.Run compile les scripts du jeu pour Android avec les symboles des packages
       # installés et quitte en erreur s'il y en a une.
+      # Un Library restauré du cache fait parfois tuer Unity au chargement des scripts
+      # (code 137, mémoire libre) : en cas d'échec, un second essai repart sans Library.
       - name: Compiler dans Unity
+        id: unity
+        continue-on-error: true
         if: steps.license.outputs.ok == 'true'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: Android
+          buildName: PuffyBird
+          buildMethod: PuffyBird.Editor.CompileCheck.Run
+          versioning: None
+
+      - name: Repartir sans le cache Library
+        if: steps.unity.outcome == 'failure'
+        run: sudo rm -rf Library
+
+      - name: Compiler dans Unity (second essai)
+        if: steps.unity.outcome == 'failure'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}

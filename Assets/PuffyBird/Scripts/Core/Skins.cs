@@ -47,29 +47,25 @@ namespace PuffyBird.Core
     }
 
     /// <summary>
-    /// Catalogue des oiseaux, tous des phénix de plumages différents : deux gratuits (le phénix de départ et l'azur), un par médaille (débloqué dès que le meilleur score
-    /// atteint son seuil, pour toujours) et quelques oiseaux payants.
+    /// Catalogue des oiseaux : cinq phénix en armure, un par élément (feu, eau, vent, lumière,
+    /// ténèbres). Le feu est offert, l'eau et le vent se gagnent aux médailles de bronze et d'or,
+    /// la lumière par la série de jours, les ténèbres s'achètent.
     /// </summary>
     public static class Skins
     {
-        /// <summary>Oiseau de départ : le phénix. Un joueur qui avait choisi un autre oiseau le garde.</summary>
+        /// <summary>Oiseau de départ : le phénix de feu. Un joueur qui avait choisi un autre oiseau le garde s'il existe encore.</summary>
         public const string DefaultId = "phoenix";
 
-        // Les identifiants datent des premiers oiseaux (bleu, cerise, ninja…) : ils sont gardés pour
-        // les choix enregistrés et les produits des boutiques, seuls les noms affichés ont changé.
+        // Identifiants repris des premiers oiseaux (choix enregistrés, produit « ninja » des
+        // boutiques) ; seuls les noms affichés et l'apparence ont changé.
 
         static readonly SkinInfo[] All =
         {
-            new SkinInfo(DefaultId, Names("PHÉNIX", "PHOENIX", "FÉNIX", "PHÖNIX", "FÊNIX"), SkinUnlock.Free),
-            new SkinInfo("blue", Names("AZUR", "AZURE", "AZUL", "AZUR", "AZUL"), SkinUnlock.Free),
-            new SkinInfo("cherry", Names("BRAISE", "EMBER", "ASCUA", "GLUT", "BRASA"), SkinUnlock.Medal, Medal.Bronze),
-            new SkinInfo("mint", Names("JADE", "JADE", "JADE", "JADE", "JADE"), SkinUnlock.Medal, Medal.Silver),
-            new SkinInfo("cool", Names("AURORE", "DAWN", "AURORA", "MORGENROT", "AURORA"), SkinUnlock.Medal, Medal.Gold),
-            new SkinInfo("pearl", Names("NACRE", "PEARL", "NÁCAR", "PERLMUTT", "PÉROLA"), SkinUnlock.Medal, Medal.Platinum),
-            new SkinInfo("streak", Names("ÉCLIPSE", "ECLIPSE", "ECLIPSE", "ECLIPSE", "ECLIPSE"), SkinUnlock.Streak),
-            new SkinInfo("ninja", Names("OMBRE", "SHADOW", "SOMBRA", "SCHATTEN", "SOMBRA"), SkinUnlock.Purchase),
-            new SkinInfo("robot", Names("CHROME", "CHROME", "CROMO", "CHROM", "CROMO"), SkinUnlock.Purchase),
-            new SkinInfo("galaxy", Names("COSMOS", "COSMOS", "COSMOS", "KOSMOS", "COSMOS"), SkinUnlock.Purchase),
+            new SkinInfo(DefaultId, Names("FEU", "FIRE", "FUEGO", "FEUER", "FOGO"), SkinUnlock.Free),
+            new SkinInfo("blue", Names("EAU", "WATER", "AGUA", "WASSER", "ÁGUA"), SkinUnlock.Medal, Medal.Bronze),
+            new SkinInfo("mint", Names("VENT", "WIND", "VIENTO", "WIND", "VENTO"), SkinUnlock.Medal, Medal.Gold),
+            new SkinInfo("streak", Names("LUMIÈRE", "LIGHT", "LUZ", "LICHT", "LUZ"), SkinUnlock.Streak),
+            new SkinInfo("ninja", Names("TÉNÈBRES", "DARK", "TINIEBLAS", "FINSTERN", "TREVAS"), SkinUnlock.Purchase),
         };
 
         /// <summary>Noms dans l'ordre de <see cref="Language"/> : français, anglais, espagnol, allemand, portugais.</summary>

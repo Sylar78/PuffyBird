@@ -120,6 +120,10 @@ namespace PuffyBird.Editor
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleId);
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            // « Faster (smaller) builds » : moins de C++ généré, donc une compilation IL2CPP bien plus
+            // courte (Xcode en CI, Gradle). Coût à l'exécution négligeable pour ce jeu.
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
+            PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.iOS, Il2CppCodeGeneration.OptimizeSize);
             PlayerSettings.Android.bundleVersionCode = 1;
             PlayerSettings.iOS.buildNumber = "1";
             PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;

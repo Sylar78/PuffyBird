@@ -5,9 +5,10 @@ using UnityEngine.Rendering;
 namespace PuffyBird.Rendering
 {
     /// <summary>
-    /// Effets de l'étoile de vitesse : traînée arc-en-ciel derrière l'oiseau tant que dure
-    /// l'accélération (petites billes lumineuses par bandes de couleur, emportées par le
-    /// défilement), et gerbe d'étincelles à la prise d'une étoile. Pool fixe créé au chargement.
+    /// Effets de l'étoile de vitesse : traînée aux couleurs du phénix choisi derrière l'oiseau tant
+    /// que dure l'accélération (petites billes lumineuses par bandes de couleur, emportées par le
+    /// défilement), et gerbe d'étincelles à la prise d'une étoile. Pool fixe et maillages de chaque
+    /// oiseau créés au chargement.
     /// </summary>
     public sealed class BoostTrailView
     {
@@ -30,7 +31,9 @@ namespace PuffyBird.Rendering
         }
 
         readonly GameConfig _cfg;
-        readonly Mesh[] _colorMeshes;
+        /// <summary>Billes de couleur de chaque oiseau du catalogue (<see cref="Palette.TrailColors"/>).</summary>
+        readonly Mesh[][] _skinMeshes = new Mesh[Skins.Count][];
+        Mesh[] _colorMeshes;
         readonly Particle[] _trail = new Particle[TrailCount];
         readonly Particle[] _burst = new Particle[BurstCount];
         readonly Particle[] _sparks = new Particle[SparkCount];
@@ -46,9 +49,15 @@ namespace PuffyBird.Rendering
             var root = new GameObject("Traînée").transform;
             root.SetParent(parent, false);
 
-            _colorMeshes = new Mesh[Palette.Rainbow.Length];
-            for (int c = 0; c < _colorMeshes.Length; c++)
-                _colorMeshes[c] = new MeshBuilder().AddSphere(Vector3.zero, 1f, Palette.Rainbow[c], 10, 6).Build("Bille " + c);
+            for (int i = 0; i < Skins.Count; i++)
+            {
+                var skin = Skins.Get(i);
+                var colors = Palette.TrailColors(Palette.Skin(skin.Id).Phoenix);
+                _skinMeshes[i] = new Mesh[colors.Length];
+                for (int c = 0; c < colors.Length; c++)
+                    _skinMeshes[i][c] = new MeshBuilder().AddSphere(Vector3.zero, 1f, colors[c], 10, 6).Build("Bille " + skin.Id + " " + c);
+            }
+            _colorMeshes = _skinMeshes[0];
 
             var material = materials.Lit("Traînée", Color.white, 0.2f, 0f, 0f);
             material.SetFloat(MaterialLibrary.VertexEmission, 1.8f);
@@ -82,7 +91,10 @@ namespace PuffyBird.Rendering
             return new Particle { Transform = go.transform, Filter = filter };
         }
 
-        /// <summary>Gerbe d'étincelles multicolores à la prise d'une étoile.</summary>
+        /// <summary>Oiseau choisi : la traînée et la gerbe de l'étoile prennent ses couleurs.</summary>
+        public void SetSkin(int index) => _colorMeshes = _skinMeshes[Mathf.Clamp(index, 0, Skins.Count - 1)];
+
+        /// <summary>Gerbe d'étincelles aux couleurs de l'oiseau à la prise d'une étoile.</summary>
         public void OnStar(Vector3 birdPosition)
         {
             var origin = birdPosition + new Vector3(0.08f, 0f, 0f);

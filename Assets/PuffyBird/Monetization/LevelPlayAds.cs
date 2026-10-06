@@ -191,6 +191,8 @@ namespace PuffyBird.Monetization
         System.Action<bool> _onFinished;
         bool _rewarded;
 
+        public bool Enabled => true;
+
         public bool IsReady => _ad != null && _onFinished == null && _ad.IsAdReady();
 
         public void Create(string adUnitId, LevelPlayAds owner)

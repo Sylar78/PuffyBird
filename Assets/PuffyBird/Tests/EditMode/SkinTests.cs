@@ -4,7 +4,7 @@ using PuffyBird.Core;
 
 namespace PuffyBird.Tests
 {
-    /// <summary>Oiseaux à débloquer : médailles du meilleur score et achats cosmétiques.</summary>
+    /// <summary>Oiseaux à débloquer : médailles du meilleur score, série de jours et achats cosmétiques.</summary>
     public class SkinTests
     {
         GameConfig _cfg;
@@ -40,38 +40,41 @@ namespace PuffyBird.Tests
         }
 
         [Test]
-        public void PhoenixIsTheFreeStartingBird()
+        public void FirePhoenixIsTheOnlyFreeBird()
         {
-            // Aucun oiseau choisi (préférence vide) : le phénix. Le bleu reste gratuit pour qui l'avait choisi.
+            // Aucun oiseau choisi (préférence vide) : le phénix de feu, seul oiseau offert.
             Assert.AreEqual("phoenix", Skins.Get(Skins.IndexOf("")).Id);
             Assert.IsNull(Skins.Get(0).ProductId);
-            Assert.AreEqual(SkinUnlock.Free, Skins.Get(Skins.IndexOf("blue")).Unlock);
+            for (int i = 1; i < Skins.Count; i++) Assert.AreNotEqual(SkinUnlock.Free, Skins.Get(i).Unlock, Skins.Get(i).Id);
         }
 
         [Test]
-        public void OneSkinPerMedal()
+        public void FiveElementsWithEveryUnlockKind()
         {
-            foreach (Medal medal in new[] { Medal.Bronze, Medal.Silver, Medal.Gold, Medal.Platinum })
+            Assert.AreEqual(5, Skins.Count);
+            int medals = 0, streak = 0, paid = 0;
+            var used = new HashSet<Medal>();
+            for (int i = 0; i < Skins.Count; i++)
             {
-                int count = 0;
-                for (int i = 0; i < Skins.Count; i++)
-                {
-                    var skin = Skins.Get(i);
-                    if (skin.Unlock == SkinUnlock.Medal && skin.Medal == medal) count++;
-                }
-                Assert.AreEqual(1, count, medal.ToString());
+                var skin = Skins.Get(i);
+                if (skin.Unlock == SkinUnlock.Medal) { medals++; Assert.IsTrue(used.Add(skin.Medal), skin.Id); }
+                if (skin.Unlock == SkinUnlock.Streak) streak++;
+                if (skin.Unlock == SkinUnlock.Purchase) paid++;
             }
+            Assert.AreEqual(2, medals);
+            Assert.AreEqual(1, streak, "un oiseau pour la série de jours");
+            Assert.AreEqual(1, paid);
         }
 
         [Test]
         public void MedalSkinsFollowBestScore()
         {
-            var bronze = Skins.Get(Skins.IndexOf("cherry"));
-            var platinum = Skins.Get(Skins.IndexOf("pearl"));
-            Assert.IsFalse(Skins.IsUnlocked(bronze, 9, _cfg, false));
-            Assert.IsTrue(Skins.IsUnlocked(bronze, 10, _cfg, false));
-            Assert.IsFalse(Skins.IsUnlocked(platinum, 39, _cfg, false));
-            Assert.IsTrue(Skins.IsUnlocked(platinum, 40, _cfg, false));
+            var water = Skins.Get(Skins.IndexOf("blue"));
+            var wind = Skins.Get(Skins.IndexOf("mint"));
+            Assert.IsFalse(Skins.IsUnlocked(water, 9, _cfg, false));
+            Assert.IsTrue(Skins.IsUnlocked(water, 10, _cfg, false));
+            Assert.IsFalse(Skins.IsUnlocked(wind, 29, _cfg, false));
+            Assert.IsTrue(Skins.IsUnlocked(wind, 30, _cfg, false));
         }
 
         [Test]
@@ -89,9 +92,9 @@ namespace PuffyBird.Tests
         {
             Assert.AreEqual(0, Skins.NewlyUnlocked(5, 9, _cfg));
             Assert.AreEqual(1, Skins.NewlyUnlocked(5, 10, _cfg));
-            Assert.AreEqual(2, Skins.NewlyUnlocked(9, 25, _cfg));
+            Assert.AreEqual(1, Skins.NewlyUnlocked(9, 25, _cfg));
             Assert.AreEqual(0, Skins.NewlyUnlocked(25, 22, _cfg));
-            Assert.AreEqual(4, Skins.NewlyUnlocked(0, 40, _cfg));
+            Assert.AreEqual(2, Skins.NewlyUnlocked(0, 40, _cfg));
         }
     }
 }

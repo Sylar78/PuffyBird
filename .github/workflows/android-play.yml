@@ -50,17 +50,14 @@ jobs:
           done
           exit $missing
 
+      - uses: actions/checkout@v4
+
       # L'image Unity (une vingtaine de Go décompressée) et le cache Library ne tiennent pas
       # ensemble sur le disque par défaut : run 2 arrêté par « no space left on device ».
       # Unity tourne dans Docker, les outils préinstallés de la machine ne servent pas.
+      # Dossiers supprimés en parallèle : ≈ 1 min, contre ≈ 6 avec l'action free-disk-space.
       - name: Libérer de l'espace disque (image Unity volumineuse)
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          tool-cache: true
+        run: bash ci/free-disk-space.sh
 
       # Unity tourne dans un conteneur limité à ~7,5 Go sur une machine sans mémoire d'échange :
       # un pic de mémoire (compilation, IL2CPP) le fait tuer par le système (code 137).
@@ -75,17 +72,47 @@ jobs:
           free -m
           df -h /
 
-      - uses: actions/checkout@v4
-
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Android-${{ hashFiles('Packages/manifest.json') }}
-          restore-keys: Library-Android-
+          # v2 : l'ancien Library fait tuer Unity au chargement des scripts (code 137, mémoire
+          # libre), constaté dans la compilation Unity et le build iOS. Repartir d'un Library neuf.
+          key: Library-Android-v2-${{ hashFiles('Packages/manifest.json') }}
+          restore-keys: Library-Android-v2-
 
       # GameCI décode la clé dans le projet sous le nom androidKeystoreName et transmet les
       # mots de passe à BuildScript.BuildAndroid, qui signe le bundle avec.
+      # Un Library restauré du cache fait parfois tuer Unity au chargement des scripts
+      # (code 137, mémoire libre) : en cas d'échec, un second essai repart sans Library.
       - name: Build Unity Android
+        id: unity
+        continue-on-error: true
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: Android
+          buildName: PuffyBird
+          buildMethod: PuffyBird.Editor.BuildScript.BuildAndroid
+          versioning: None
+          androidExportType: androidAppBundle
+          androidKeystoreName: puffybird-upload.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+          customParameters: -release -buildNumber ${{ github.run_number }}
+
+      - name: Repartir sans le cache Library
+        if: steps.unity.outcome == 'failure'
+        run: sudo rm -rf Library
+
+      - name: Build Unity Android (second essai)
+        if: steps.unity.outcome == 'failure'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
