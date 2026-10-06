@@ -36,21 +36,96 @@ namespace PuffyBird.Tests
         [TestCase(1u)]
         [TestCase(2u)]
         [TestCase(3u)]
-        public void PipesMoveOnlyFromTheSixteenthPair(uint seed)
+        public void PipesMoveOnlyFromTheSixteenthPairAndNotAlways(uint seed)
         {
             var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), seed, startOnTitle: false);
             sim.Press();
-            PlayWithBot(sim, 40f, s =>
+            int moving = 0, still = 0, lastId = -1;
+            PlayWithBot(sim, 60f, s =>
             {
                 for (int i = 0; i < s.Pipes.Count; i++)
                 {
                     ref var p = ref s.Pipes[i];
-                    bool moving = p.Id >= _cfg.MovingPipesFromScore;
-                    Assert.AreEqual(moving ? _cfg.PipeMoveAmplitude : 0f, p.MoveAmplitude, $"paire {p.Id}");
+                    if (p.Id < _cfg.MovingPipesFromScore || p.Kind != PipeKind.Pair) Assert.AreEqual(0f, p.MoveAmplitude, $"paire {p.Id}");
+                    else Assert.That(p.MoveAmplitude == 0f || p.MoveAmplitude == _cfg.PipeMoveAmplitude, $"paire {p.Id}");
                     Assert.LessOrEqual(System.Math.Abs(p.Shift), _cfg.PipeMoveAmplitude + 1e-3f);
                 }
+                ref var last = ref s.Pipes.Last;
+                if (last.Id > lastId && last.Id >= _cfg.MovingPipesFromScore && last.Kind == PipeKind.Pair)
+                {
+                    if (last.MoveAmplitude > 0f) moving++;
+                    else still++;
+                }
+                lastId = last.Id;
             });
-            Assert.GreaterOrEqual(sim.Score, 25);
+            Assert.GreaterOrEqual(sim.Score, 35);
+            Assert.Greater(moving, 3, "des paires bougent");
+            Assert.Greater(still, 3, "d'autres restent fixes");
+        }
+
+        [Test]
+        public void SinglePipeLeavesTheGapAgainstTheScreenEdge()
+        {
+            float cx = _cfg.BirdCenterX;
+            float r = _cfg.BirdRadius;
+            float x = cx - _cfg.PipeWidth * 0.5f;
+            // Tuyau du bas seul : ouverture de 100 px sous le haut de l'écran, rien au-dessus.
+            Assert.IsFalse(Collision.HitsPipe(cx, -40f, r, 0f, x, _cfg, PipeKind.BottomOnly));
+            Assert.IsFalse(Collision.HitsPipe(cx, _cfg.PipeGap - r - 1f, r, 0f, x, _cfg, PipeKind.BottomOnly));
+            Assert.IsTrue(Collision.HitsPipe(cx, _cfg.PipeGap + 1f, r, 0f, x, _cfg, PipeKind.BottomOnly));
+            Assert.IsTrue(Collision.HitsPipe(cx, 380f, r, 0f, x, _cfg, PipeKind.BottomOnly));
+            // Tuyau du haut seul : ouverture de 100 px au-dessus du sol, le tuyau du haut reste infini.
+            float top = _cfg.GroundY - _cfg.PipeGap;
+            Assert.IsFalse(Collision.HitsPipe(cx, top + r + 1f, r, top, x, _cfg, PipeKind.TopOnly));
+            Assert.IsFalse(Collision.HitsPipe(cx, _cfg.GroundY - r - 1f, r, top, x, _cfg, PipeKind.TopOnly));
+            Assert.IsTrue(Collision.HitsPipe(cx, top - 1f, r, top, x, _cfg, PipeKind.TopOnly));
+            Assert.IsTrue(Collision.HitsPipe(cx, -500f, r, top, x, _cfg, PipeKind.TopOnly));
+        }
+
+        /// <summary>Relève chaque paire une fois, à son apparition, sur plusieurs graines.</summary>
+        System.Collections.Generic.List<PipePair> SpawnedPairs(uint seeds, float seconds)
+        {
+            var pairs = new System.Collections.Generic.List<PipePair>();
+            for (uint seed = 1; seed <= seeds; seed++)
+            {
+                var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), seed, startOnTitle: false);
+                sim.Press();
+                int lastId = -1;
+                PlayWithBot(sim, seconds, s =>
+                {
+                    if (s.Pipes.Last.Id == lastId) return;
+                    lastId = s.Pipes.Last.Id;
+                    pairs.Add(s.Pipes.Last);
+                });
+                Assert.AreEqual(GameState.Playing, sim.State, $"graine {seed}");
+            }
+            return pairs;
+        }
+
+        [Test]
+        public void SinglePipesAndBreathersShowUp()
+        {
+            int singles = 0, breathers = 0, regular = 0;
+            PipeKind previous = PipeKind.Pair;
+            foreach (var p in SpawnedPairs(4, 60f))
+            {
+                if (p.Kind == PipeKind.BottomOnly) Assert.AreEqual(0f, p.BaseTop);
+                if (p.Kind == PipeKind.TopOnly) Assert.AreEqual(_cfg.GroundY - _cfg.PipeGap, p.BaseTop);
+                if (p.Kind == PipeKind.Pair) Assert.AreEqual(p.GapTop, p.BaseTop);
+                if (p.Kind != PipeKind.Pair)
+                {
+                    singles++;
+                    Assert.GreaterOrEqual(p.Id, _cfg.SinglePipeFromPair);
+                    Assert.AreEqual(PipeKind.Pair, previous, "jamais deux tuyaux seuls de suite");
+                }
+                if (previous != PipeKind.Pair) Assert.GreaterOrEqual(p.SpacingBefore, _cfg.AfterSinglePipeSpacing, "plus de place après un tuyau seul");
+                if (p.SpacingBefore == _cfg.BreatherSpacing) breathers++;
+                if (p.SpacingBefore == _cfg.PipeSpacing) regular++;
+                previous = p.Kind;
+            }
+            Assert.Greater(singles, 3, "des tuyaux seuls");
+            Assert.Greater(breathers, 3, "des pauses sans tuyau");
+            Assert.Greater(regular, breathers * 4, "l'espacement normal reste la règle");
         }
 
         [Test]
@@ -129,7 +204,11 @@ namespace PuffyBird.Tests
             PlayWithBot(sim, 20f, s =>
             {
                 for (int i = 1; i < s.Pipes.Count; i++)
-                    Assert.AreEqual(_cfg.PipeSpacing, s.Pipes[i].X - s.Pipes[i - 1].X, 1e-3f);
+                {
+                    float spacing = s.Pipes[i].SpacingBefore;
+                    Assert.That(spacing == _cfg.PipeSpacing || spacing == _cfg.AfterSinglePipeSpacing || spacing == _cfg.BreatherSpacing, $"espacement {spacing}");
+                    Assert.AreEqual(spacing, s.Pipes[i].X - s.Pipes[i - 1].X, 1e-3f);
+                }
             });
             Assert.AreEqual(GameState.Playing, sim.State);
         }
@@ -160,7 +239,7 @@ namespace PuffyBird.Tests
 
         /// <summary>
         /// Non-régression de l'équité (§16.2) avec les extensions : le bot franchit les tuyaux
-        /// mobiles et survit aux accélérations sur plusieurs graines.
+        /// mobiles et les tuyaux seuls, et survit aux accélérations sur plusieurs graines.
         /// </summary>
         [TestCase(1u)]
         [TestCase(2u)]
@@ -168,13 +247,19 @@ namespace PuffyBird.Tests
         [TestCase(4u)]
         [TestCase(5u)]
         [TestCase(6u)]
+        [TestCase(7u)]
+        [TestCase(8u)]
+        [TestCase(9u)]
+        [TestCase(10u)]
+        [TestCase(11u)]
+        [TestCase(12u)]
         public void AutoPilotSurvivesMovingPipesAndStars(uint seed)
         {
             var sim = new GameSimulation(_cfg, new MemoryScoreStorage(), seed, startOnTitle: false);
             sim.Press();
             int stars = PlayWithBot(sim, 75f);
             Assert.AreEqual(GameState.Playing, sim.State, $"le bot meurt à {sim.Score} points");
-            Assert.GreaterOrEqual(sim.Score, 55);
+            Assert.GreaterOrEqual(sim.Score, 45);
             TestContext.WriteLine($"graine {seed} : {sim.Score} points, {stars} étoiles");
         }
 

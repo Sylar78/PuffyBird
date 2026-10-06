@@ -60,9 +60,22 @@ namespace PuffyBird.Core
         /// </summary>
         public float MaxViewMargin = 64f;
 
-        // Tuyaux mobiles (extension) : à partir de ce score, les nouvelles paires montent et
-        // descendent d'un bloc ; l'ouverture garde sa hauteur. Amplitude = 30 % de l'ouverture.
+        // Tuyaux mobiles (extension) : à partir de ce score, une nouvelle paire sur deux environ
+        // (tirage) monte et descend d'un bloc ; l'ouverture garde sa hauteur. Amplitude = 30 % de l'ouverture.
         public int MovingPipesFromScore = 15;
+        public float MovingPipeChance = 0.5f;
+
+        // Tuyau seul (extension) : à partir de cette paire, parfois un seul tuyau plus long ; l'ouverture
+        // (PipeGap) est alors entre lui et le haut de l'écran, ou entre lui et le sol. La paire
+        // suivante est un peu plus loin pour laisser le temps de rejoindre son ouverture.
+        public int SinglePipeFromPair = 5;
+        public float SinglePipeChance = 0.12f;
+        public float AfterSinglePipeSpacing = 225f;
+
+        // Pauses (extension) : à partir de cette paire, parfois un long moment sans tuyau.
+        public int BreatherFromPair = 6;
+        public float BreatherChance = 0.1f;
+        public float BreatherSpacing = 330f;
 
         /// <summary>Couleur de l'oiseau, fixe (demande du 30/09/2026) au lieu du tirage de §6.8.</summary>
         public BirdColor BirdColor = BirdColor.Blue;
@@ -80,6 +93,12 @@ namespace PuffyBird.Core
         public float StarBoostFactor = 1.15f;
         public float StarBoostDuration = 5f;
         public float StarBoostRamp = 0.3f;
+
+        /// <summary>
+        /// Seconde chance : attente maximale (s) du chargement de la vidéo après le tap sur CONTINUER.
+        /// Si aucune vidéo n'a pu être chargée, la partie reprend quand même.
+        /// </summary>
+        public float ContinueAdWait = 3f;
 
         // Séquence de mort, écrans (§11, §12)
         public float FlashTime = 0.12f;

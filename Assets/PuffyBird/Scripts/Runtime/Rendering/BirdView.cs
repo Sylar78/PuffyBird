@@ -57,9 +57,11 @@ namespace PuffyBird.Rendering
         readonly Palette.SkinLook[] _looks = new Palette.SkinLook[Skins.Count];
         readonly Mesh _goldBody;
         readonly Mesh _goldWing;
-        readonly Mesh _goldPhoenixBody;
-        readonly Mesh _goldPhoenixWing;
-        readonly Mesh _goldPhoenixTail;
+        // Phénix sous étoile : ses propres couleurs, éclaircies (Palette.Radiant).
+        readonly Mesh[] _radiantBody = new Mesh[Skins.Count];
+        readonly Mesh[] _radiantWing = new Mesh[Skins.Count];
+        readonly Mesh[] _radiantTail = new Mesh[Skins.Count];
+        readonly Material _sparkleMaterial;
         readonly Particle[] _sparkles = new Particle[SparkleCount];
         readonly Particle[] _puffs = new Particle[PuffCount];
         readonly Particle[] _feathers = new Particle[FeatherCount];
@@ -92,6 +94,10 @@ namespace PuffyBird.Rendering
                     _bodyMeshes[i] = BuildPhoenixBody(plumage).Build("Oiseau " + skin.Id);
                     _wingMeshes[i] = BuildPhoenixWing(plumage).Build("Aile " + skin.Id);
                     _tailMeshes[i] = BuildPhoenixTail(plumage).Build("Queue " + skin.Id);
+                    var radiant = Palette.Radiant(plumage);
+                    _radiantBody[i] = BuildPhoenixBody(radiant).Build("Oiseau étoilé " + skin.Id);
+                    _radiantWing[i] = BuildPhoenixWing(radiant).Build("Aile étoilée " + skin.Id);
+                    _radiantTail[i] = BuildPhoenixTail(radiant).Build("Queue étoilée " + skin.Id);
                 }
                 else
                 {
@@ -101,9 +107,6 @@ namespace PuffyBird.Rendering
             }
             _goldBody = BuildBody(Palette.GoldBird, Palette.Accessory.None).Build("Oiseau doré");
             _goldWing = BuildWing(Palette.GoldBird).Build("Aile dorée");
-            _goldPhoenixBody = BuildPhoenixBody(Palette.PhoenixGold).Build("Phénix doré");
-            _goldPhoenixWing = BuildPhoenixWing(Palette.PhoenixGold).Build("Aile du phénix doré");
-            _goldPhoenixTail = BuildPhoenixTail(Palette.PhoenixGold).Build("Queue du phénix doré");
 
             _bodyMaterial = materials.Lit("Oiseau", Color.white, 0.45f, 0f, 0.5f);
             _bodyMaterial.SetFloat(MaterialLibrary.BreathStrength, 0.004f);
@@ -133,10 +136,10 @@ namespace PuffyBird.Rendering
             _featherMaterial = materials.Lit("Plumes", Color.white, 0.3f, 0f, 0.4f);
             for (int i = 0; i < FeatherCount; i++) _feathers[i].Transform = CreateParticle(parent, "Plume", featherMesh, _featherMaterial);
 
-            var sparkleMesh = new MeshBuilder().AddStar(Vector3.zero, 1f, 0.28f, 0.25f, Palette.Glitter, 4).Build("Éclat");
-            var sparkleMaterial = materials.Lit("Éclats", Color.white, 0.2f, 0f, 0f);
-            sparkleMaterial.SetFloat(MaterialLibrary.VertexEmission, 2.6f);
-            for (int i = 0; i < SparkleCount; i++) _sparkles[i].Transform = CreateParticle(parent, "Éclat", sparkleMesh, sparkleMaterial);
+            var sparkleMesh = new MeshBuilder().AddStar(Vector3.zero, 1f, 0.28f, 0.25f, Color.white, 4).Build("Éclat");
+            _sparkleMaterial = materials.Lit("Éclats", Color.white, 0.2f, 0f, 0f);
+            _sparkleMaterial.SetFloat(MaterialLibrary.VertexEmission, 2.6f);
+            for (int i = 0; i < SparkleCount; i++) _sparkles[i].Transform = CreateParticle(parent, "Éclat", sparkleMesh, _sparkleMaterial);
 
             SetSkin(0);
         }
@@ -459,6 +462,10 @@ namespace PuffyBird.Rendering
             _farWing.localPosition = shoulder;
             SetFinish(look.Emission, look.VertexEmission, look.Glitter, look.Smoothness, look.Metallic, look.Rim, look.RimStrength);
             _featherMaterial.SetColor(MaterialLibrary.BaseColor, look.Feather);
+            // Paillettes et éclats de l'étoile : couleur du phénix (le maillage des éclats est clair, la couleur de base le teinte).
+            var glitter = look.Shape == Palette.BodyShape.Phoenix ? Palette.BoostGlitter(look.Phoenix) : Palette.Glitter;
+            foreach (var m in _plumage) m.SetColor(MaterialLibrary.GlitterColor, glitter);
+            _sparkleMaterial.SetColor(MaterialLibrary.BaseColor, glitter);
         }
 
         /// <summary>Menu des oiseaux ouvert : l'oiseau vient au centre de l'écran, agrandi, et tourne doucement.</summary>
@@ -476,9 +483,9 @@ namespace PuffyBird.Rendering
         public Vector3 Position => _root.position;
 
         /// <summary>
-        /// Pendant l'accélération d'une étoile, l'oiseau devient jaune doré brillant et pailleté :
-        /// plumage or lustré, paillettes qui scintillent sur tout le corps (shader), lueur dorée
-        /// qui pulse et petits éclats en étoile autour de lui. Il reprend sa couleur à la fin.
+        /// Pendant l'accélération d'une étoile, le phénix brille de sa propre couleur : plumage
+        /// éclairci et lumineux, paillettes qui scintillent sur tout le corps (shader), lueur de la
+        /// couleur de ses flammes qui pulse et petits éclats autour de lui. Il reprend son aspect à la fin.
         /// </summary>
         public void SetBoost(float amount, float time, float deltaTime)
         {
@@ -487,14 +494,18 @@ namespace PuffyBird.Rendering
             {
                 _golden = golden;
                 if (!golden) SetSkin(_skin);
-                else if (_looks[_skin].Shape == Palette.BodyShape.Phoenix) ApplyMeshes(_goldPhoenixBody, _goldPhoenixWing, _goldPhoenixTail);
+                else if (_looks[_skin].Shape == Palette.BodyShape.Phoenix) ApplyMeshes(_radiantBody[_skin], _radiantWing[_skin], _radiantTail[_skin]);
                 else ApplyMeshes(_goldBody, _goldWing, null);
             }
             if (golden)
             {
+                var look = _looks[_skin];
+                bool phoenix = look.Shape == Palette.BodyShape.Phoenix;
+                var glow = phoenix ? Palette.BoostGlow(look.Phoenix) : Palette.GoldGlow;
+                var rim = phoenix ? Palette.BoostGlitter(look.Phoenix) : Palette.Glitter;
                 float pulse = 0.75f + 0.25f * Mathf.Sin(time * 9f);
-                SetFinish(Palette.GoldGlow * (0.22f * pulse * amount), _looks[_skin].VertexEmission * 0.5f, 1.4f * amount, 0.85f, 0.3f, Palette.Glitter, 0.5f + 0.8f * amount);
-                _featherMaterial.SetColor(MaterialLibrary.BaseColor, Palette.GoldBird.Body);
+                SetFinish(glow * (0.22f * pulse * amount), look.VertexEmission * 0.8f, 1.4f * amount, 0.85f, 0.3f, rim, 0.5f + 0.8f * amount);
+                _featherMaterial.SetColor(MaterialLibrary.BaseColor, phoenix ? look.Feather : Palette.GoldBird.Body);
 
                 _sparkleAccumulator += SparkleRate * amount * deltaTime;
                 while (_sparkleAccumulator >= 1f)

@@ -140,7 +140,7 @@ namespace PuffyBird.Rendering
 
                 float x = Mathf.LerpUnclamped(p.PrevX, p.X, alpha) + _cfg.PipeWidth * 0.5f;
                 // Paires mobiles : les deux tuyaux se décalent ensemble, l'ouverture garde sa hauteur.
-                float gapTop = p.GapTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha);
+                float gapTop = p.BaseTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha);
                 float gapTopY = _space.Y(gapTop);
                 float gapBottomY = _space.Y(gapTop + _cfg.PipeGap);
                 pair.Root.transform.localPosition = new Vector3(_space.X(x), 0f, 0f);
@@ -155,6 +155,12 @@ namespace PuffyBird.Rendering
                 pair.TopBody.localPosition = new Vector3(0f, gapTopY, 0f);
                 pair.TopBody.localScale = new Vector3(1f, TopPipeHeight, 1f);
                 pair.TopCap.localPosition = new Vector3(0f, gapTopY + capHeight, 0f);
+
+                // Tuyau seul : l'autre est masqué (l'ouverture touche le haut de l'écran ou le sol).
+                SetActive(pair.TopBody, p.Kind != PipeKind.BottomOnly);
+                SetActive(pair.TopCap, p.Kind != PipeKind.BottomOnly);
+                SetActive(pair.BottomBody, p.Kind != PipeKind.TopOnly);
+                SetActive(pair.BottomCap, p.Kind != PipeKind.TopOnly);
 
                 if (!pair.Root.activeSelf) pair.Root.SetActive(true);
             }
@@ -174,6 +180,11 @@ namespace PuffyBird.Rendering
                 }
                 UpdateWobble(pair, deltaTime);
             }
+        }
+
+        static void SetActive(Transform part, bool active)
+        {
+            if (part.gameObject.activeSelf != active) part.gameObject.SetActive(active);
         }
 
         void UpdateWobble(Pair pair, float deltaTime)

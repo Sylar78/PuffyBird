@@ -259,9 +259,40 @@ namespace PuffyBird.Rendering
         public static readonly PhoenixColors Fire = Plumage("#2A0604", "#FF4A12", "#E0A030", "#FFE0A0", "#FF3A0A",
             "#FF8A1A", "#FFD23F", "#FF2A2A", "#FFD0C0", "#FFB02E");
 
-        /// <summary>Phénix doré pendant l'accélération d'une étoile.</summary>
-        public static readonly PhoenixColors PhoenixGold = Plumage("#8A5A08", "#FFC21A", "#FFD54A", "#FFF6C9", "#FFD54A",
-            "#FFE680", "#FFFFFF", "#FFF1A8", "#FFFFFF", "#FFE680");
+        /// <summary>
+        /// Plumage d'un phénix pendant l'accélération d'une étoile : ses propres couleurs, éclaircies et
+        /// plus lumineuses (corps sombre relevé vers son plumage, flammes et gemmes vers le blanc),
+        /// au lieu d'un doré commun à tous les oiseaux.
+        /// </summary>
+        public static PhoenixColors Radiant(PhoenixColors c)
+        {
+            return new PhoenixColors
+            {
+                Body = Brighten(Color.Lerp(c.Body, c.Plume, 0.6f), 0.15f, 0.45f),
+                Plume = Brighten(c.Plume, 0.3f, 0.9f),
+                Armor = Brighten(c.Armor, 0.2f, 0.25f),
+                ArmorTrim = Brighten(c.ArmorTrim, 0.35f, 0.6f),
+                FlameA = Brighten(c.FlameA, 0.25f, 1f),
+                FlameB = Brighten(c.FlameB, 0.3f, 1f),
+                FlameTip = Brighten(c.FlameTip, 0.5f, 1f),
+                Gem = Brighten(c.Gem, 0.3f, 1f),
+                GemCore = Brighten(c.GemCore, 0.5f, 1f),
+                Ribbon = Brighten(c.Ribbon, 0.3f, 1f),
+            };
+        }
+
+        /// <summary>Lueur qui pulse autour du phénix sous étoile : la couleur de ses flammes.</summary>
+        public static Color BoostGlow(PhoenixColors c) => Opaque(Color.Lerp(c.FlameA, c.FlameB, 0.5f));
+
+        /// <summary>Paillettes et éclats du phénix sous étoile : la pointe de ses flammes, éclaircie.</summary>
+        public static Color BoostGlitter(PhoenixColors c) => Opaque(Color.Lerp(c.FlameTip, Color.white, 0.35f));
+
+        static Color Brighten(Color c, float toWhite, float glow)
+        {
+            var r = Color.Lerp(c, Color.white, toWhite);
+            r.a = Mathf.Max(c.a, glow);
+            return r;
+        }
 
         /// <summary>
         /// Couleurs de la traînée de l'étoile pour un phénix : ses flammes, ses gemmes et ses rubans,

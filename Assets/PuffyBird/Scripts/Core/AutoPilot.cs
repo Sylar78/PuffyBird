@@ -74,7 +74,7 @@ namespace PuffyBird.Core
             for (int i = 0; i < pipes.Count; i++)
             {
                 ref var p = ref pipes[i];
-                if (Collision.HitsPipe(cx, cy, cfg.BirdRadius, p.GapTop + p.ShiftAt(time, cfg), p.X - m.Scroll, cfg)) return false;
+                if (Collision.HitsPipe(cx, cy, cfg.BirdRadius, p.BaseTop + p.ShiftAt(time, cfg), p.X - m.Scroll, cfg, p.Kind)) return false;
             }
             if (step >= Horizon) return true;
 

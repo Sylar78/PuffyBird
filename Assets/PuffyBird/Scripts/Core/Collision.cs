@@ -17,12 +17,13 @@ namespace PuffyBird.Core
 
         /// <summary>
         /// Collision entre l'oiseau (cercle) et une paire : le tuyau du haut est infini, on ne
-        /// peut donc pas passer au-dessus ; le tuyau du bas descend jusqu'au sol.
+        /// peut donc pas passer au-dessus ; le tuyau du bas descend jusqu'au sol. Un tuyau seul
+        /// (<paramref name="kind"/>) n'a que l'un des deux.
         /// </summary>
-        public static bool HitsPipe(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg)
+        public static bool HitsPipe(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg, PipeKind kind = PipeKind.Pair)
         {
-            return CircleRect(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop)
-                || CircleRect(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
+            return (kind != PipeKind.BottomOnly && CircleRect(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop))
+                || (kind != PipeKind.TopOnly && CircleRect(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY));
         }
 
         /// <summary>
@@ -39,10 +40,12 @@ namespace PuffyBird.Core
         }
 
         /// <summary>Écart entre l'oiseau et le tuyau le plus proche d'une paire (même géométrie que <see cref="HitsPipe"/>).</summary>
-        public static float PipeGap(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg)
+        public static float PipeGap(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg, PipeKind kind = PipeKind.Pair)
         {
-            float top = CircleRectGap(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop);
-            float bottom = CircleRectGap(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
+            float top = kind == PipeKind.BottomOnly ? float.MaxValue
+                : CircleRectGap(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop);
+            float bottom = kind == PipeKind.TopOnly ? float.MaxValue
+                : CircleRectGap(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
             return top < bottom ? top : bottom;
         }
 

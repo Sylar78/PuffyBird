@@ -13,6 +13,8 @@ namespace PuffyBird.Ads
     /// </summary>
     public interface IRewardedAds
     {
+        /// <summary>Une régie de vidéos est branchée : le bouton CONTINUER est proposé, même si aucune vidéo n'est encore chargée.</summary>
+        bool Enabled { get; }
         bool IsReady { get; }
         void Show(System.Action<bool> onFinished);
     }
@@ -20,6 +22,7 @@ namespace PuffyBird.Ads
     /// <summary>Pas de vidéo récompensée : le bouton CONTINUER n'apparaît pas.</summary>
     public sealed class NoRewardedAds : IRewardedAds
     {
+        public bool Enabled => false;
         public bool IsReady => false;
         public void Show(System.Action<bool> onFinished) => onFinished(false);
     }
