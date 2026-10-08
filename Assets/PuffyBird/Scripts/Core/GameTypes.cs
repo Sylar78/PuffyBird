@@ -65,6 +65,8 @@ namespace PuffyBird.Core
         Milestone = 1 << 9,
         /// <summary>Premier tap d'une partie : READY devient PLAYING.</summary>
         RunStarted = 1 << 10,
+        /// <summary>L'oiseau a touché un tuyau sous l'effet d'une étoile : l'étoile est perdue, la partie continue.</summary>
+        StarShield = 1 << 11,
     }
 
     public static class Medals
