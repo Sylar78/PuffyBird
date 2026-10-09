@@ -180,6 +180,51 @@ namespace PuffyBird.Tests
         }
 
         [Test]
+        public void StarShieldsAgainstOnePipeThenWearsOff()
+        {
+            var sim = NewPlayingSim();
+            sim.ForceBoost(_cfg.StarBoostDuration);
+            Assert.IsTrue(sim.Shielded);
+            // Ouverture loin au-dessus : l'oiseau est dans le tuyau du bas.
+            sim.Pipes.Spawn(_cfg.BirdCenterX - _cfg.PipeWidth * 0.5f, (int)(sim.Bird.CenterY(_cfg) - _cfg.PipeGap - 40f));
+            int shieldId = sim.Pipes[0].Id;
+            sim.Step();
+            var events = sim.ConsumeEvents();
+            Assert.IsTrue((events & GameEvents.StarShield) != 0, "l'étoile encaisse le choc");
+            Assert.IsTrue((events & GameEvents.Hit) == 0);
+            Assert.AreEqual(GameState.Playing, sim.State, "la partie continue");
+            Assert.IsFalse(sim.Shielded, "l'étoile est perdue");
+            Assert.AreEqual(0f, sim.BoostTime);
+            Assert.AreEqual(shieldId, sim.ShieldPipeId);
+            Assert.AreEqual(-1, sim.HitPipeId);
+
+            // L'oiseau traverse la paire sans mourir, puis la vitesse redevient normale.
+            for (int i = 0; i < 40; i++)
+            {
+                if (sim.Bird.Y > 300f) sim.Press();
+                sim.Step();
+                Assert.AreEqual(GameState.Playing, sim.State);
+                Assert.IsTrue((sim.ConsumeEvents() & GameEvents.StarShield) == 0, "une seule fois");
+            }
+            Assert.AreEqual(1f, sim.SpeedFactor, 1e-5f);
+        }
+
+        [Test]
+        public void PipeKillsWithoutStarAndGroundKillsEvenWithStar()
+        {
+            var sim = NewPlayingSim();
+            sim.Pipes.Spawn(_cfg.BirdCenterX - _cfg.PipeWidth * 0.5f, (int)(sim.Bird.CenterY(_cfg) - _cfg.PipeGap - 40f));
+            sim.Step();
+            Assert.AreEqual(GameState.Dying, sim.State, "sans étoile, le tuyau tue");
+
+            var boosted = NewPlayingSim();
+            boosted.ForceBoost(1000f);
+            for (int i = 0; i < 600 && boosted.State == GameState.Playing; i++) boosted.Step();
+            Assert.AreEqual(GameState.Over, boosted.State, "le sol tue toujours");
+            Assert.IsTrue(boosted.DiedOnGround);
+        }
+
+        [Test]
         public void BirdIsBlueAndEveryThemeShowsUp()
         {
             Assert.AreEqual(System.Enum.GetValues(typeof(Theme)).Length, _cfg.ThemeCount, "tous les décors sont tirés");

@@ -523,6 +523,14 @@ namespace PuffyBird
                 _haptics.Play(HapticKind.Medium);
                 Unlock(Achievement.FirstStar);
             }
+            if ((events & GameEvents.StarShield) != 0)
+            {
+                // L'étoile a encaissé le choc : étincelles, tuyau qui vibre, la partie continue.
+                _trail.OnNearMiss(_bird.Position);
+                _pipes.Hit(_sim.ShieldPipeId);
+                _haptics.Play(HapticKind.Heavy);
+                if (!ReduceFlash) _cameraRig.Shake(0.03f, 0.2f);
+            }
             if ((events & GameEvents.NearMiss) != 0)
             {
                 _trail.OnNearMiss(_bird.Position);

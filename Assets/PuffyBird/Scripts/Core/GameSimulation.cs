@@ -67,6 +67,11 @@ namespace PuffyBird.Core
         public float BoostTime => _boostTime;
         /// <summary>Intensité de l'accélération dans [0, 1], pour les effets visuels.</summary>
         public float BoostAmount => (_speedFactor - 1f) / (_cfg.StarBoostFactor - 1f);
+        /// <summary>
+        /// L'étoile protège l'oiseau : tant que son effet dure, toucher un tuyau la consomme au lieu
+        /// de terminer la partie. Le sol tue toujours.
+        /// </summary>
+        public bool Shielded => State == GameState.Playing && _boostTime > 0f;
 
         float _viewMargin;
 
@@ -90,6 +95,8 @@ namespace PuffyBird.Core
         public int RunId { get; private set; }
         /// <summary>Identifiant de la paire touchée, ou -1.</summary>
         public int HitPipeId { get; private set; } = -1;
+        /// <summary>Identifiant de la dernière paire traversée grâce à l'étoile, ou -1.</summary>
+        public int ShieldPipeId { get; private set; } = -1;
         public bool DiedOnGround { get; private set; }
         public Medal Medal => Medals.For(Score, _cfg);
         public bool Muted
@@ -136,6 +143,7 @@ namespace PuffyBird.Core
             _speedFactor = 1f;
             Flash = 0f;
             HitPipeId = -1;
+            ShieldPipeId = -1;
             DiedOnGround = false;
             _dieSoundTimer = 0f;
             _events |= GameEvents.Swoosh;
@@ -266,8 +274,19 @@ namespace PuffyBird.Core
                     _events |= GameEvents.Point;
                     if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
                 }
+                if (p.Pierced) continue;
                 if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind))
                 {
+                    if (_boostTime > 0f)
+                    {
+                        ShieldPipeId = p.Id;
+                        // L'étoile est perdue : l'oiseau traverse cette paire sans mourir, et la vitesse
+                        // et son éclat redescendent à la normale.
+                        p.Pierced = true;
+                        _boostTime = 0f;
+                        _events |= GameEvents.StarShield;
+                        continue;
+                    }
                     HitPipeId = p.Id;
                     Die(false);
                     return;
@@ -321,6 +340,7 @@ namespace PuffyBird.Core
             Continued = false;
             Flash = 0f;
             HitPipeId = -1;
+            ShieldPipeId = -1;
             DiedOnGround = false;
             _dieSoundTimer = 0f;
             RunId++;

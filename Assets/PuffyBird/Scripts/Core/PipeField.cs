@@ -31,6 +31,8 @@ namespace PuffyBird.Core
         public bool Grazed;
         /// <summary>Le frôlement a déjà été signalé (une seule fois par paire).</summary>
         public bool GrazeReported;
+        /// <summary>L'étoile a protégé l'oiseau contre cette paire : elle ne peut plus le toucher.</summary>
+        public bool Pierced;
         /// <summary>Amplitude du mouvement vertical en px (0 = paire fixe).</summary>
         public float MoveAmplitude;
         public float MovePhase;

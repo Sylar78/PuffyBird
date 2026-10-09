@@ -61,7 +61,7 @@ namespace PuffyBird.Audio
         {
             if ((events & GameEvents.Flap) != 0) Play(SoundId.Wing);
             if ((events & GameEvents.Point) != 0) Play(SoundId.Point);
-            if ((events & GameEvents.Hit) != 0) Play(SoundId.Hit);
+            if ((events & (GameEvents.Hit | GameEvents.StarShield)) != 0) Play(SoundId.Hit);
             if ((events & GameEvents.Die) != 0) Play(SoundId.Die);
             if ((events & GameEvents.Swoosh) != 0) Play(SoundId.Swoosh);
             if ((events & GameEvents.Star) != 0) Play(SoundId.Star);
