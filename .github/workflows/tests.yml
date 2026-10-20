@@ -1,4 +1,4 @@
-# Tests de la simulation (PuffyBird.Core et tests EditMode) hors de Unity, à chaque push et
+# Tests de la simulation (ElementalPhenix.Core et tests EditMode) hors de Unity, à chaque push et
 # pull request : une régression du gameplay est signalée en quelques minutes, avant tout build
 # mobile. Même commande qu'en local : dotnet test tools/CoreTests
 name: Tests

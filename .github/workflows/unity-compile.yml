@@ -1,5 +1,5 @@
 # Compile tout le projet dans Unity avec les vrais packages (Unity IAP, Analytics, LevelPlay…)
-# et les symboles PUFFYBIRD_IAP / PUFFYBIRD_ANALYTICS, sans faire de build : une erreur de
+# et les symboles ELEMENTALPHENIX_IAP / ELEMENTALPHENIX_ANALYTICS, sans faire de build : une erreur de
 # compilation (scripts, éditeur, code de la boutique) apparaît ici plutôt que dans un build
 # TestFlight ou Google Play. Lancé quand le code ou les packages changent.
 name: Compilation Unity
@@ -91,8 +91,8 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           targetPlatform: Android
-          buildName: PuffyBird
-          buildMethod: PuffyBird.Editor.CompileCheck.Run
+          buildName: ElementalPhenix
+          buildMethod: ElementalPhenix.Editor.CompileCheck.Run
           versioning: None
 
       - name: Repartir sans le cache Library
@@ -110,8 +110,8 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           targetPlatform: Android
-          buildName: PuffyBird
-          buildMethod: PuffyBird.Editor.CompileCheck.Run
+          buildName: ElementalPhenix
+          buildMethod: ElementalPhenix.Editor.CompileCheck.Run
           versioning: None
 
       # Code 137 = Unity tué par le système : dire si c'est la mémoire ou le disque.

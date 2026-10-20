@@ -1,4 +1,4 @@
-# Publier PuffyBird sur TestFlight (iOS)
+# Publier Elemental Phenix sur TestFlight (iOS)
 
 Le build iOS tourne entièrement sur GitHub : aucun Mac n'est nécessaire. Le workflow
 `.github/workflows/ios-testflight.yml` fait trois choses :
@@ -16,13 +16,13 @@ Le build iOS tourne entièrement sur GitHub : aucun Mac n'est nécessaire. Le wo
 
 ### 2. Identifiant et fiche de l'app
 
-- Dans [Certificates, Identifiers & Profiles > Identifiers](https://developer.apple.com/account/resources/identifiers/list), cliquer sur **+**, choisir *App IDs* puis *App*, et saisir l'identifiant explicite `fr.puffybird.app`. Aucune capacité particulière n'est à cocher.
+- Dans [Certificates, Identifiers & Profiles > Identifiers](https://developer.apple.com/account/resources/identifiers/list), cliquer sur **+**, choisir *App IDs* puis *App*, et saisir l'identifiant explicite `fr.elementalphenix.app`. Aucune capacité particulière n'est à cocher.
 - Dans [App Store Connect > Apps](https://appstoreconnect.apple.com/apps), cliquer sur **+ > Nouvelle app** :
   - plateforme iOS ;
-  - nom : PuffyBird (il doit être libre sur l'App Store, sinon en choisir un autre ; c'est le nom affiché, pas l'identifiant) ;
+  - nom : Elemental Phenix (il doit être libre sur l'App Store, sinon en choisir un autre ; c'est le nom affiché, pas l'identifiant) ;
   - langue principale : français ;
-  - identifiant de lot : `fr.puffybird.app` ;
-  - SKU : `puffybird`.
+  - identifiant de lot : `fr.elementalphenix.app` ;
+  - SKU : `elementalphenix`.
 
 ### 3. Clé API App Store Connect
 
@@ -76,8 +76,8 @@ Les minutes des Mac GitHub comptent dix fois plus que celles de Linux pour un d�
 | Symptôme | Cause probable |
 |---|---|
 | Échec à l'étape « Build Unity iOS », message de licence | Secret `UNITY_LICENSE` incomplet, ou licence expirée : réactiver dans Unity Hub et recopier le fichier. |
-| « No Account for Team » ou « No profiles for 'fr.puffybird.app' » | Clé API sans le rôle Admin, Team ID erroné, ou identifiant d'app non créé (étape 2). |
-| « Invalid Bundle » ou refus à l'envoi | Fiche App Store Connect absente ou identifiant de lot différent de `fr.puffybird.app`. |
+| « No Account for Team » ou « No profiles for 'fr.elementalphenix.app' » | Clé API sans le rôle Admin, Team ID erroné, ou identifiant d'app non créé (étape 2). |
+| « Invalid Bundle » ou refus à l'envoi | Fiche App Store Connect absente ou identifiant de lot différent de `fr.elementalphenix.app`. |
 | « The bundle version must be higher » | Numéro de build déjà envoyé : relancer le workflow, qui prend un nouveau numéro. |
 | Refus lié au SDK iOS | Apple exige le dernier SDK : le workflow prend le dernier Xcode stable ; vérifier que l'image `macos-latest` le contient. |
 

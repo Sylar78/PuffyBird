@@ -4,8 +4,8 @@ Tout est **non consommable** (acheté une fois, gardé pour toujours, restauré 
 
 | ID du produit (identique sur les deux stores) | Contenu | Prix conseillé |
 |---|---|---|
-| `fr.puffybird.app.noads` | Retire la bannière publicitaire | 1,99 € |
-| `fr.puffybird.app.skin.ninja` | Phénix TÉNÈBRES (armure sombre, flammes violettes) | 0,99 € |
+| `fr.elementalphenix.app.noads` | Retire la bannière publicitaire | 1,99 € |
+| `fr.elementalphenix.app.skin.ninja` | Phénix TÉNÈBRES (armure sombre, flammes violettes) | 0,99 € |
 
 L'identifiant du produit date du premier oiseau payant (ninja) : il reste tel quel. Les produits `skin.robot` et `skin.galaxy` des anciens oiseaux ne sont plus utilisés : ne pas les créer (ou les retirer de la vente s'ils existent déjà).
 
@@ -13,14 +13,14 @@ Dans le jeu : bouton **OISEAUX** de l'écran titre (oiseaux, avec leur prix et *
 
 ## 1. Package Unity IAP
 
-Le package **In App Purchasing** (`com.unity.purchasing` 5.4.3) est déclaré dans `Packages/manifest.json` : Unity l'installe tout seul à l'ouverture du projet, et les builds de la CI aussi. À la compilation, `Editor/PackageDefines` active le code de la boutique (symbole `PUFFYBIRD_IAP`). Rien à faire dans Unity ; pousser simplement le `Packages/packages-lock.json` que Unity met à jour à l'ouverture.
+Le package **In App Purchasing** (`com.unity.purchasing` 5.4.3) est déclaré dans `Packages/manifest.json` : Unity l'installe tout seul à l'ouverture du projet, et les builds de la CI aussi. À la compilation, `Editor/PackageDefines` active le code de la boutique (symbole `ELEMENTALPHENIX_IAP`). Rien à faire dans Unity ; pousser simplement le `Packages/packages-lock.json` que Unity met à jour à l'ouverture.
 
 La boutique n'apparaît dans le jeu qu'une fois les produits créés et validés sur les stores (étapes 2 et 3) : avant cela, aucun prix ne remonte et les oiseaux payants restent cachés.
 
 ## 2. App Store Connect (iOS)
 
 1. **Accords, taxes et banque** : accepter l'accord **Applications payantes** et renseigner compte bancaire et formulaires fiscaux. Sans cela, les produits restent « Prêt à soumettre » et l'achat échoue.
-2. App PuffyBird > **Monétisation > Achats intégrés** > **+** > type **Non consommable**, pour chacun des 4 produits :
+2. App Elemental Phenix > **Monétisation > Achats intégrés** > **+** > type **Non consommable**, pour chacun des 4 produits :
    - Nom de référence (ex. « Sans pub »), **ID du produit** exactement comme dans le tableau.
    - **Prix** : 1,99 € ou 0,99 €.
    - Localisation française (et anglaise) : nom affiché et description courte.
@@ -31,12 +31,12 @@ La boutique n'apparaît dans le jeu qu'une fois les produits créés et validés
 ## 3. Play Console (Android)
 
 1. **Configuration > Profil de paiement** : créer le profil marchand (une fois par compte développeur).
-2. App PuffyBird > **Monétiser avec Play > Produits > Produits intégrés** > **Créer un produit**, pour chacun des 4 produits : ID exact du tableau, nom, description, prix, puis **Activer**.
+2. App Elemental Phenix > **Monétiser avec Play > Produits > Produits intégrés** > **Créer un produit**, pour chacun des 4 produits : ID exact du tableau, nom, description, prix, puis **Activer**.
    - La page n'est accessible qu'après l'envoi d'un bundle contenant la bibliothèque de facturation, donc après un build fait avec le package IAP installé (étape 1).
 3. Tester : **Paramètres > Tests de licence** > ajouter les comptes Google des testeurs (achats de test sans débit), puis installer la version de test fermé.
 
 ## Fonctionnement
 
 - Au lancement, la boutique se connecte, charge les prix localisés et récupère les achats passés.
-- Un achat est enregistré sur l'appareil (`puffybird.owned`) avant d'être confirmé auprès du store : s'il est interrompu, il revient au lancement suivant. Les achats restent disponibles hors ligne.
+- Un achat est enregistré sur l'appareil (`elementalphenix.owned`) avant d'être confirmé auprès du store : s'il est interrompu, il revient au lancement suivant. Les achats restent disponibles hors ligne.
 - Un remboursement Apple retire le produit. Pas de vérification serveur des reçus : pour des achats cosmétiques à 0,99 €, ce n'est pas nécessaire.

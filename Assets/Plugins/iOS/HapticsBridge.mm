@@ -1,4 +1,4 @@
-// Pont natif des vibrations pour PuffyBird.Feedback.Haptics : générateurs d'impact UIKit.
+// Pont natif des vibrations pour ElementalPhenix.Feedback.Haptics : générateurs d'impact UIKit.
 #import <UIKit/UIKit.h>
 
 static UIImpactFeedbackGenerator* gGenerators[3];

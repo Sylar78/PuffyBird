@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Exécute la simulation (ElementalPhenix.Core) et ses tests EditMode hors de Unity :
+      dotnet test tools/CoreTests
+    Les sources sont celles du projet Unity, rien n'est dupliqué.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>ElementalPhenix.Tests.EditMode</AssemblyName>
+    <RootNamespace>ElementalPhenix.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/ElementalPhenix/Scripts/Core/**/*.cs" Exclude="../../Assets/ElementalPhenix/Scripts/Core/AssemblyInfo.cs" />
+    <Compile Include="../../Assets/ElementalPhenix/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-// Pont natif du partage pour PuffyBird.Social.ShareService : feuille de partage iOS (texte, lien, image).
+// Pont natif du partage pour ElementalPhenix.Social.ShareService : feuille de partage iOS (texte, lien, image).
 #import <UIKit/UIKit.h>
 
 extern UIViewController* UnityGetGLViewController();
