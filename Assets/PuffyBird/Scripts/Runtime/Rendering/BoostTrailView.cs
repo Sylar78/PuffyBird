@@ -152,7 +152,7 @@ namespace PuffyBird.Rendering
         {
             float amount = Mathf.Clamp01(sim.BoostAmount);
             // Le décor défile vers la gauche : la traînée reste accrochée au monde.
-            float scroll = sim.State == GameState.Playing ? _cfg.ScrollSpeed * sim.SpeedFactor / WorldSpace.PixelsPerUnit : 0f;
+            float scroll = sim.State == GameState.Playing ? sim.Config.ScrollSpeed * sim.SpeedFactor / WorldSpace.PixelsPerUnit : 0f;
 
             if (amount > 0f && sim.State == GameState.Playing)
             {

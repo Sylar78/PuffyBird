@@ -32,7 +32,7 @@ namespace PuffyBird.UI
         const float RowGap = 6f;
         const float PanelTopDefault = 112f;
         const float DailyButtonY = 284f;
-        const float DailyButtonWidth = 168f;
+        const float ModeButtonWidth = 124f;
         const float DailyBestY = 306f;
         const float DailyTagY = 140f;
         const float DailyOverBestY = 158f;
@@ -70,6 +70,8 @@ namespace PuffyBird.UI
         readonly UiLayer.Button _skinsButton;
         readonly UiLayer.Button _continueButton;
         readonly UiLayer.Button _dailyButton;
+        readonly UiLayer.Button _journeyButton;
+        readonly Element[] _journeyStageTexts;
         readonly Element _dailyTag;
         Element _dailyBest;
         int _dailyBestShown = -1;
@@ -93,11 +95,19 @@ namespace PuffyBird.UI
             _trophyButton = ui.CreateButton(VoxelFont.TrophyIcon, Palette.GetReady, Color.white);
             _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + Lang.T(" CLASSEMENT", " RANKING", " RANKING", " RANGLISTE", " RANKING"), Palette.GetReady, Color.white);
             _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + Lang.T(" PARTAGER", " SHARE", " COMPARTIR", " TEILEN", " COMPARTILHAR"), Palette.Hex("#4EA6D8"), Color.white);
-            _skinsButton = ui.CreateButton(Lang.T("OISEAUX", "BIRDS", "PÁJAROS", "VÖGEL", "AVES"), Palette.GameOver, Color.white);
+            _skinsButton = ui.CreateButton(Lang.T("PHÉNIX", "PHOENIXES", "FÉNIX", "PHÖNIXE", "FÊNIX"), Palette.GameOver, Color.white);
             _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" CONTINUER (PUB)", " CONTINUE (AD)", " CONTINUAR (ANUNCIO)", " WEITER (WERBUNG)", " CONTINUAR (ANÚNCIO)"), Palette.GetReady, Color.white);
             _dailyButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" DÉFI DU JOUR", " DAILY CHALLENGE", " RETO DEL DÍA", " TAGESAUFGABE", " DESAFIO DO DIA"), Palette.Hex("#E8892B"), Color.white);
+            _journeyButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" VOYAGE", " JOURNEY", " VIAJE", " REISE", " JORNADA"), Palette.Hex("#C0392B"), Color.white);
+            int stages = _cfg.Journey.Length;
+            _journeyStageTexts = new Element[stages];
+            for (int i = 0; i < stages; i++)
+            {
+                int n = i + 1;
+                _journeyStageTexts[i] = ui.Text(Lang.T($"ÉTAPE {n} / {stages}", $"STAGE {n} / {stages}", $"ETAPA {n} / {stages}", $"ETAPPE {n} / {stages}", $"ETAPA {n} / {stages}"), TextAlign.Center, Palette.GetReady, Palette.Outline);
+            }
             _dailyTag = ui.Text(Lang.T("DÉFI DU JOUR", "DAILY CHALLENGE", "RETO DEL DÍA", "TAGESAUFGABE", "DESAFIO DO DIA"), TextAlign.Center, Palette.GetReady, Palette.Outline);
-            _newSkin = ui.Text(Lang.T("NOUVEL OISEAU DÉBLOQUÉ !", "NEW BIRD UNLOCKED!", "¡NUEVO PÁJARO DESBLOQUEADO!", "NEUER VOGEL FREIGESCHALTET!", "NOVA AVE DESBLOQUEADA!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
+            _newSkin = ui.Text(Lang.T("NOUVEAU PHÉNIX DÉBLOQUÉ !", "NEW PHOENIX UNLOCKED!", "¡NUEVO FÉNIX DESBLOQUEADO!", "NEUER PHÖNIX FREIGESCHALTET!", "NOVA FÊNIX DESBLOQUEADA!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
         }
 
         /// <summary>Menu des oiseaux (bouton OISEAUX de l'écran titre) ; null = pas de bouton.</summary>
@@ -121,6 +131,9 @@ namespace PuffyBird.UI
 
         /// <summary>Meilleur score d'aujourd'hui au défi du jour (0 : pas encore joué).</summary>
         public Func<int> DailyBestScore { get; set; }
+
+        /// <summary>Étape du Voyage proposée par le bouton VOYAGE (0 à 8).</summary>
+        public Func<int> JourneyStage { get; set; }
 
         /// <summary>Cache les boutons et bandeaux de l'écran de fin le temps d'une capture d'écran à partager.</summary>
         public bool HideOverlay { get; set; }
@@ -186,13 +199,18 @@ namespace PuffyBird.UI
                 else UiLayer.Hide(_trophyButton);
                 if (_skins != null) _ui.PlaceButton(_skinsButton, UiAction.OpenSkins, _cfg.Width * 0.5f, iconY, SkinsButtonWidth, IconButtonSize, 2f, hitMargin: 6f);
                 else UiLayer.Hide(_skinsButton);
-                _ui.PlaceButton(_dailyButton, UiAction.PlayDaily, _cfg.Width * 0.5f, DailyButtonY, DailyButtonWidth, IconButtonSize, 1.6f, hitMargin: 6f);
+                // VOYAGE à gauche, DÉFI DU JOUR à droite, chacun avec sa ligne d'information dessous.
+                _ui.PlaceButton(_journeyButton, UiAction.PlayJourney, JourneyX, DailyButtonY, ModeButtonWidth, IconButtonSize, 1.6f, hitMargin: 4f);
+                _ui.PlaceButton(_dailyButton, UiAction.PlayDaily, DailyX, DailyButtonY, ModeButtonWidth, IconButtonSize, 1.6f, hitMargin: 4f);
+                ShowJourneyStage(JourneyStage != null ? JourneyStage() : 0);
             }
             else
             {
                 UiLayer.Hide(_trophyButton);
                 UiLayer.Hide(_skinsButton);
                 UiLayer.Hide(_dailyButton);
+                UiLayer.Hide(_journeyButton);
+                ShowJourneyStage(-1);
             }
 
             // Défi du jour : meilleur score du jour sous le bouton (titre), bandeau en attente de partie et à l'écran de fin.
@@ -209,7 +227,7 @@ namespace PuffyBird.UI
             else
             {
                 UiLayer.Hide(_dailyTag);
-                if (title && !IsOpen && dailyBest > 0) _ui.Place(DailyBestText(dailyBest), _cfg.Width * 0.5f, DailyBestY, 1.4f);
+                if (title && !IsOpen && dailyBest > 0) _ui.Place(DailyBestText(dailyBest), DailyX, DailyBestY, 1.2f, maxWidth: ModeButtonWidth + 8f);
                 else UiLayer.Hide(_dailyBest);
             }
 
@@ -247,6 +265,19 @@ namespace PuffyBird.UI
             else _skins?.Hide();
             if (Screen == MenuScreen.Consent) Consent.Draw(ConsentChoice?.Invoke());
             else Consent?.Hide();
+        }
+
+        float JourneyX => _cfg.Width * 0.5f - ModeButtonWidth * 0.5f - 5f;
+        float DailyX => _cfg.Width * 0.5f + ModeButtonWidth * 0.5f + 5f;
+
+        /// <summary>« ÉTAPE n / 9 » sous le bouton VOYAGE ; <paramref name="stage"/> négatif : rien.</summary>
+        void ShowJourneyStage(int stage)
+        {
+            for (int i = 0; i < _journeyStageTexts.Length; i++)
+            {
+                if (i == stage) _ui.Place(_journeyStageTexts[i], JourneyX, DailyBestY, 1.2f, maxWidth: ModeButtonWidth + 8f);
+                else UiLayer.Hide(_journeyStageTexts[i]);
+            }
         }
 
         /// <summary>« MEILLEUR AUJOURD'HUI : n », reconstruit seulement quand n change (à la mort, hors partie).</summary>

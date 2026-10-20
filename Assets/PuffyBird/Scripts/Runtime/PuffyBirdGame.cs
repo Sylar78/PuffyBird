@@ -126,6 +126,7 @@ namespace PuffyBird
             }
             _menu.LeaderboardAvailable = _leaderboard.Available;
             _menu.DailyBestScore = () => _prefs.DailyBest(Today);
+            _menu.JourneyStage = NextJourneyStage;
             _menu.ContinueAvailable = () => _sim.CanContinue && _rewarded.Enabled;
             _menu.AddSettingsRow(UiAction.ToggleMusic, () => _prefs.Music ? 0 : 1, null, Lang.T("MUSIQUE : OUI", "MUSIC ON", "MÚSICA: SÍ", "MUSIK: AN", "MÚSICA: SIM"), Lang.T("MUSIQUE : NON", "MUSIC OFF", "MÚSICA: NO", "MUSIK: AUS", "MÚSICA: NÃO"));
             _menu.AddSettingsRow(UiAction.ToggleSound, () => _sim.Muted ? 1 : 0, null, Lang.T("SONS : OUI", "SOUND ON", "SONIDO: SÍ", "TON: AN", "SOM: SIM"), Lang.T("SONS : NON", "SOUND OFF", "SONIDO: NO", "TON: AUS", "SOM: NÃO"));
@@ -278,6 +279,9 @@ namespace PuffyBird
                     break;
                 case UiAction.PlayDaily:
                     _sim.StartDaily(DailyChallenge.SeedForDay(Today));
+                    break;
+                case UiAction.PlayJourney:
+                    _sim.StartJourney(NextJourneyStage());
                     break;
                 case UiAction.ToggleReduceFlash:
                     _prefs.ReduceFlash = !_prefs.ReduceFlash;
@@ -482,6 +486,9 @@ namespace PuffyBird
             return IsSkinUnlocked(selected) ? selected : 0;
         }
 
+        /// <summary>Étape du Voyage proposée sur l'écran titre : la première non réussie, ou la première une fois le Voyage terminé.</summary>
+        int NextJourneyStage() => _prefs.JourneyCleared >= _cfg.Journey.Length ? 0 : _prefs.JourneyCleared;
+
         void ToggleSound()
         {
             _sim.Muted = !_sim.Muted;
@@ -496,7 +503,7 @@ namespace PuffyBird
                 _nearMissesThisRun = 0;
                 if (_sim.IsDaily) Unlock(Achievement.DailyChallenge);
             }
-            if ((events & GameEvents.Point) != 0)
+            if ((events & GameEvents.Point) != 0 && !_sim.IsJourney)
             {
                 _prefs.Achievements.UnlockForScore(_sim.Score, _cfg);
                 _prefs.SaveAchievements();
@@ -544,6 +551,14 @@ namespace PuffyBird
                 _haptics.Play(HapticKind.Medium);
                 if (!ReduceFlash) _cameraRig.Shake(0.02f, 0.2f);
             }
+            if ((events & GameEvents.StageCleared) != 0)
+            {
+                _prefs.RecordJourneyStage(_sim.JourneyStage);
+                _trail.OnMilestone(_bird.Position, Medal.Platinum);
+                _hud.PulseScore();
+                _haptics.Play(HapticKind.Medium);
+                if (!ReduceFlash) _cameraRig.Shake(0.02f, 0.2f);
+            }
             if ((events & GameEvents.Hit) != 0)
             {
                 _haptics.Play(HapticKind.Heavy);
@@ -574,6 +589,7 @@ namespace PuffyBird
             _scenery.ApplyTheme(theme);
             _weather.ApplyTheme(theme);
             _postFx.ApplyTheme(theme);
+            _pipes.SetTheme(_sim.Theme);
             _cameraRig.Camera.backgroundColor = theme.SkyHorizon;
             _music.SetTheme(_sim.Theme);
         }

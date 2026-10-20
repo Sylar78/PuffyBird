@@ -22,7 +22,7 @@ namespace PuffyBird.UI
 
         static readonly string[] French =
         {
-            "PUFFYBIRD EST GRATUIT",
+            "CE JEU EST GRATUIT",
             "GRÂCE À LA PUB. NOS",
             "PARTENAIRES PEUVENT-ILS",
             "UTILISER VOS DONNÉES POUR",
@@ -33,7 +33,7 @@ namespace PuffyBird.UI
 
         static readonly string[] English =
         {
-            "PUFFYBIRD IS FREE",
+            "THIS GAME IS FREE",
             "THANKS TO ADS. MAY WE AND",
             "OUR PARTNERS USE YOUR DATA",
             "FOR PERSONALIZED ADS AND",
@@ -44,7 +44,7 @@ namespace PuffyBird.UI
 
         static readonly string[] Spanish =
         {
-            "PUFFYBIRD ES GRATIS",
+            "ESTE JUEGO ES GRATIS",
             "GRACIAS A LOS ANUNCIOS.",
             "¿PODEMOS USAR TUS DATOS",
             "PARA ANUNCIOS PERSONALIZADOS",
@@ -55,7 +55,7 @@ namespace PuffyBird.UI
 
         static readonly string[] German =
         {
-            "PUFFYBIRD IST KOSTENLOS",
+            "DIESES SPIEL IST GRATIS",
             "DANK DER WERBUNG. DÜRFEN",
             "WIR DEINE DATEN FÜR",
             "PERSONALISIERTE WERBUNG UND",
@@ -66,7 +66,7 @@ namespace PuffyBird.UI
 
         static readonly string[] Portuguese =
         {
-            "PUFFYBIRD É GRATUITO",
+            "ESTE JOGO É GRATUITO",
             "GRAÇAS AOS ANÚNCIOS.",
             "PODEMOS USAR SEUS DADOS",
             "PARA ANÚNCIOS PERSONALIZADOS",

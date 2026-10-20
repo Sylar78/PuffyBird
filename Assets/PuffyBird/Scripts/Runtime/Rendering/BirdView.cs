@@ -634,7 +634,7 @@ namespace PuffyBird.Rendering
             float angle = look.WingLift + look.WingAmplitude * Mathf.Cos(phase * Mathf.PI * 2f);
             _nearWing.localRotation = Quaternion.Euler(angle, 0f, 0f);
             _farWing.localRotation = Quaternion.Euler(-angle, 0f, 0f);
-            bool flapping = sim.State != GameState.Dying && sim.State != GameState.Over;
+            bool flapping = sim.State != GameState.Dying && (sim.State != GameState.Over || sim.StageCleared);
             _wingMaterial.SetFloat(MaterialLibrary.BendAmount, flapping ? 2.5f * look.WingBend * Mathf.Sin(phase * Mathf.PI * 2f) : 0f);
             // La queue ondule à contretemps des ailes.
             _tail.localRotation = Quaternion.Euler(0f, 0f, TailSway * Mathf.Sin(phase * Mathf.PI * 2f + 1.2f));

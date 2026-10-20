@@ -11,7 +11,10 @@ namespace PuffyBird.Core
     {
         const int MaxPendingPresses = 8;
 
-        readonly GameConfig _cfg;
+        // Réglages de la partie en cours : ceux du mode classique, ou ceux de l'étape du Voyage.
+        GameConfig _cfg;
+        readonly GameConfig _baseCfg;
+        readonly GameConfig[] _stageCfgs;
         readonly IScoreStorage _storage;
         readonly Rng _rng;
         // Tirages des extensions (tuyaux mobiles, étoiles) : séparés, pour que la suite des
@@ -30,6 +33,9 @@ namespace PuffyBird.Core
         int _pairsSpawned;
         bool _dailyPending;
         uint _dailySeed;
+        bool _journeyPending;
+        int _journeyPendingStage;
+        float _clearTime;
         float _boostTime;
         float _speedFactor = 1f;
         GameEvents _events;
@@ -37,6 +43,9 @@ namespace PuffyBird.Core
         public GameSimulation(GameConfig cfg, IScoreStorage storage, uint seed, bool startOnTitle = true)
         {
             _cfg = cfg ?? throw new ArgumentNullException(nameof(cfg));
+            _baseCfg = cfg;
+            _stageCfgs = new GameConfig[cfg.Journey.Length];
+            for (int i = 0; i < _stageCfgs.Length; i++) _stageCfgs[i] = cfg.ForStage(i);
             _storage = storage ?? new MemoryScoreStorage();
             _rng = new Rng(seed);
             _bonusRng = new Rng(seed ^ 0x9E3779B9u);
@@ -47,7 +56,21 @@ namespace PuffyBird.Core
             _events = GameEvents.None;
         }
 
+        /// <summary>Réglages de la partie en cours (ceux de l'étape en mode Voyage).</summary>
         public GameConfig Config => _cfg;
+        /// <summary>
+        /// La partie est une étape du Voyage des éléments (<see cref="JourneyStage"/>) : décor et règle
+        /// imposés, objectif de score, aucun record ni médaille. Les essais s'enchaînent jusqu'à ACCUEIL.
+        /// </summary>
+        public bool IsJourney { get; private set; }
+        /// <summary>Étape du Voyage en cours (0 à <c>Journey.Length − 1</c>).</summary>
+        public int JourneyStage { get; private set; }
+        /// <summary>Points à marquer pour réussir l'étape (0 hors Voyage).</summary>
+        public int JourneyGoal => IsJourney ? _baseCfg.Journey[JourneyStage].Goal : 0;
+        /// <summary>L'objectif de l'étape est atteint : l'oiseau plane jusqu'à l'écran de fin, sans obstacle ni collision.</summary>
+        public bool StageCleared { get; private set; }
+        /// <summary>La dernière étape est réussie : le prochain tap ramène à l'écran titre.</summary>
+        public bool JourneyComplete => IsJourney && StageCleared && JourneyStage == _baseCfg.Journey.Length - 1;
         /// <summary>La partie (et les suivantes, jusqu'au retour à l'accueil) suit le défi du jour : même graine, donc mêmes tuyaux et même décor pour tous.</summary>
         public bool IsDaily { get; private set; }
         public GameState State { get; private set; }
@@ -84,7 +107,7 @@ namespace PuffyBird.Core
             get => _viewMargin;
             set => _viewMargin = Math.Max(0f, Math.Min(_cfg.MaxViewMargin, value));
         }
-        /// <summary>Distance totale défilée en px ; figée pendant DYING et OVER.</summary>
+        /// <summary>Distance totale défilée en px ; figée pendant DYING et OVER (sauf après une étape réussie du Voyage).</summary>
         public double ScrollDistance { get; private set; }
         public double PrevScrollDistance { get; private set; }
         public float GroundOffset { get; private set; }
@@ -98,7 +121,7 @@ namespace PuffyBird.Core
         /// <summary>Identifiant de la dernière paire traversée grâce à l'étoile, ou -1.</summary>
         public int ShieldPipeId { get; private set; } = -1;
         public bool DiedOnGround { get; private set; }
-        public Medal Medal => Medals.For(Score, _cfg);
+        public Medal Medal => IsJourney ? Medal.None : Medals.For(Score, _cfg);
         public bool Muted
         {
             get => _storage.Muted;
@@ -125,7 +148,7 @@ namespace PuffyBird.Core
         public bool Continued { get; private set; }
 
         /// <summary>Seconde chance possible : écran de fin, pas encore utilisée.</summary>
-        public bool CanContinue => State == GameState.Over && !Continued && !IsFadingOut;
+        public bool CanContinue => State == GameState.Over && !Continued && !IsFadingOut && !StageCleared;
 
         /// <summary>
         /// Seconde chance (vidéo récompensée choisie par le joueur) : l'oiseau repart de sa position
@@ -192,6 +215,18 @@ namespace PuffyBird.Core
             BeginTransition();
         }
 
+        /// <summary>
+        /// Lance une étape du Voyage des éléments depuis l'écran titre : fondu, puis la partie avec le
+        /// décor et la règle de l'étape. Une étape réussie mène à la suivante au tap ; ACCUEIL quitte le Voyage.
+        /// </summary>
+        public void StartJourney(int stage)
+        {
+            if (State != GameState.Title || IsFadingOut) return;
+            _journeyPending = true;
+            _journeyPendingStage = Math.Max(0, Math.Min(_baseCfg.Journey.Length - 1, stage));
+            BeginTransition();
+        }
+
         public GameEvents ConsumeEvents()
         {
             var e = _events;
@@ -218,7 +253,9 @@ namespace PuffyBird.Core
             UpdateTransition(dt);
             UpdateDieSound(dt);
 
-            bool scrolling = State == GameState.Title || State == GameState.Ready || State == GameState.Playing;
+            // Après une étape réussie, le vol continue derrière l'écran de fin.
+            bool scrolling = State == GameState.Title || State == GameState.Ready || State == GameState.Playing
+                || (State == GameState.Over && StageCleared);
             if (scrolling)
             {
                 if (State == GameState.Playing) StepBoost(ref _boostTime, ref _speedFactor, dt, _cfg);
@@ -235,10 +272,19 @@ namespace PuffyBird.Core
                 return;
             }
 
+            if (State == GameState.Over && StageCleared)
+            {
+                Glide(dt);
+                _pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor, spawn: false);
+                _stars.Advance(_cfg.ScrollSpeed * _speedFactor * dt, _cfg, _viewMargin);
+                return;
+            }
+
             if (State == GameState.Playing || State == GameState.Dying)
             {
                 float rotSpeed = State == GameState.Dying ? _cfg.RotSpeedDying : _cfg.RotSpeed;
-                _bird.Integrate(dt, rotSpeed, _cfg);
+                if (StageCleared) Glide(dt);
+                else _bird.Integrate(dt, rotSpeed, _cfg, _cfg.GustAt(Time));
                 if (_bird.Y + _cfg.BirdHeight >= _cfg.GroundY)
                 {
                     _bird.Y = _cfg.GroundY - _cfg.BirdHeight;
@@ -249,9 +295,20 @@ namespace PuffyBird.Core
 
             if (State != GameState.Playing) return;
 
-            if (_pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor)) OnPairSpawned();
+            if (_pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor, spawn: !StageCleared)) OnPairSpawned();
             _pipes.UpdateMotion(Time, _cfg);
             _stars.Advance(_cfg.ScrollSpeed * _speedFactor * dt, _cfg, _viewMargin);
+
+            if (StageCleared)
+            {
+                _clearTime += dt;
+                if (_clearTime >= _cfg.JourneyClearTime)
+                {
+                    SetState(GameState.Over);
+                    _events |= GameEvents.Swoosh;
+                }
+                return;
+            }
 
             float cx = _cfg.BirdCenterX;
             float cy = _bird.CenterY(_cfg);
@@ -272,7 +329,19 @@ namespace PuffyBird.Core
                     p.Scored = true;
                     Score++;
                     _events |= GameEvents.Point;
-                    if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
+                    if (IsJourney)
+                    {
+                        if (Score >= JourneyGoal)
+                        {
+                            // Objectif atteint : plus de tuyau ni de collision, l'oiseau plane jusqu'à l'écran de fin.
+                            StageCleared = true;
+                            _clearTime = 0f;
+                            _boostTime = 0f;
+                            _events |= GameEvents.StageCleared;
+                            return;
+                        }
+                    }
+                    else if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
                 }
                 if (p.Pierced) continue;
                 if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind))
@@ -315,12 +384,29 @@ namespace PuffyBird.Core
             if (_dailyPending)
             {
                 IsDaily = true;
+                IsJourney = false;
                 _dailyPending = false;
+            }
+            else if (_journeyPending)
+            {
+                IsJourney = true;
+                IsDaily = false;
+                JourneyStage = _journeyPendingStage;
+                _journeyPending = false;
             }
             else if (_fadeToTitle)
             {
                 IsDaily = false;
+                IsJourney = false;
             }
+            else if (IsJourney && StageCleared)
+            {
+                // Étape réussie : la suivante (la dernière ramène à l'écran titre, voir HandlePress).
+                JourneyStage = Math.Min(JourneyStage + 1, _baseCfg.Journey.Length - 1);
+            }
+            _cfg = IsJourney ? _stageCfgs[JourneyStage] : _baseCfg;
+            StageCleared = false;
+            _clearTime = 0f;
             if (IsDaily)
             {
                 _rng.Reseed(_dailySeed);
@@ -329,6 +415,7 @@ namespace PuffyBird.Core
             _rng.Range(0, 2);
             BirdColor = _cfg.BirdColor;
             Theme = (Theme)_rng.Range(0, _cfg.ThemeCount - 1);
+            if (IsJourney) Theme = _baseCfg.Journey[JourneyStage].Theme;
             _bird.Reset(_cfg.BirdStartY);
             _pipes.Clear();
             _stars.Clear();
@@ -373,13 +460,16 @@ namespace PuffyBird.Core
                     Flap();
                     break;
                 case GameState.Playing:
-                    Flap();
+                    if (!StageCleared) Flap();
                     break;
                 case GameState.Paused:
                     Resume();
                     break;
                 case GameState.Over:
-                    if (StateTime > _cfg.OverInputDelay) BeginTransition();
+                    if (StateTime <= _cfg.OverInputDelay) break;
+                    BeginTransition();
+                    // Voyage terminé : retour à l'écran titre.
+                    if (JourneyComplete) _fadeToTitle = true;
                     break;
             }
         }
@@ -449,6 +539,18 @@ namespace PuffyBird.Core
             speedFactor = speedFactor < target ? Math.Min(target, speedFactor + rate) : Math.Max(target, speedFactor - rate);
         }
 
+        /// <summary>
+        /// Vol de fin d'étape : l'oiseau rejoint en douceur sa hauteur de départ, nez à l'horizontale,
+        /// sans gravité ni collision.
+        /// </summary>
+        void Glide(float dt)
+        {
+            float target = _cfg.BirdStartY - _bird.Y;
+            _bird.Vy = target * _cfg.JourneyGlideReturn;
+            _bird.Y += _bird.Vy * dt;
+            _bird.Rot += (0f - _bird.Rot) * Math.Min(1f, dt * 4f);
+        }
+
         void Flap()
         {
             _bird.Flap(_cfg);
@@ -462,7 +564,8 @@ namespace PuffyBird.Core
                 _events |= GameEvents.Hit;
                 Flash = _cfg.FlashTime;
                 DiedOnGround = onGround;
-                if (Score > Best)
+                // Le Voyage change la physique : ses scores ne comptent pas pour le record.
+                if (!IsJourney && Score > Best)
                 {
                     Best = Score;
                     NewBest = true;

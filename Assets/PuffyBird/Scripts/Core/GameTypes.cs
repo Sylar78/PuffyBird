@@ -67,6 +67,8 @@ namespace PuffyBird.Core
         RunStarted = 1 << 10,
         /// <summary>L'oiseau a touché un tuyau sous l'effet d'une étoile : l'étoile est perdue, la partie continue.</summary>
         StarShield = 1 << 11,
+        /// <summary>Objectif d'une étape du Voyage atteint.</summary>
+        StageCleared = 1 << 12,
     }
 
     public static class Medals

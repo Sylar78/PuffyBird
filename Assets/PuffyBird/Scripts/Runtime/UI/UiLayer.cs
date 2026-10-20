@@ -25,6 +25,7 @@ namespace PuffyBird.UI
         Share,
         OpenSkins,
         PlayDaily,
+        PlayJourney,
         SkinPrevious,
         SkinNext,
         SkinUse,

@@ -8,8 +8,9 @@ namespace PuffyBird.UI
 
     /// <summary>
     /// Interface en volume, placée dans la scène juste devant le plan de jeu et positionnée en
-    /// pixels logiques selon la spec (§11) : titre, « Get Ready », score, « Game Over » et panneau
-    /// de fin animés, médaille métallique, étiquette NEW, pause. Tout est créé au chargement ;
+    /// pixels logiques selon la spec (§11) : titre, « Envol ! », score, « Flamme éteinte » et panneau
+    /// de fin animés, gemme élémentaire (à la place de la médaille), étiquette NEW, pause, et les écrans
+    /// du Voyage des éléments (étape, règle, objectif, étape réussie). Tout est créé au chargement ;
     /// en jeu on ne fait que déplacer, afficher ou masquer (aucune allocation).
     /// </summary>
     public sealed class HudView
@@ -41,6 +42,7 @@ namespace PuffyBird.UI
         readonly int[] _digitBuffer = new int[10];
 
         readonly Element _title;
+        readonly Element _titleSub;
         readonly Element _tapToPlay;
         readonly Element _titleBestLabel;
         readonly Number _titleBest;
@@ -65,6 +67,15 @@ namespace PuffyBird.UI
         readonly Element _retry;
         readonly Element _pause;
         readonly Element _pauseTap;
+        // Voyage des éléments : une ligne par étape, construite au chargement.
+        readonly Element[] _stageNames;
+        readonly Element[] _stageRules;
+        readonly Element[] _stageGoals;
+        readonly Element _stageCleared;
+        readonly Element _journeyDone;
+        readonly Element _nextStage;
+        readonly Element _homeTap;
+        readonly Element _goalLabel;
         readonly UiLayer.Button _pauseButton;
 
         Medal _shownMedal = (Medal)(-1);
@@ -86,30 +97,32 @@ namespace PuffyBird.UI
             var outline = Palette.Outline;
             for (int d = 0; d < 10; d++) _digitMeshes[d] = VoxelFont.Build(d.ToString(), TextAlign.Left, Color.white, outline);
 
-            _title = Text("PUFFYBIRD", TextAlign.Center, Palette.Hex("#F8C82A"), outline);
+            _title = Text("PHOENIX", TextAlign.Center, Palette.Hex("#FFB02E"), outline);
+            _titleSub = Text("ELEMENTS", TextAlign.Center, Palette.Hex("#FFE0A0"), outline);
             _tapToPlay = Text(Lang.T("TOUCHE POUR JOUER", "TAP TO PLAY", "TOCA PARA JUGAR", "TIPPEN ZUM SPIELEN", "TOQUE PARA JOGAR"), TextAlign.Center, Color.white, outline);
             _titleBestLabel = Text(Lang.T("RECORD", "BEST", "RÉCORD", "REKORD", "RECORDE"), TextAlign.Right, Palette.PanelLabel, outline);
             _titleBest = CreateNumber(TextAlign.Left, 5);
-            _getReady = Text(Lang.T("PRÊT ?", "GET READY!", "¡PREPARADO!", "BEREIT?", "PREPARE-SE!"), TextAlign.Center, Palette.GetReady, outline);
+            _getReady = Text(Lang.T("ENVOL !", "TAKE FLIGHT!", "¡A VOLAR!", "ABFLUG!", "VOE!"), TextAlign.Center, Palette.GetReady, outline);
             _tapArrow = Text("^", TextAlign.Center, Color.white, outline);
             _tapLabel = Text(Lang.T("TOUCHE", "TAP", "TOCA", "TIPPEN", "TOQUE"), TextAlign.Center, Color.white, outline);
             _score = CreateNumber(TextAlign.Center, 6);
-            _gameOver = Text(Lang.T("PERDU !", "GAME OVER", "FIN DEL JUEGO", "SPIEL VORBEI", "FIM DE JOGO"), TextAlign.Center, Palette.GameOver, outline);
+            _gameOver = Text(Lang.T("FLAMME ÉTEINTE", "FLAME OUT", "LLAMA APAGADA", "FLAMME AUS", "CHAMA APAGADA"), TextAlign.Center, Palette.GameOver, outline);
 
             _panelBorder = Solid(Palette.Outline);
             _panel = Solid(Palette.PanelEdge);
             _panelInner = Solid(Palette.Panel);
-            _medalLabel = Text(Lang.T("MÉDAILLE", "MEDAL", "MEDALLA", "MEDAILLE", "MEDALHA"), TextAlign.Left, Palette.PanelLabel, Palette.Panel);
+            _medalLabel = Text(Lang.T("GEMME", "GEM", "GEMA", "JUWEL", "GEMA"), TextAlign.Left, Palette.PanelLabel, Palette.Panel);
             _scoreLabel = Text(Lang.T("SCORE", "SCORE", "PUNTOS", "PUNKTE", "PONTOS"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
             _bestLabel = Text(Lang.T("RECORD", "BEST", "RÉCORD", "REKORD", "RECORDE"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
             _panelScore = CreateNumber(TextAlign.Right, 6);
             _panelBest = CreateNumber(TextAlign.Right, 6);
 
-            var medalMesh = new MeshBuilder()
-                .AddCylinder(new Vector3(0f, -0.5f, 0f), 0.5f, 1f, Color.white, 36)
-                .AddCylinder(new Vector3(0f, -0.62f, 0f), 0.36f, 0.14f, new Color(0.85f, 0.85f, 0.85f), 36)
-                .Build("Médaille");
-            _medal = Create("Médaille", medalMesh, _medalMaterial);
+            // Gemme taillée : couronne à facettes au-dessus, pavillon en pointe dessous (couleur : le matériau).
+            var gemMesh = new MeshBuilder()
+                .AddPrism(new Vector3(0f, 0.08f, 0f), 0.5f, 0.3f, 0.2f, Color.white, 8)
+                .AddPrism(new Vector3(0f, -0.42f, 0f), 0f, 0.5f, 0.5f, new Color(0.82f, 0.82f, 0.82f), 8)
+                .Build("Gemme");
+            _medal = Create("Gemme", gemMesh, _medalMaterial);
             var sparkleMesh = new MeshBuilder()
                 .AddBox(Vector3.zero, new Vector3(1f, 0.18f, 0.18f), Color.white)
                 .AddBox(Vector3.zero, new Vector3(0.18f, 1f, 0.18f), Color.white)
@@ -122,6 +135,60 @@ namespace PuffyBird.UI
             _pause = Text(Lang.T("PAUSE", "PAUSE", "PAUSA", "PAUSE", "PAUSA"), TextAlign.Center, Color.white, outline);
             _pauseTap = Text(Lang.T("TOUCHE POUR REPRENDRE", "TAP TO RESUME", "TOCA PARA SEGUIR", "ZUM FORTSETZEN TIPPEN", "TOQUE PARA CONTINUAR"), TextAlign.Center, Color.white, outline);
             _pauseButton = ui.CreateButton(VoxelFont.PauseIcon, Palette.GameOver, Color.white);
+
+            int stages = _cfg.Journey.Length;
+            _stageNames = new Element[stages];
+            _stageRules = new Element[stages];
+            _stageGoals = new Element[stages];
+            for (int i = 0; i < stages; i++)
+            {
+                var stage = _cfg.Journey[i];
+                int n = i + 1;
+                string name = StageName(stage.Theme);
+                _stageNames[i] = Text(Lang.T($"ÉTAPE {n} : {name}", $"STAGE {n}: {name}", $"ETAPA {n}: {name}", $"ETAPPE {n}: {name}", $"ETAPA {n}: {name}"), TextAlign.Center, Palette.GetReady, outline);
+                _stageRules[i] = Text(StageRule(stage.Theme), TextAlign.Center, Color.white, outline);
+                int goal = stage.Goal;
+                _stageGoals[i] = Text(Lang.T($"OBJECTIF : {goal}", $"GOAL: {goal}", $"OBJETIVO: {goal}", $"ZIEL: {goal}", $"OBJETIVO: {goal}"), TextAlign.Center, Color.white, outline);
+            }
+            _stageCleared = Text(Lang.T("ÉTAPE RÉUSSIE !", "STAGE CLEAR!", "¡ETAPA SUPERADA!", "ETAPPE GESCHAFFT!", "ETAPA CONCLUÍDA!"), TextAlign.Center, Palette.GetReady, outline);
+            _journeyDone = Text(Lang.T("VOYAGE TERMINÉ !", "JOURNEY COMPLETE!", "¡VIAJE COMPLETADO!", "REISE BEENDET!", "JORNADA CONCLUÍDA!"), TextAlign.Center, Palette.GetReady, outline);
+            _nextStage = Text(Lang.T("TOUCHE : ÉTAPE SUIVANTE", "TAP FOR NEXT STAGE", "TOCA: SIGUIENTE ETAPA", "TIPPEN: NÄCHSTE ETAPPE", "TOQUE: PRÓXIMA ETAPA"), TextAlign.Center, Color.white, outline);
+            _homeTap = Text(Lang.T("TOUCHE POUR L'ACCUEIL", "TAP TO GO HOME", "TOCA PARA VOLVER", "TIPPEN ZUM MENÜ", "TOQUE PARA VOLTAR"), TextAlign.Center, Color.white, outline);
+            _goalLabel = Text(Lang.T("OBJECTIF", "GOAL", "OBJETIVO", "ZIEL", "OBJETIVO"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
+        }
+
+        /// <summary>Nom d'une étape du Voyage (son décor).</summary>
+        static string StageName(Theme theme)
+        {
+            switch (theme)
+            {
+                case Theme.Night: return Lang.T("NUIT ÉTOILÉE", "STARRY NIGHT", "NOCHE ESTRELLADA", "STERNENNACHT", "NOITE ESTRELADA");
+                case Theme.City: return Lang.T("VILLE NÉON", "NEON CITY", "CIUDAD NEÓN", "NEONSTADT", "CIDADE NEON");
+                case Theme.Japan: return Lang.T("JAPON", "JAPAN", "JAPÓN", "JAPAN", "JAPÃO");
+                case Theme.Storm: return Lang.T("ORAGE", "STORM", "TORMENTA", "GEWITTER", "TEMPESTADE");
+                case Theme.Snow: return Lang.T("GRAND NORD", "FAR NORTH", "GRAN NORTE", "HOHER NORDEN", "EXTREMO NORTE");
+                case Theme.Jungle: return Lang.T("JUNGLE", "JUNGLE", "SELVA", "DSCHUNGEL", "SELVA");
+                case Theme.Sky: return Lang.T("CIEL", "SKY", "CIELO", "HIMMEL", "CÉU");
+                case Theme.Ocean: return Lang.T("ABYSSES", "ABYSS", "ABISMO", "TIEFSEE", "ABISMO");
+                default: return Lang.T("PRAIRIE", "MEADOW", "PRADERA", "WIESE", "PRADARIA");
+            }
+        }
+
+        /// <summary>Règle d'une étape du Voyage, en quelques mots (voir <see cref="GameConfig.Journey"/>).</summary>
+        static string StageRule(Theme theme)
+        {
+            switch (theme)
+            {
+                case Theme.Night: return Lang.T("PLUS D'ÉTOILES", "MORE STARS", "MÁS ESTRELLAS", "MEHR STERNE", "MAIS ESTRELAS");
+                case Theme.City: return Lang.T("TOURS MOBILES", "MOVING TOWERS", "TORRES MÓVILES", "BEWEGTE TÜRME", "TORRES MÓVEIS");
+                case Theme.Japan: return Lang.T("PILIERS SEULS", "LONE PILLARS", "PILARES SOLOS", "EINZELNE SÄULEN", "PILARES SOLITÁRIOS");
+                case Theme.Storm: return Lang.T("RAFALES DE VENT", "WIND GUSTS", "RÁFAGAS DE VIENTO", "WINDBÖEN", "RAJADAS DE VENTO");
+                case Theme.Snow: return Lang.T("AILES GELÉES", "FROZEN WINGS", "ALAS HELADAS", "GEFRORENE FLÜGEL", "ASAS CONGELADAS");
+                case Theme.Jungle: return Lang.T("COURSE FOLLE", "WILD RUSH", "CARRERA LOCA", "WILDE JAGD", "CORRIDA LOUCA");
+                case Theme.Sky: return Lang.T("AIR LÉGER", "LIGHT AIR", "AIRE LIGERO", "LEICHTE LUFT", "AR LEVE");
+                case Theme.Ocean: return Lang.T("NAGE AU RALENTI", "SLOW SWIM", "NADO LENTO", "LANGSAM SCHWIMMEN", "NADO LENTO");
+                default: return Lang.T("PREMIER ENVOL", "FIRST FLIGHT", "PRIMER VUELO", "ERSTER FLUG", "PRIMEIRO VOO");
+            }
         }
 
         Element Create(string name, Mesh mesh, Material material) => _ui.Create(name, mesh, material);
@@ -154,7 +221,7 @@ namespace PuffyBird.UI
         /// <summary>Fait gonfler un instant le score en jeu (palier de médaille).</summary>
         public void PulseScore() => _pulse = PulseTime;
 
-        void Place(Element e, float px, float py, float voxelPx, float z = HudZ) => _ui.Place(e, px, py, voxelPx, z);
+        void Place(Element e, float px, float py, float voxelPx, float z = HudZ, float maxWidth = 0f) => _ui.Place(e, px, py, voxelPx, z, maxWidth);
 
         void PlaceBox(Element e, float left, float top, float width, float height, float z) => _ui.PlaceBox(e, left, top, width, height, z);
 
@@ -213,8 +280,16 @@ namespace PuffyBird.UI
             // Titre
             if (state == GameState.Title)
             {
-                if (menuCoversTitle) Hide(_title);
-                else Place(_title, 144f, 96f + bob, 4f);
+                if (menuCoversTitle)
+                {
+                    Hide(_title);
+                    Hide(_titleSub);
+                }
+                else
+                {
+                    Place(_title, 144f, 84f + bob, 4.4f);
+                    Place(_titleSub, 144f, 122f + bob, 2.6f);
+                }
                 if (!menuOpen && Blink(realTime)) Place(_tapToPlay, 144f, 330f, 2.4f); else Hide(_tapToPlay);
                 if (!menuOpen && sim.Best > 0)
                 {
@@ -230,15 +305,38 @@ namespace PuffyBird.UI
             else
             {
                 Hide(_title);
+                Hide(_titleSub);
                 Hide(_tapToPlay);
                 Hide(_titleBestLabel);
                 Hide(_titleBest);
             }
 
             // Get Ready
+            int journeyStage = sim.IsJourney ? sim.JourneyStage : -1;
+            bool journeyReady = state == GameState.Ready && !menuOpen && sim.IsJourney;
+            // Voyage : nom de l'étape, sa règle et son objectif à la place de « ENVOL ! ».
+            for (int i = 0; i < _stageNames.Length; i++)
+            {
+                if (journeyReady && i == journeyStage)
+                {
+                    Place(_stageNames[i], 144f, 86f, 2.6f, maxWidth: 264f);
+                    Place(_stageRules[i], 144f, 116f, 2.2f, maxWidth: 264f);
+                    Place(_stageGoals[i], 144f, 142f, 1.6f);
+                }
+                else
+                {
+                    Hide(_stageNames[i]);
+                    Hide(_stageRules[i]);
+                    bool goalInGame = i == journeyStage && !menuOpen && (state == GameState.Playing || state == GameState.Paused);
+                    if (goalInGame) Place(_stageGoals[i], 144f, safeTopPx + _cfg.ScoreTopMargin + 36f, 1.3f);
+                    else Hide(_stageGoals[i]);
+                }
+            }
+
             if (state == GameState.Ready && !menuOpen)
             {
-                Place(_getReady, 144f, 100f, 3.2f);
+                if (sim.IsJourney) Hide(_getReady);
+                else Place(_getReady, 144f, 100f, 3.2f);
                 float arrowBob = Mathf.Abs(Mathf.Sin(realTime * Mathf.PI * 1.25f)) * 6f;
                 Place(_tapArrow, 144f, 286f - arrowBob, 3f);
                 Place(_tapLabel, 144f, 316f, 2f);
@@ -290,7 +388,12 @@ namespace PuffyBird.UI
 
         void UpdateOver(GameSimulation sim, float t, float deltaTime)
         {
-            Place(_gameOver, 144f, OverScreenTimeline.TitleY(t) - 12f, 3.4f);
+            // Titre : flamme éteinte, étape réussie ou voyage terminé.
+            var title = !sim.StageCleared ? _gameOver : (sim.JourneyComplete ? _journeyDone : _stageCleared);
+            Place(title, 144f, OverScreenTimeline.TitleY(t) - 12f, 3.4f, maxWidth: 264f);
+            if (title != _gameOver) Hide(_gameOver);
+            if (title != _stageCleared) Hide(_stageCleared);
+            if (title != _journeyDone) Hide(_journeyDone);
 
             if (OverScreenTimeline.PanelVisible(t))
             {
@@ -300,10 +403,13 @@ namespace PuffyBird.UI
                 PlaceBox(_panelInner, 30f, py + 6f, 228f, 102f, PanelZ);
                 Place(_medalLabel, 44f, py + 12f, 1.7f);
                 Place(_scoreLabel, 244f, py + 12f, 1.7f);
-                Place(_bestLabel, 244f, py + 56f, 1.7f);
+                // Voyage : l'objectif de l'étape au lieu du record, gemme d'aurore si l'étape est réussie.
+                Place(sim.IsJourney ? _goalLabel : _bestLabel, 244f, py + 56f, 1.7f);
+                Hide(sim.IsJourney ? _bestLabel : _goalLabel);
                 PlaceNumber(_panelScore, OverScreenTimeline.ShownScore(t, sim.Score, _cfg), 244f, py + 28f, 2.2f);
-                PlaceNumber(_panelBest, sim.Best, 244f, py + 72f, 2.2f);
-                UpdateMedal(sim.Medal, 70f, py + 66f, t, deltaTime);
+                PlaceNumber(_panelBest, sim.IsJourney ? sim.JourneyGoal : sim.Best, 244f, py + 72f, 2.2f);
+                var gem = sim.IsJourney ? (sim.StageCleared ? Medal.Platinum : Medal.None) : sim.Medal;
+                UpdateMedal(gem, 70f, py + 66f, t, deltaTime);
 
                 if (OverScreenTimeline.NewBadgeVisible(t, sim.Score, sim.NewBest, _cfg))
                 {
@@ -321,8 +427,12 @@ namespace PuffyBird.UI
                 HidePanel();
             }
 
-            if (OverScreenTimeline.ButtonsVisible(t, _cfg) && !sim.IsFadingOut && Blink(t)) Place(_retry, 144f, 392f, 2.2f);
-            else Hide(_retry);
+            var retry = !sim.StageCleared ? _retry : (sim.JourneyComplete ? _homeTap : _nextStage);
+            if (OverScreenTimeline.ButtonsVisible(t, _cfg) && !sim.IsFadingOut && Blink(t)) Place(retry, 144f, 392f, 2.2f, maxWidth: 264f);
+            else Hide(retry);
+            if (retry != _retry) Hide(_retry);
+            if (retry != _nextStage) Hide(_nextStage);
+            if (retry != _homeTap) Hide(_homeTap);
         }
 
         void UpdateMedal(Medal medal, float px, float py, float t, float deltaTime)
@@ -339,8 +449,9 @@ namespace PuffyBird.UI
             var p = _space.OnScreen(px, py, HudZ + 0.05f, out float scale);
             float d = 44f / WorldSpace.PixelsPerUnit * scale;
             _medal.Transform.localPosition = p;
-            _medal.Transform.localRotation = Quaternion.Euler(90f, Mathf.Sin(t * 2.2f) * 18f, 0f);
-            _medal.Transform.localScale = new Vector3(d, 0.06f * scale, d);
+            // La gemme tourne lentement sur elle-même, facettes à la lumière.
+            _medal.Transform.localRotation = Quaternion.Euler(12f, t * 70f, 0f);
+            _medal.Transform.localScale = new Vector3(d, d, d);
             if (!_medal.GameObject.activeSelf) _medal.GameObject.SetActive(true);
 
             // Étincelle : apparaît à un endroit aléatoire de la médaille, en boucle (§10.3).
@@ -367,6 +478,7 @@ namespace PuffyBird.UI
             Hide(_medalLabel);
             Hide(_scoreLabel);
             Hide(_bestLabel);
+            Hide(_goalLabel);
             Hide(_panelScore);
             Hide(_panelBest);
             Hide(_medal);
@@ -378,7 +490,11 @@ namespace PuffyBird.UI
         void HideOver()
         {
             Hide(_gameOver);
+            Hide(_stageCleared);
+            Hide(_journeyDone);
             Hide(_retry);
+            Hide(_nextStage);
+            Hide(_homeTap);
             HidePanel();
         }
     }

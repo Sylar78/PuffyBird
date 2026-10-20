@@ -25,7 +25,7 @@ namespace PuffyBird.Editor
     static class IosPostBuild
     {
         const string TrackingUsage =
-            "Your data will be used to show you more relevant ads, which keeps PuffyBird free.";
+            "Your data will be used to show you more relevant ads, which keeps Phoenix Elements free.";
 
         /// <summary>Langues du jeu : code de dossier .lproj et texte de la demande de suivi (ATT) dans cette langue.</summary>
         sealed class Localization
@@ -43,10 +43,10 @@ namespace PuffyBird.Editor
         static readonly Localization[] Localizations =
         {
             new Localization("en", TrackingUsage),
-            new Localization("fr", "Vos données serviront à vous proposer des publicités plus pertinentes, ce qui permet à PuffyBird de rester gratuit."),
-            new Localization("es", "Tus datos se usarán para mostrarte anuncios más relevantes, lo que mantiene PuffyBird gratis."),
-            new Localization("de", "Deine Daten werden verwendet, um dir passendere Werbung zu zeigen. So bleibt PuffyBird kostenlos."),
-            new Localization("pt", "Seus dados serão usados para mostrar anúncios mais relevantes, o que mantém o PuffyBird gratuito."),
+            new Localization("fr", "Vos données serviront à vous proposer des publicités plus pertinentes, ce qui permet à Phoenix Elements de rester gratuit."),
+            new Localization("es", "Tus datos se usarán para mostrarte anuncios más relevantes, lo que mantiene Phoenix Elements gratis."),
+            new Localization("de", "Deine Daten werden verwendet, um dir passendere Werbung zu zeigen. So bleibt Phoenix Elements kostenlos."),
+            new Localization("pt", "Seus dados serão usados para mostrar anúncios mais relevantes, o que mantém o Phoenix Elements gratuito."),
         };
 
         const string EntitlementsFile = "Unity-iPhone/PuffyBird.entitlements";

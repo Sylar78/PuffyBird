@@ -103,6 +103,48 @@ namespace PuffyBird.Rendering
             return this;
         }
 
+        /// <summary>
+        /// Prisme (ou tronc de pyramide) vertical à <paramref name="sides"/> faces planes, une normale par
+        /// face : arêtes nettes (pierre taillée, cristal, gemme). Les couvercles s'alignent sur les faces.
+        /// </summary>
+        public MeshBuilder AddPrism(Vector3 baseCenter, float bottomRadius, float topRadius, float height, Color color, int sides, bool caps = true)
+        {
+            for (int i = 0; i < sides; i++)
+            {
+                float a0 = (float)i / sides * Mathf.PI * 2f;
+                float a1 = (float)(i + 1) / sides * Mathf.PI * 2f;
+                var d0 = new Vector3(Mathf.Cos(a0), 0f, Mathf.Sin(a0));
+                var d1 = new Vector3(Mathf.Cos(a1), 0f, Mathf.Sin(a1));
+                var b0 = baseCenter + d0 * bottomRadius;
+                var b1 = baseCenter + d1 * bottomRadius;
+                var t0 = baseCenter + d0 * topRadius + Vector3.up * height;
+                var t1 = baseCenter + d1 * topRadius + Vector3.up * height;
+                // Normale de la face : perpendiculaire à l'arête du bas et à la pente.
+                var n = Vector3.Cross(t0 - b0, b1 - b0);
+                if (n.sqrMagnitude < 1e-10f) n = Vector3.Cross(t1 - b1, b1 - b0);
+                n = n.normalized;
+                if (Vector3.Dot(n, d0 + d1) < 0f) n = -n;
+                int start = _vertices.Count;
+                _vertices.Add(b0); _vertices.Add(t0); _vertices.Add(b1); _vertices.Add(t1);
+                float u0 = (float)i / sides;
+                float u1 = (float)(i + 1) / sides;
+                _uvs.Add(new Vector2(u0, 0f)); _uvs.Add(new Vector2(u0, 1f)); _uvs.Add(new Vector2(u1, 0f)); _uvs.Add(new Vector2(u1, 1f));
+                for (int k = 0; k < 4; k++)
+                {
+                    _normals.Add(n);
+                    _colors.Add(color);
+                }
+                _indices.Add(start); _indices.Add(start + 1); _indices.Add(start + 2);
+                _indices.Add(start + 2); _indices.Add(start + 1); _indices.Add(start + 3);
+            }
+            if (caps)
+            {
+                if (topRadius > 0f) AddDisc(baseCenter + Vector3.up * height, topRadius, Vector3.up, color, sides);
+                if (bottomRadius > 0f) AddDisc(baseCenter, bottomRadius, Vector3.down, color, sides);
+            }
+            return this;
+        }
+
         /// <summary>Cône : base de rayon donné, pointe à <paramref name="height"/> le long de y.</summary>
         public MeshBuilder AddCone(Vector3 baseCenter, float radius, float height, Color color, int segments = 16)
             => AddFrustum(baseCenter, radius, 0f, height, color, segments, true);

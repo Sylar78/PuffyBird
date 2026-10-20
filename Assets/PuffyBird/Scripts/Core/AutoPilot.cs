@@ -50,14 +50,14 @@ namespace PuffyBird.Core
             m.Scroll += cfg.ScrollSpeed * m.Factor * dt;
 
             if (flap) vy = cfg.FlapVelocity;
-            vy += cfg.Gravity * dt;
+            float time = sim.Time + dt * step;
+            vy += (cfg.Gravity + cfg.GustAt(time)) * dt;
             if (vy < cfg.MaxRiseSpeed) vy = cfg.MaxRiseSpeed;
             if (vy > cfg.MaxFallSpeed) vy = cfg.MaxFallSpeed;
             y += vy * dt;
             if (y < -cfg.BirdHeight) y = -cfg.BirdHeight;
             if (y + cfg.BirdHeight >= cfg.GroundY) return false;
 
-            float time = sim.Time + dt * step;
             float cx = cfg.BirdCenterX;
             float cy = y + cfg.BirdHeight * 0.5f;
             var stars = sim.Stars;

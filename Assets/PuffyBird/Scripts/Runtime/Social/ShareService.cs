@@ -28,15 +28,15 @@ namespace PuffyBird.Social
             switch (language)
             {
                 case Language.French:
-                    return $"J'ai fait {score} {(one ? "point" : "points")} à PuffyBird ! Tu fais mieux ?";
+                    return $"J'ai fait {score} {(one ? "point" : "points")} à Phoenix Elements ! Tu fais mieux ?";
                 case Language.Spanish:
-                    return $"¡Conseguí {score} {(one ? "punto" : "puntos")} en PuffyBird! ¿Puedes superarlo?";
+                    return $"¡Conseguí {score} {(one ? "punto" : "puntos")} en Phoenix Elements! ¿Puedes superarlo?";
                 case Language.German:
-                    return $"Ich habe {score} {(one ? "Punkt" : "Punkte")} bei PuffyBird! Schaffst du mehr?";
+                    return $"Ich habe {score} {(one ? "Punkt" : "Punkte")} bei Phoenix Elements! Schaffst du mehr?";
                 case Language.Portuguese:
-                    return $"Fiz {score} {(one ? "ponto" : "pontos")} no PuffyBird! Será que você consegue mais?";
+                    return $"Fiz {score} {(one ? "ponto" : "pontos")} no Phoenix Elements! Será que você consegue mais?";
                 default:
-                    return $"I scored {score} {(one ? "point" : "points")} in PuffyBird! Can you beat it?";
+                    return $"I scored {score} {(one ? "point" : "points")} in Phoenix Elements! Can you beat it?";
             }
         }
 

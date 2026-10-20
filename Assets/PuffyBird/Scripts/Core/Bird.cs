@@ -34,9 +34,10 @@ namespace PuffyBird.Core
         }
 
         /// <summary>Euler semi-implicite : vitesse, puis position, puis rotation (§4.3, §6.4).</summary>
-        public void Integrate(float dt, float rotSpeed, GameConfig cfg)
+        /// <param name="gust">Accélération des rafales ajoutée à la gravité (mode Voyage), 0 sinon.</param>
+        public void Integrate(float dt, float rotSpeed, GameConfig cfg, float gust = 0f)
         {
-            Vy = Clamp(Vy + cfg.Gravity * dt, cfg.MaxRiseSpeed, cfg.MaxFallSpeed);
+            Vy = Clamp(Vy + (cfg.Gravity + gust) * dt, cfg.MaxRiseSpeed, cfg.MaxFallSpeed);
             Y += Vy * dt;
             Rot = Math.Max(cfg.RotMin, Rot - rotSpeed * dt);
             if (Y < -cfg.BirdHeight) Y = -cfg.BirdHeight;

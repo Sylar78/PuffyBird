@@ -26,6 +26,7 @@ namespace PuffyBird
         const string AutoQualityKey = "puffybird.qualityauto";
         const string ReduceFlashKey = "puffybird.reduceflash";
         const string HighContrastKey = "puffybird.contrast";
+        const string JourneyKey = "puffybird.journey";
 
         /// <summary>Consentement aux pubs personnalisées pas encore demandé.</summary>
         public const int ConsentUnknown = -1;
@@ -61,6 +62,7 @@ namespace PuffyBird
             _autoQuality = PlayerPrefs.GetInt(AutoQualityKey, -1);
             _reduceFlash = PlayerPrefs.GetInt(ReduceFlashKey, 0) == 1;
             _highContrast = PlayerPrefs.GetInt(HighContrastKey, 0) == 1;
+            _journeyCleared = PlayerPrefs.GetInt(JourneyKey, 0);
             Achievements = new AchievementTracker(PlayerPrefs.GetInt(AchievementsKey, 0), PlayerPrefs.GetInt(AchievementsReportedKey, 0));
         }
 
@@ -71,6 +73,20 @@ namespace PuffyBird
         {
             PlayerPrefs.SetInt(AchievementsKey, Achievements.Unlocked);
             PlayerPrefs.SetInt(AchievementsReportedKey, Achievements.Reported);
+            PlayerPrefs.Save();
+        }
+
+        int _journeyCleared;
+
+        /// <summary>Étapes du Voyage des éléments réussies d'affilée depuis la première (0 à 9).</summary>
+        public int JourneyCleared => _journeyCleared;
+
+        /// <summary>Note une étape réussie (index à partir de 0) ; la progression ne recule jamais.</summary>
+        public void RecordJourneyStage(int stage)
+        {
+            if (stage + 1 <= _journeyCleared) return;
+            _journeyCleared = stage + 1;
+            PlayerPrefs.SetInt(JourneyKey, _journeyCleared);
             PlayerPrefs.Save();
         }
 

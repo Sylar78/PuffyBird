@@ -144,14 +144,15 @@ namespace PuffyBird.Core
         /// et l'ordre des tirages ne changent pas : seule l'apparition est plus précoce.
         /// </param>
         /// <param name="speedFactor">Multiplicateur du défilement (étoile de vitesse).</param>
+        /// <param name="spawn">Faux : plus aucune paire n'apparaît (fin d'une étape du Voyage).</param>
         /// <returns>Vrai si une nouvelle paire est apparue (c'est alors <see cref="Last"/>).</returns>
-        public bool Advance(float dt, Rng rng, GameConfig cfg, float viewMargin = 0f, float speedFactor = 1f)
+        public bool Advance(float dt, Rng rng, GameConfig cfg, float viewMargin = 0f, float speedFactor = 1f, bool spawn = true)
         {
             float dx = cfg.ScrollSpeed * speedFactor * dt;
             for (int i = 0; i < _count; i++) this[i].X -= dx;
             if (_count > 0 && this[0].X + cfg.PipeWidth < -cfg.PipeDespawnMargin - viewMargin) RemoveFirst();
             float spacing = NextSpacing > 0f ? NextSpacing : cfg.PipeSpacing;
-            if (_count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead + viewMargin - spacing)
+            if (spawn && _count > 0 && Last.X <= cfg.Width + cfg.SpawnLookahead + viewMargin - spacing)
             {
                 SpawnRandom(Last.X + spacing, rng, cfg);
                 Last.SpacingBefore = spacing;

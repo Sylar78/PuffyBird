@@ -110,7 +110,7 @@ namespace PuffyBird.Editor
         static void ConfigurePlayer()
         {
             PlayerSettings.companyName = "Sylar78";
-            PlayerSettings.productName = "PuffyBird";
+            PlayerSettings.productName = "Phoenix Elements";
             PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;

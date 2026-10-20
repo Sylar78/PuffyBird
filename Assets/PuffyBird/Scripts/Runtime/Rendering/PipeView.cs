@@ -5,9 +5,10 @@ using UnityEngine.Rendering;
 namespace PuffyBird.Rendering
 {
     /// <summary>
-    /// Tuyaux en 3D : fûts cylindriques et chapeaux à bague dorée, recyclés dans un pool de 4
-    /// paires (aucune allocation en jeu). La géométrie visible correspond aux rectangles de
-    /// collision : chapeau de 52 px, fût de 48 px. Le tuyau touché vibre (vertex shader), sans
+    /// Obstacles en 3D, propres à chaque décor (<see cref="ObstacleStyles"/>) : fût à facettes et
+    /// chapeau en couches, recyclés dans un pool de 4 paires (aucune allocation en jeu ; les maillages
+    /// des 9 décors sont construits au chargement). La géométrie visible correspond aux rectangles de
+    /// collision : chapeau de 52 px, fût de 48 px. L'obstacle touché vibre (vertex shader), sans
     /// jamais modifier la hitbox.
     /// </summary>
     public sealed class PipeView
@@ -33,10 +34,11 @@ namespace PuffyBird.Rendering
         readonly GameConfig _cfg;
         readonly Pair[] _pairs = new Pair[4];
         readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
-        readonly Mesh _bodyMesh;
-        readonly Mesh _capMesh;
-        readonly Mesh _bodyMeshContrast;
-        readonly Mesh _capMeshContrast;
+        // Maillages par décor : [thème * 2 + contrasté].
+        readonly Mesh[] _bodyMeshes;
+        readonly Mesh[] _capMeshes;
+        Theme _theme;
+        bool _contrast;
         readonly MeshFilter[] _bodyFilters = new MeshFilter[8];
         readonly MeshFilter[] _capFilters = new MeshFilter[8];
 
@@ -47,28 +49,40 @@ namespace PuffyBird.Rendering
             var root = new GameObject("Tuyaux").transform;
             root.SetParent(parent, false);
 
-            var material = materials.Lit("Tuyau", Color.white, 0.6f, 0f, 0.45f);
+            var material = materials.Lit("Obstacle", Color.white, 0.6f, 0f, 0.45f);
             material.SetFloat(MaterialLibrary.WobbleFrequency, 38f);
+            // Bandeaux lumineux (néons, runes, glace) : l'alpha des couleurs de sommet dose la lueur.
+            material.SetFloat(MaterialLibrary.VertexEmission, 1.8f);
 
             float bodyRadius = WorldSpace.Length(_cfg.PipeBodyWidth) * 0.5f;
             float capRadius = WorldSpace.Length(_cfg.PipeWidth) * 0.5f;
             float capHeight = WorldSpace.Length(_cfg.PipeCapHeight);
 
-            // Fût : cylindre unitaire (hauteur 1, base à l'origine), étiré à la bonne longueur.
-            // Chapeau : lèvre avec une bague et un léger biseau, base à l'origine. Deux palettes : normale et contrastée.
-            _bodyMesh = BuildBody(bodyRadius, Palette.PipeBody, "Fût");
-            _capMesh = BuildCap(capRadius, capHeight, Palette.PipeBody, Palette.PipeShade, Palette.PipeRim, "Chapeau");
-            _bodyMeshContrast = BuildBody(bodyRadius, Palette.PipeBodyContrast, "Fût contrasté");
-            _capMeshContrast = BuildCap(capRadius, capHeight, Palette.PipeBodyContrast, Palette.PipeShadeContrast, Palette.PipeRimContrast, "Chapeau contrasté");
+            // Fût : prisme unitaire (hauteur 1, base à l'origine), étiré à la bonne longueur.
+            // Chapeau : couches empilées, base côté fût, bord côté ouverture. Deux palettes par décor : normale et contrastée.
+            var themes = (Theme[])System.Enum.GetValues(typeof(Theme));
+            _bodyMeshes = new Mesh[themes.Length * 2];
+            _capMeshes = new Mesh[themes.Length * 2];
+            foreach (var theme in themes)
+            {
+                var style = ObstacleStyles.For(theme);
+                for (int c = 0; c < 2; c++)
+                {
+                    bool contrast = c == 1;
+                    string suffix = theme + (contrast ? " contrasté" : "");
+                    _bodyMeshes[(int)theme * 2 + c] = BuildBody(bodyRadius, style, contrast, "Fût " + suffix);
+                    _capMeshes[(int)theme * 2 + c] = BuildCap(capRadius, capHeight, style, contrast, "Chapeau " + suffix);
+                }
+            }
 
             for (int i = 0; i < _pairs.Length; i++)
             {
                 var pair = new Pair { Root = new GameObject("Paire " + i) };
                 pair.Root.transform.SetParent(root, false);
-                pair.TopBody = CreatePart(pair.Root.transform, "Fût haut", _bodyMesh, material);
-                pair.TopCap = CreatePart(pair.Root.transform, "Chapeau haut", _capMesh, material);
-                pair.BottomBody = CreatePart(pair.Root.transform, "Fût bas", _bodyMesh, material);
-                pair.BottomCap = CreatePart(pair.Root.transform, "Chapeau bas", _capMesh, material);
+                pair.TopBody = CreatePart(pair.Root.transform, "Fût haut", _bodyMeshes[0], material);
+                pair.TopCap = CreatePart(pair.Root.transform, "Chapeau haut", _capMeshes[0], material);
+                pair.BottomBody = CreatePart(pair.Root.transform, "Fût bas", _bodyMeshes[0], material);
+                pair.BottomCap = CreatePart(pair.Root.transform, "Chapeau bas", _capMeshes[0], material);
                 // Le chapeau du haut est retourné : lèvre vers le bas (§7.1).
                 pair.TopCap.localRotation = Quaternion.Euler(180f, 0f, 0f);
                 _bodyFilters[i * 2] = pair.TopBody.GetComponent<MeshFilter>();
@@ -81,28 +95,44 @@ namespace PuffyBird.Rendering
             }
         }
 
-        static Mesh BuildBody(float radius, Color body, string name)
+        static Mesh BuildBody(float radius, ObstacleStyles.Style style, bool contrast, string name)
         {
-            return new MeshBuilder().AddCylinder(Vector3.zero, radius, 1f, body, 28, caps: false).Build(name);
+            var color = ObstacleStyles.ColorOf(style, ObstacleStyles.Role.Body, contrast);
+            return new MeshBuilder().AddPrism(Vector3.zero, radius, radius, 1f, color, style.Sides, caps: false).Build(name);
         }
 
-        static Mesh BuildCap(float radius, float height, Color body, Color shade, Color rim, string name)
+        static Mesh BuildCap(float radius, float height, ObstacleStyles.Style style, bool contrast, string name)
         {
-            return new MeshBuilder()
-                .AddFrustum(Vector3.zero, radius * 0.96f, radius, height * 0.18f, shade, 28)
-                .AddCylinder(new Vector3(0f, height * 0.18f, 0f), radius, height * 0.5f, body, 28)
-                .AddCylinder(new Vector3(0f, height * 0.68f, 0f), radius * 1.03f, height * 0.14f, rim, 28)
-                .AddFrustum(new Vector3(0f, height * 0.82f, 0f), radius, radius * 0.9f, height * 0.18f, body, 28)
-                .Build(name);
+            var builder = new MeshBuilder();
+            foreach (var layer in style.Cap)
+            {
+                var color = ObstacleStyles.ColorOf(style, layer.Role, contrast);
+                builder.AddPrism(new Vector3(0f, height * layer.From, 0f), radius * layer.Bottom, radius * layer.Top, height * layer.Height, color, style.Sides);
+            }
+            return builder.Build(name);
         }
 
-        /// <summary>Palette contrastée des tuyaux (accessibilité) : change seulement les maillages, jamais la hitbox. Rare, hors partie.</summary>
+        /// <summary>Obstacles du décor de la partie. Hors partie (changement de décor).</summary>
+        public void SetTheme(Theme theme)
+        {
+            _theme = theme;
+            ApplyMeshes();
+        }
+
+        /// <summary>Palette contrastée des obstacles (accessibilité) : change seulement les maillages, jamais la hitbox. Rare, hors partie.</summary>
         public void SetHighContrast(bool on)
         {
+            _contrast = on;
+            ApplyMeshes();
+        }
+
+        void ApplyMeshes()
+        {
+            int index = (int)_theme * 2 + (_contrast ? 1 : 0);
             for (int i = 0; i < _bodyFilters.Length; i++)
             {
-                _bodyFilters[i].sharedMesh = on ? _bodyMeshContrast : _bodyMesh;
-                _capFilters[i].sharedMesh = on ? _capMeshContrast : _capMesh;
+                _bodyFilters[i].sharedMesh = _bodyMeshes[index];
+                _capFilters[i].sharedMesh = _capMeshes[index];
             }
         }
 

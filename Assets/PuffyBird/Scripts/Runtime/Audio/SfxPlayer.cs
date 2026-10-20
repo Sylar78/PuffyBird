@@ -66,7 +66,7 @@ namespace PuffyBird.Audio
             if ((events & GameEvents.Swoosh) != 0) Play(SoundId.Swoosh);
             if ((events & GameEvents.Star) != 0) Play(SoundId.Star);
             if ((events & GameEvents.NearMiss) != 0) Play(SoundId.Graze);
-            if ((events & GameEvents.Milestone) != 0) Play(SoundId.Milestone);
+            if ((events & (GameEvents.Milestone | GameEvents.StageCleared)) != 0) Play(SoundId.Milestone);
         }
     }
 }

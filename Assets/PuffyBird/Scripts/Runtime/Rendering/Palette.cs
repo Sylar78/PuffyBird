@@ -36,11 +36,8 @@ namespace PuffyBird.Rendering
         public static readonly Color White = Color.white;
         public static readonly Color Pupil = Hex("#1A1016");
 
-        // Tuyaux : céramique jade à bague dorée, volontairement différents des tuyaux verts de l'original (§22).
-        public static readonly Color PipeBody = Hex("#3FB6A8");
-        public static readonly Color PipeShade = Hex("#2B8C82");
-        public static readonly Color PipeRim = Hex("#F2C35B");
-        // Tuyaux contrastés (accessibilité) : orangé vif (vermillon, la teinte que distinguent le mieux les daltoniens) et bague claire.
+        // Obstacles : un style par décor (ObstacleStyles), volontairement loin des tuyaux de l'original (§22).
+        // Obstacles contrastés (accessibilité) : orangé vif (vermillon, la teinte que distinguent le mieux les daltoniens) et bague claire.
         public static readonly Color PipeBodyContrast = Hex("#E8650A");
         public static readonly Color PipeShadeContrast = Hex("#9A3F00");
         public static readonly Color PipeRimContrast = Hex("#FFF4C8");
@@ -67,14 +64,18 @@ namespace PuffyBird.Rendering
         public static readonly Color PanelEdge = Hex("#D7A84C");
         public static readonly Color MedalEmpty = Hex("#E5DFA0");
 
+        /// <summary>
+        /// Gemme élémentaire gagnée selon le score (paliers des médailles de la spec) : braise, marée,
+        /// rafale, aurore.
+        /// </summary>
         public static Color MedalColor(Medal medal)
         {
             switch (medal)
             {
-                case Medal.Bronze: return Hex("#D0874B");
-                case Medal.Silver: return Hex("#C7C7C7");
-                case Medal.Gold: return Hex("#F3C22B");
-                case Medal.Platinum: return Hex("#E8F4F8");
+                case Medal.Bronze: return Hex("#FF6A2A");
+                case Medal.Silver: return Hex("#2EA8FF");
+                case Medal.Gold: return Hex("#3EE0A0");
+                case Medal.Platinum: return Hex("#F4E3FF");
                 default: return MedalEmpty;
             }
         }

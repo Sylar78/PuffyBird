@@ -121,9 +121,62 @@ namespace PuffyBird.Core
         /// <summary>Distance max (px) entre l'oiseau et un tuyau pour compter comme un frôlement.</summary>
         public float NearMissDistance = 5f;
 
+        /// <summary>Rafales de vent (mode Voyage, orage) : 0 dans le mode classique.</summary>
+        public float GustAcceleration;
+        public float GustPeriod = 1f;
+
+        /// <summary>
+        /// Mode Voyage des éléments : une étape par décor, chacune avec sa règle. L'objectif atteint,
+        /// l'oiseau plane <see cref="JourneyClearTime"/> secondes sans obstacle avant l'écran de fin.
+        /// Les écarts de physique restent franchissables (testé avec le pilote automatique).
+        /// </summary>
+        public JourneyStage[] Journey =
+        {
+            new JourneyStage(Theme.Day, 10),
+            new JourneyStage(Theme.Night, 12) { StarChance = 0.45f, StarFirstPair = 1 },
+            new JourneyStage(Theme.City, 12) { MovingPipesFromScore = 0, MovingPipeChance = 0.6f },
+            new JourneyStage(Theme.Japan, 15) { SinglePipeFromPair = 2, SinglePipeChance = 0.35f },
+            new JourneyStage(Theme.Storm, 15) { GustAcceleration = 260f, GustPeriod = 2.4f },
+            new JourneyStage(Theme.Snow, 15) { GravityScale = 1.18f },
+            new JourneyStage(Theme.Jungle, 18) { ScrollScale = 1.15f },
+            new JourneyStage(Theme.Sky, 18) { GravityScale = 0.75f, FlapScale = 0.85f, MaxFallScale = 0.8f },
+            new JourneyStage(Theme.Ocean, 20) { GravityScale = 0.6f, FlapScale = 0.75f, MaxFallScale = 0.6f, ScrollScale = 0.85f },
+        };
+        public float JourneyClearTime = 1.5f;
+        /// <summary>Rappel de l'oiseau vers sa hauteur de départ pendant le vol de fin d'étape (1/s).</summary>
+        public float JourneyGlideReturn = 2.5f;
+
         public float BirdCenterX => BirdX + BirdWidth * 0.5f;
 
         /// <summary>Réglages de référence (mode Normal).</summary>
         public static GameConfig CreateDefault() => new GameConfig();
+
+        /// <summary>Copie des réglages avec la règle de l'étape <paramref name="index"/> du Voyage. Alloue : au chargement seulement.</summary>
+        public GameConfig ForStage(int index)
+        {
+            var stage = Journey[index];
+            var c = (GameConfig)MemberwiseClone();
+            c.Gravity = Gravity * stage.GravityScale;
+            c.FlapVelocity = FlapVelocity * stage.FlapScale;
+            c.MaxRiseSpeed = MaxRiseSpeed * stage.FlapScale;
+            c.MaxFallSpeed = MaxFallSpeed * stage.MaxFallScale;
+            c.ScrollSpeed = ScrollSpeed * stage.ScrollScale;
+            c.GustAcceleration = stage.GustAcceleration;
+            c.GustPeriod = stage.GustPeriod;
+            if (stage.StarChance >= 0f) c.StarChance = stage.StarChance;
+            if (stage.StarFirstPair >= 0) c.StarFirstPair = stage.StarFirstPair;
+            if (stage.MovingPipesFromScore >= 0) c.MovingPipesFromScore = stage.MovingPipesFromScore;
+            if (stage.MovingPipeChance >= 0f) c.MovingPipeChance = stage.MovingPipeChance;
+            if (stage.SinglePipeFromPair >= 0) c.SinglePipeFromPair = stage.SinglePipeFromPair;
+            if (stage.SinglePipeChance >= 0f) c.SinglePipeChance = stage.SinglePipeChance;
+            return c;
+        }
+
+        /// <summary>Accélération des rafales au temps <paramref name="time"/> (0 sans rafales).</summary>
+        public float GustAt(float time)
+        {
+            if (GustAcceleration == 0f) return 0f;
+            return GustAcceleration * (float)System.Math.Sin(time * 2.0 * System.Math.PI / GustPeriod);
+        }
     }
 }
