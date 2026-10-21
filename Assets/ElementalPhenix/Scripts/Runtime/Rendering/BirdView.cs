@@ -66,6 +66,9 @@ namespace ElementalPhenix.Rendering
         readonly Particle[] _puffs = new Particle[PuffCount];
         readonly Particle[] _feathers = new Particle[FeatherCount];
         readonly Material _featherMaterial;
+        readonly Material _puffMaterial;
+        readonly ElementAuraView _aura;
+        bool _auraActive;
         int _nextPuff;
         int _nextSparkle;
         float _sparkleAccumulator;
@@ -128,9 +131,8 @@ namespace ElementalPhenix.Rendering
             _tail.localPosition = PhoenixTailRoot;
 
             var puffMesh = new MeshBuilder().AddSphere(Vector3.zero, 1f, Color.white, 12, 8).Build("Puff");
-            var puffMaterial = materials.Lit("Puff", Color.white, 0.1f, 0f, 0.6f);
-            puffMaterial.SetColor(MaterialLibrary.EmissionColor, new Color(0.25f, 0.25f, 0.25f));
-            for (int i = 0; i < PuffCount; i++) _puffs[i].Transform = CreateParticle(parent, "Puff", puffMesh, puffMaterial);
+            _puffMaterial = materials.Lit("Puff", Color.white, 0.1f, 0f, 0.6f);
+            for (int i = 0; i < PuffCount; i++) _puffs[i].Transform = CreateParticle(parent, "Puff", puffMesh, _puffMaterial);
 
             var featherMesh = new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(1f, 0.25f, 0.45f), Color.white, 10, 6).Build("Plume");
             _featherMaterial = materials.Lit("Plumes", Color.white, 0.3f, 0f, 0.4f);
@@ -141,6 +143,7 @@ namespace ElementalPhenix.Rendering
             _sparkleMaterial.SetFloat(MaterialLibrary.VertexEmission, 2.6f);
             for (int i = 0; i < SparkleCount; i++) _sparkles[i].Transform = CreateParticle(parent, "Éclat", sparkleMesh, _sparkleMaterial);
 
+            _aura = new ElementAuraView(parent, materials);
             SetSkin(0);
         }
 
@@ -466,6 +469,10 @@ namespace ElementalPhenix.Rendering
             var glitter = look.Shape == Palette.BodyShape.Phoenix ? Palette.BoostGlitter(look.Phoenix) : Palette.Glitter;
             foreach (var m in _plumage) m.SetColor(MaterialLibrary.GlitterColor, glitter);
             _sparkleMaterial.SetColor(MaterialLibrary.BaseColor, glitter);
+            _aura.SetLook(look);
+            _aura.PuffLook(out var puff, out var puffGlow);
+            _puffMaterial.SetColor(MaterialLibrary.BaseColor, puff);
+            _puffMaterial.SetColor(MaterialLibrary.EmissionColor, puffGlow);
         }
 
         /// <summary>Menu des oiseaux ouvert : l'oiseau vient au centre de l'écran, agrandi, et tourne doucement.</summary>
@@ -485,7 +492,8 @@ namespace ElementalPhenix.Rendering
         /// <summary>
         /// Pendant l'accélération d'une étoile, le phénix brille de sa propre couleur : plumage
         /// éclairci et lumineux, paillettes qui scintillent sur tout le corps (shader), lueur de la
-        /// couleur de ses flammes qui pulse et petits éclats autour de lui. Il reprend son aspect à la fin.
+        /// couleur de ses flammes qui pulse et aura de son élément plus dense (<see cref="ElementAuraView"/>).
+        /// Il reprend son aspect à la fin. Hors étoile, la lueur du plumage suit le rythme de l'élément.
         /// </summary>
         public void SetBoost(float amount, float time, float deltaTime)
         {
@@ -507,7 +515,8 @@ namespace ElementalPhenix.Rendering
                 SetFinish(glow * (0.22f * pulse * amount), look.VertexEmission * 0.8f, 1.4f * amount, 0.85f, 0.3f, rim, 0.5f + 0.8f * amount);
                 _featherMaterial.SetColor(MaterialLibrary.BaseColor, phoenix ? look.Feather : Palette.GoldBird.Body);
 
-                _sparkleAccumulator += SparkleRate * amount * deltaTime;
+                // Les phénix ont l'aura de leur élément ; les petits éclats restent pour l'oiseau doré.
+                if (!phoenix) _sparkleAccumulator += SparkleRate * amount * deltaTime;
                 while (_sparkleAccumulator >= 1f)
                 {
                     _sparkleAccumulator -= 1f;
@@ -517,8 +526,16 @@ namespace ElementalPhenix.Rendering
             else
             {
                 _sparkleAccumulator = 0f;
+                var look = _looks[_skin];
+                float pulse = _aura.GlowPulse(time);
+                foreach (var m in _plumage)
+                {
+                    m.SetColor(MaterialLibrary.EmissionColor, look.Emission * pulse);
+                    m.SetFloat(MaterialLibrary.VertexEmission, look.VertexEmission * pulse);
+                }
             }
             UpdateSparkles(deltaTime);
+            _aura.Update(_root.position, _root.localScale.x, golden ? amount : 0f, _auraActive, deltaTime, time);
         }
 
         void SetFinish(Color emission, float vertexEmission, float glitter, float smoothness, float metallic, Color rimColor, float rim)
@@ -583,6 +600,7 @@ namespace ElementalPhenix.Rendering
                 p.Transform.position = origin + Random.insideUnitSphere * 0.03f;
                 p.Transform.gameObject.SetActive(true);
             }
+            _aura.Burst(_root.position, _root.localScale.x);
         }
 
         public void OnHit()
@@ -635,6 +653,7 @@ namespace ElementalPhenix.Rendering
             _nearWing.localRotation = Quaternion.Euler(angle, 0f, 0f);
             _farWing.localRotation = Quaternion.Euler(-angle, 0f, 0f);
             bool flapping = sim.State != GameState.Dying && (sim.State != GameState.Over || sim.StageCleared);
+            _auraActive = flapping;
             _wingMaterial.SetFloat(MaterialLibrary.BendAmount, flapping ? 2.5f * look.WingBend * Mathf.Sin(phase * Mathf.PI * 2f) : 0f);
             // La queue ondule à contretemps des ailes.
             _tail.localRotation = Quaternion.Euler(0f, 0f, TailSway * Mathf.Sin(phase * Mathf.PI * 2f + 1.2f));

@@ -98,6 +98,17 @@ namespace ElementalPhenix.Rendering
             Phoenix,
         }
 
+        /// <summary>Élément d'un phénix : choisit son aura (<see cref="ElementAuraView"/>) et le rythme de sa lueur.</summary>
+        public enum Element
+        {
+            None,
+            Fire,
+            Ice,
+            Wind,
+            Light,
+            Shadow,
+        }
+
         /// <summary>Apparence d'un oiseau du catalogue : couleurs, accessoire et finition du plumage.</summary>
         public struct SkinLook
         {
@@ -121,6 +132,7 @@ namespace ElementalPhenix.Rendering
             public Color Feather;
             /// <summary>Plumage si <see cref="Shape"/> vaut <see cref="BodyShape.Phoenix"/>.</summary>
             public PhoenixColors Phoenix;
+            public Element Element;
         }
 
         static SkinLook Look(string body, string belly, string shade, Accessory accessory = Accessory.None)
@@ -196,29 +208,47 @@ namespace ElementalPhenix.Rendering
         {
             switch (id)
             {
-                case "blue": // Eau : armure argent, flammes bleues, gemmes azur.
-                    return PhoenixLook(Plumage("#0A1638", "#2E6BFF", "#B9C3D2", "#EEF3FA", "#1F5BFF", "#4FB4FF",
-                        "#BFEFFF", "#3FA9FF", "#E6F7FF", "#3A3AD8"), "#7FD4FF", "#2E7BFF");
-                case "mint": // Vent : armure argent doré, flammes or et ambre, gemmes vertes.
-                    return PhoenixLook(Plumage("#1A1006", "#E89A1A", "#C9C2A8", "#F2EBD0", "#FF9F1A", "#FFC83A",
-                        "#FFF2A0", "#3FCF4F", "#D8FFC8", "#FFD23F"), "#FFD23F", "#FFB02E");
+                case "blue": // Eau : armure argent, flammes bleues, gemmes azur ; liseré de givre, plumage lisse et scintillant.
+                {
+                    var look = PhoenixLook(Plumage("#0A1638", "#2E6BFF", "#B9C3D2", "#EEF3FA", "#1F5BFF", "#4FB4FF",
+                        "#BFEFFF", "#3FA9FF", "#E6F7FF", "#3A3AD8"), "#E2FAFF", "#BFEFFF");
+                    look.Element = Element.Ice;
+                    look.RimStrength = 1.25f;
+                    look.Smoothness = 0.92f;
+                    look.Glitter = 0.5f;
+                    return look;
+                }
+                case "mint": // Vent : armure argent doré, flammes or et ambre, gemmes vertes ; liseré vert d'eau.
+                {
+                    var look = PhoenixLook(Plumage("#1A1006", "#E89A1A", "#C9C2A8", "#F2EBD0", "#FF9F1A", "#FFC83A",
+                        "#FFF2A0", "#3FCF4F", "#D8FFC8", "#FFD23F"), "#C8FFE0", "#FFB02E");
+                    look.Element = Element.Wind;
+                    return look;
+                }
                 case "streak": // Lumière : armure d'or, plumes blanches, voiles nacrés, gemmes turquoise.
                 {
                     var look = PhoenixLook(Plumage("#E8E6F0", "#FFFFFF", "#D9A441", "#F7E3A0", "#FFFFFF", "#CFFFF4",
-                        "#FFF6C8", "#33E0D0", "#E6FFFB", "#7FF0E0"), "#CFFFF4", "#FFFFFF");
+                        "#FFF6C8", "#33E0D0", "#E6FFFB", "#7FF0E0"), "#FFF6C8", "#FFFFFF");
+                    look.Element = Element.Light;
                     look.Glitter = 0.6f;
                     look.VertexEmission = 1f;
+                    look.Emission = Hex("#FFE9A0") * 0.08f;
                     return look;
                 }
                 case "ninja": // Ténèbres : armure acier sombre, flammes violettes, gemmes roses.
                 {
                     var look = PhoenixLook(Plumage("#0C0612", "#7A2BD8", "#3A3946", "#B8B8C8", "#8A2BFF", "#C040FF",
                         "#F08CFF", "#FF4FD8", "#FFD0F4", "#E040C8"), "#C86BFF", "#8A2BFF");
+                    look.Element = Element.Shadow;
                     look.Emission = Hex("#5A1A9A") * 0.12f;
                     return look;
                 }
                 default: // Feu (phénix de départ) : armure d'or, flammes rouges et orangées, gemmes rubis.
-                    return PhoenixLook(Fire, "#FF9A3D", "#FF5A1A");
+                {
+                    var look = PhoenixLook(Fire, "#FF9A3D", "#FF5A1A");
+                    look.Element = Element.Fire;
+                    return look;
+                }
             }
         }
 
