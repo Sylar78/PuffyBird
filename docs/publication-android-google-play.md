@@ -98,7 +98,7 @@ Ensuite, **Run workflow** envoie directement sur la piste choisie (`internal` pa
 Chez LevelPlay, chaque plateforme est une app distincte. Tant que `AdIds` (bloc `UNITY_ANDROID`) est vide, la version Android tourne **sans pub** (et sans écran de consentement). Le code Android est prêt ; il ne manque que les deux identifiants.
 
 1. [Tableau de bord LevelPlay](https://platform.ironsrc.com/) > **Apps** > **Add app** :
-   - Plateforme **Android**, app pas encore publiée : nom `Elemental Phenix`, package `fr.elementalphenix.app` (on pourra lier la fiche Play plus tard).
+   - Plateforme **Android**, app pas encore publiée : nom `Elemental Phenix`, package `fr.puffybird.app` (on pourra lier la fiche Play plus tard).
    - **Coppa** : « Not directed » (13 ans et plus), comme l'app iOS.
    - Copier l'**App Key** (sous le nom de l'app).
 2. **Ad units** > app Android > **Banner** : rafraîchissement **30 s**, comme sur iOS. Copier l'**ID de l'unité**.

@@ -13,6 +13,7 @@ namespace ElementalPhenix
         public bool TryReadBest(out int best)
         {
             best = 0;
+            LegacyPrefs.Migrate();
             if (!PlayerPrefs.HasKey(BestKey)) return true;
             int value = PlayerPrefs.GetInt(BestKey, Unreadable);
             // Clé présente mais d'un autre type : valeur illisible, à ne jamais écraser.
@@ -33,7 +34,11 @@ namespace ElementalPhenix
         {
             get
             {
-                if (!_muted.HasValue) _muted = PlayerPrefs.GetInt(MutedKey, 0) == 1;
+                if (!_muted.HasValue)
+                {
+                    LegacyPrefs.Migrate();
+                    _muted = PlayerPrefs.GetInt(MutedKey, 0) == 1;
+                }
                 return _muted.Value;
             }
             set

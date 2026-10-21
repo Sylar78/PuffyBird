@@ -42,8 +42,8 @@ namespace ElementalPhenix.Core
     public static class Products
     {
         /// <summary>Retrait des bannières publicitaires (non consommable).</summary>
-        public const string NoAds = "fr.elementalphenix.app.noads";
-        public const string SkinPrefix = "fr.elementalphenix.app.skin.";
+        public const string NoAds = "fr.puffybird.app.noads";
+        public const string SkinPrefix = "fr.puffybird.app.skin.";
     }
 
     /// <summary>

@@ -12,12 +12,12 @@ Le jeu affiche un bouton trophée sur l'écran titre (en haut à gauche) et deux
 1. [App Store Connect](https://appstoreconnect.apple.com) > **Apps** > Elemental Phenix > onglet **Services** (ou **Fonctionnalités** selon l'interface) > **Game Center**.
 2. **Classements** > **+** > **Classement classique** :
    - Nom de référence : `Meilleur score`
-   - **ID du classement : `elementalphenix.best`** (exactement, c'est celui du code)
+   - **ID du classement : `puffybird.best`** (exactement, c'est celui du code)
    - Format du score : **Entier**
    - Envoi du score : **Meilleur score**, ordre de tri **Du plus haut au plus bas**
    - Plage de scores : 0 à 9999 (facultatif)
    - Localisation : ajouter **Français** (nom « Meilleur score », format « points ») puis **Anglais** (« Best score », « points »).
-3. Sur la page de la **version** de l'app (onglet Distribution), cocher **Game Center** et ajouter le classement `elementalphenix.best`. Il sera validé avec la prochaine version soumise.
+3. Sur la page de la **version** de l'app (onglet Distribution), cocher **Game Center** et ajouter le classement `puffybird.best`. Il sera validé avec la prochaine version soumise.
 
 Le classement fonctionne tout de suite en TestFlight, avant la validation d'Apple. Au premier tap sur le trophée, Game Center propose de se connecter. Si le joueur a refusé une fois, iOS ne repropose pas la connexion : le bouton ouvre alors les Réglages.
 
@@ -29,7 +29,7 @@ Le classement fonctionne tout de suite en TestFlight, avant la validation d'Appl
 2. **Non, mon jeu n'utilise pas encore les API Google** > nom `Elemental Phenix` > **Créer**.
 3. **Identifiants** > **Ajouter des identifiants** > type **Android** :
    - La console propose de créer un projet Google Cloud et l'**écran de consentement OAuth** : suivre ses liens (type « Externe », nom Elemental Phenix, e-mail d'assistance, puis **Publier**).
-   - Créer un **ID client OAuth** de type Android, nom de package `fr.elementalphenix.app`, empreinte **SHA-1 de la clé de signature de l'appli** : Play Console > **Tester et publier** > **Configuration** > **Intégrité de l'appli** > **Signature de l'appli** > « Certificat de la clé de signature d'application » > SHA-1.
+   - Créer un **ID client OAuth** de type Android, nom de package `fr.puffybird.app`, empreinte **SHA-1 de la clé de signature de l'appli** : Play Console > **Tester et publier** > **Configuration** > **Intégrité de l'appli** > **Signature de l'appli** > « Certificat de la clé de signature d'application » > SHA-1.
    - Ajouter un second identifiant Android avec le SHA-1 du **certificat de la clé d'importation** (même page), pour les builds que vous installez vous-même.
 4. **Classements** > **Créer un classement** : nom `Meilleur score`, format **Numérique**, ordre **Plus élevé = meilleur**. Copier son **ID** (il commence par `CgkI`).
 5. **Testeurs** : ajouter les comptes Google des testeurs (tant que la configuration n'est pas publiée, seuls eux voient le classement).
@@ -52,15 +52,15 @@ Les 9 succès, leurs conditions et les icônes prêtes à envoyer (512 × 512, d
 
 | ID Game Center | Icône | Titre (FR / EN) | Condition | Points |
 |---|---|---|---|---|
-| `elementalphenix.ach.score10` | `score10.png` | Médaille de bronze / Bronze medal | 10 points dans une partie | 10 |
-| `elementalphenix.ach.score20` | `score20.png` | Médaille d'argent / Silver medal | 20 points dans une partie | 20 |
-| `elementalphenix.ach.score30` | `score30.png` | Médaille d'or / Gold medal | 30 points dans une partie | 30 |
-| `elementalphenix.ach.score40` | `score40.png` | Médaille de platine / Platinum medal | 40 points dans une partie | 50 |
-| `elementalphenix.ach.star` | `star.png` | Étoile filante / Shooting star | Attraper une étoile de vitesse | 10 |
-| `elementalphenix.ach.closecalls` | `closecalls.png` | Sang-froid / Cool nerves | Frôler 5 tuyaux dans une même partie | 20 |
-| `elementalphenix.ach.streak7` | `streak7.png` | Une semaine de vol / A week in flight | Jouer 7 jours de suite | 20 |
-| `elementalphenix.ach.streak30` | `streak30.png` | Phénix éternel / Eternal phoenix | Jouer 30 jours de suite (débloque aussi le phénix LUMIÈRE) | 50 |
-| `elementalphenix.ach.daily` | `daily.png` | Défi relevé / Challenge accepted | Lancer le défi du jour | 10 |
+| `puffybird.ach.score10` | `score10.png` | Médaille de bronze / Bronze medal | 10 points dans une partie | 10 |
+| `puffybird.ach.score20` | `score20.png` | Médaille d'argent / Silver medal | 20 points dans une partie | 20 |
+| `puffybird.ach.score30` | `score30.png` | Médaille d'or / Gold medal | 30 points dans une partie | 30 |
+| `puffybird.ach.score40` | `score40.png` | Médaille de platine / Platinum medal | 40 points dans une partie | 50 |
+| `puffybird.ach.star` | `star.png` | Étoile filante / Shooting star | Attraper une étoile de vitesse | 10 |
+| `puffybird.ach.closecalls` | `closecalls.png` | Sang-froid / Cool nerves | Frôler 5 tuyaux dans une même partie | 20 |
+| `puffybird.ach.streak7` | `streak7.png` | Une semaine de vol / A week in flight | Jouer 7 jours de suite | 20 |
+| `puffybird.ach.streak30` | `streak30.png` | Phénix éternel / Eternal phoenix | Jouer 30 jours de suite (débloque aussi le phénix LUMIÈRE) | 50 |
+| `puffybird.ach.daily` | `daily.png` | Défi relevé / Challenge accepted | Lancer le défi du jour | 10 |
 
 Total : 200 points (Apple en accepte 1000 par app). Aucun n'est « caché ».
 

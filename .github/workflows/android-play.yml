@@ -27,7 +27,7 @@ concurrency:
 env:
   # Même version que l'éditeur utilisé en local et que le workflow iOS.
   UNITY_VERSION: 6000.6.3f1
-  PACKAGE_NAME: fr.elementalphenix.app
+  PACKAGE_NAME: fr.puffybird.app
 
 jobs:
   unity:

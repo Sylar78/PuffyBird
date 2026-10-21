@@ -23,7 +23,7 @@ namespace ElementalPhenix.Editor
         const string PipelinePath = SettingsFolder + "/ElementalPhenix_URP.asset";
         const string RendererPath = SettingsFolder + "/ElementalPhenix_Renderer.asset";
         const string PostProcessDataPath = "Packages/com.unity.render-pipelines.universal/Runtime/Data/PostProcessData.asset";
-        const string BundleId = "fr.elementalphenix.app";
+        const string BundleId = "fr.puffybird.app";
         /// <summary>Icône générée par tools/icon/make_icon.py (1024 px, sans alpha).</summary>
         public const string IconPath = "Assets/ElementalPhenix/Icons/AppIcon.png";
 

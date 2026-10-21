@@ -41,6 +41,7 @@ namespace ElementalPhenix.Monetization
 
         UnityIapStore()
         {
+            LegacyPrefs.Migrate();
             foreach (string id in PlayerPrefs.GetString(OwnedKey, "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 _owned.Add(id);

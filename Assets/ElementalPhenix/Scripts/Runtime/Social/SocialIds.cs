@@ -9,7 +9,7 @@ namespace ElementalPhenix.Social
     public static class SocialIds
     {
         /// <summary>ID du classement Game Center, à créer à l'identique dans App Store Connect.</summary>
-        public const string GameCenterLeaderboard = "elementalphenix.best";
+        public const string GameCenterLeaderboard = "puffybird.best";
 
         /// <summary>
         /// ID du projet Play Games Services (nombre de la Play Console, « Configuration des services
@@ -23,8 +23,8 @@ namespace ElementalPhenix.Social
         /// <summary>Lien ajouté au message de partage du score.</summary>
         public const string ShareUrl = "https://sylar78.github.io/puffybird-site/";
 
-        /// <summary>Préfixe des succès Game Center : <c>elementalphenix.ach.</c> + <see cref="AchievementTracker.Key"/>, à créer à l'identique dans App Store Connect.</summary>
-        public const string GameCenterAchievementPrefix = "elementalphenix.ach.";
+        /// <summary>Préfixe des succès Game Center : <c>puffybird.ach.</c> + <see cref="AchievementTracker.Key"/>, à créer à l'identique dans App Store Connect.</summary>
+        public const string GameCenterAchievementPrefix = "puffybird.ach.";
 
         /// <summary>
         /// IDs des succès Play Games (de la forme <c>CgkI…</c>), dans l'ordre de l'énumération

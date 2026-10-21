@@ -49,6 +49,7 @@ namespace ElementalPhenix
 
         public GamePrefs()
         {
+            LegacyPrefs.Migrate();
             _haptics = PlayerPrefs.GetInt(HapticsKey, 1) == 1;
             _music = PlayerPrefs.GetInt(MusicKey, 1) == 1;
             _quality = PlayerPrefs.GetInt(QualityKey, -1);

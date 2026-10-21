@@ -79,7 +79,7 @@ namespace ElementalPhenix.Core
             if (days >= cfg.StreakDaysForSkin) Unlock(Achievement.Streak30);
         }
 
-        /// <summary>Clé stable du succès, base des identifiants Game Center (<c>elementalphenix.ach.&lt;clé&gt;</c>).</summary>
+        /// <summary>Clé stable du succès, base des identifiants Game Center (<c>puffybird.ach.&lt;clé&gt;</c>).</summary>
         public static string Key(Achievement a)
         {
             switch (a)

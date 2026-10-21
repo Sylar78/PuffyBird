@@ -81,7 +81,7 @@ namespace ElementalPhenix.Tests
         public void PaidSkinsNeedTheirPurchaseOnly()
         {
             var ninja = Skins.Get(Skins.IndexOf("ninja"));
-            Assert.AreEqual("fr.elementalphenix.app.skin.ninja", ninja.ProductId);
+            Assert.AreEqual("fr.puffybird.app.skin.ninja", ninja.ProductId);
             Assert.IsFalse(Skins.IsUnlocked(ninja, 999, _cfg, false));
             Assert.IsTrue(Skins.IsUnlocked(ninja, 0, _cfg, true));
             Assert.IsNull(Skins.Get(0).ProductId);

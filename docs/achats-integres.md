@@ -4,8 +4,8 @@ Tout est **non consommable** (acheté une fois, gardé pour toujours, restauré 
 
 | ID du produit (identique sur les deux stores) | Contenu | Prix conseillé |
 |---|---|---|
-| `fr.elementalphenix.app.noads` | Retire la bannière publicitaire | 1,99 € |
-| `fr.elementalphenix.app.skin.ninja` | Phénix TÉNÈBRES (armure sombre, flammes violettes) | 0,99 € |
+| `fr.puffybird.app.noads` | Retire la bannière publicitaire | 1,99 € |
+| `fr.puffybird.app.skin.ninja` | Phénix TÉNÈBRES (armure sombre, flammes violettes) | 0,99 € |
 
 L'identifiant du produit date du premier oiseau payant (ninja) : il reste tel quel. Les produits `skin.robot` et `skin.galaxy` des anciens oiseaux ne sont plus utilisés : ne pas les créer (ou les retirer de la vente s'ils existent déjà).
 
