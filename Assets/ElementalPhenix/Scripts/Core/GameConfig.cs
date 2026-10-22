@@ -132,15 +132,15 @@ namespace ElementalPhenix.Core
         /// </summary>
         public JourneyStage[] Journey =
         {
-            new JourneyStage(Theme.Day, 10),
-            new JourneyStage(Theme.Night, 12) { StarChance = 0.45f, StarFirstPair = 1 },
-            new JourneyStage(Theme.City, 12) { MovingPipesFromScore = 0, MovingPipeChance = 0.6f },
-            new JourneyStage(Theme.Japan, 15) { SinglePipeFromPair = 2, SinglePipeChance = 0.35f },
-            new JourneyStage(Theme.Storm, 15) { GustAcceleration = 260f, GustPeriod = 2.4f },
-            new JourneyStage(Theme.Snow, 15) { GravityScale = 1.18f },
-            new JourneyStage(Theme.Jungle, 18) { ScrollScale = 1.15f },
-            new JourneyStage(Theme.Sky, 18) { GravityScale = 0.75f, FlapScale = 0.85f, MaxFallScale = 0.8f },
-            new JourneyStage(Theme.Ocean, 20) { GravityScale = 0.6f, FlapScale = 0.75f, MaxFallScale = 0.6f, ScrollScale = 0.85f },
+            new JourneyStage(Theme.Day, 10, StageRule.FirstFlight),
+            new JourneyStage(Theme.Night, 12, StageRule.MoreStars) { StarChance = 0.45f, StarFirstPair = 1 },
+            new JourneyStage(Theme.City, 12, StageRule.DenseTraffic) { SpacingScale = 0.8f, GapScale = 1.1f },
+            new JourneyStage(Theme.Japan, 15, StageRule.NarrowGates) { GapScale = 0.86f, SpacingScale = 1.2f },
+            new JourneyStage(Theme.Storm, 15, StageRule.Gusts) { GustAcceleration = 260f, GustPeriod = 2.4f },
+            new JourneyStage(Theme.Snow, 15, StageRule.FrozenWings) { GravityScale = 1.18f },
+            new JourneyStage(Theme.Jungle, 18, StageRule.WildRush) { ScrollScale = 1.15f },
+            new JourneyStage(Theme.Sky, 18, StageRule.LightAir) { GravityScale = 0.75f, FlapScale = 0.85f, MaxFallScale = 0.8f },
+            new JourneyStage(Theme.Ocean, 20, StageRule.SlowSwim) { GravityScale = 0.6f, FlapScale = 0.75f, MaxFallScale = 0.6f, ScrollScale = 0.85f },
         };
         public float JourneyClearTime = 1.5f;
         /// <summary>Rappel de l'oiseau vers sa hauteur de départ pendant le vol de fin d'étape (1/s).</summary>
@@ -161,6 +161,8 @@ namespace ElementalPhenix.Core
             c.MaxRiseSpeed = MaxRiseSpeed * stage.FlapScale;
             c.MaxFallSpeed = MaxFallSpeed * stage.MaxFallScale;
             c.ScrollSpeed = ScrollSpeed * stage.ScrollScale;
+            c.PipeGap = PipeGap * stage.GapScale;
+            c.PipeSpacing = PipeSpacing * stage.SpacingScale;
             c.GustAcceleration = stage.GustAcceleration;
             c.GustPeriod = stage.GustPeriod;
             if (stage.StarChance >= 0f) c.StarChance = stage.StarChance;

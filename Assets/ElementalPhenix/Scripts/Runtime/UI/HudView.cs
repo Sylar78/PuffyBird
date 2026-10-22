@@ -146,7 +146,7 @@ namespace ElementalPhenix.UI
                 int n = i + 1;
                 string name = StageName(stage.Theme);
                 _stageNames[i] = Text(Lang.T($"ÉTAPE {n} : {name}", $"STAGE {n}: {name}", $"ETAPA {n}: {name}", $"ETAPPE {n}: {name}", $"ETAPA {n}: {name}"), TextAlign.Center, Palette.GetReady, outline);
-                _stageRules[i] = Text(StageRule(stage.Theme), TextAlign.Center, Color.white, outline);
+                _stageRules[i] = Text(RuleName(stage.Rule), TextAlign.Center, Color.white, outline);
                 int goal = stage.Goal;
                 _stageGoals[i] = Text(Lang.T($"OBJECTIF : {goal}", $"GOAL: {goal}", $"OBJETIVO: {goal}", $"ZIEL: {goal}", $"OBJETIVO: {goal}"), TextAlign.Center, Color.white, outline);
             }
@@ -175,18 +175,18 @@ namespace ElementalPhenix.UI
         }
 
         /// <summary>Règle d'une étape du Voyage, en quelques mots (voir <see cref="GameConfig.Journey"/>).</summary>
-        static string StageRule(Theme theme)
+        static string RuleName(StageRule rule)
         {
-            switch (theme)
+            switch (rule)
             {
-                case Theme.Night: return Lang.T("PLUS D'ÉTOILES", "MORE STARS", "MÁS ESTRELLAS", "MEHR STERNE", "MAIS ESTRELAS");
-                case Theme.City: return Lang.T("TOURS MOBILES", "MOVING TOWERS", "TORRES MÓVILES", "BEWEGTE TÜRME", "TORRES MÓVEIS");
-                case Theme.Japan: return Lang.T("PILIERS SEULS", "LONE PILLARS", "PILARES SOLOS", "EINZELNE SÄULEN", "PILARES SOLITÁRIOS");
-                case Theme.Storm: return Lang.T("RAFALES DE VENT", "WIND GUSTS", "RÁFAGAS DE VIENTO", "WINDBÖEN", "RAJADAS DE VENTO");
-                case Theme.Snow: return Lang.T("AILES GELÉES", "FROZEN WINGS", "ALAS HELADAS", "GEFRORENE FLÜGEL", "ASAS CONGELADAS");
-                case Theme.Jungle: return Lang.T("COURSE FOLLE", "WILD RUSH", "CARRERA LOCA", "WILDE JAGD", "CORRIDA LOUCA");
-                case Theme.Sky: return Lang.T("AIR LÉGER", "LIGHT AIR", "AIRE LIGERO", "LEICHTE LUFT", "AR LEVE");
-                case Theme.Ocean: return Lang.T("NAGE AU RALENTI", "SLOW SWIM", "NADO LENTO", "LANGSAM SCHWIMMEN", "NADO LENTO");
+                case StageRule.MoreStars: return Lang.T("PLUS D'ÉTOILES", "MORE STARS", "MÁS ESTRELLAS", "MEHR STERNE", "MAIS ESTRELAS");
+                case StageRule.DenseTraffic: return Lang.T("TRAFIC DENSE", "HEAVY TRAFFIC", "TRÁFICO DENSO", "DICHTER VERKEHR", "TRÂNSITO INTENSO");
+                case StageRule.NarrowGates: return Lang.T("PORTES ÉTROITES", "NARROW GATES", "PUERTAS ESTRECHAS", "ENGE TORE", "PORTAS ESTREITAS");
+                case StageRule.Gusts: return Lang.T("RAFALES DE VENT", "WIND GUSTS", "RÁFAGAS DE VIENTO", "WINDBÖEN", "RAJADAS DE VENTO");
+                case StageRule.FrozenWings: return Lang.T("AILES GELÉES", "FROZEN WINGS", "ALAS HELADAS", "GEFRORENE FLÜGEL", "ASAS CONGELADAS");
+                case StageRule.WildRush: return Lang.T("COURSE FOLLE", "WILD RUSH", "CARRERA LOCA", "WILDE JAGD", "CORRIDA LOUCA");
+                case StageRule.LightAir: return Lang.T("AIR LÉGER", "LIGHT AIR", "AIRE LIGERO", "LEICHTE LUFT", "AR LEVE");
+                case StageRule.SlowSwim: return Lang.T("NAGE AU RALENTI", "SLOW SWIM", "NADO LENTO", "LANGSAM SCHWIMMEN", "NADO LENTO");
                 default: return Lang.T("PREMIER ENVOL", "FIRST FLIGHT", "PRIMER VUELO", "ERSTER FLUG", "PRIMEIRO VOO");
             }
         }
@@ -326,10 +326,12 @@ namespace ElementalPhenix.UI
                 else
                 {
                     Hide(_stageNames[i]);
-                    Hide(_stageRules[i]);
                     bool goalInGame = i == journeyStage && !menuOpen && (state == GameState.Playing || state == GameState.Paused);
                     if (goalInGame) Place(_stageGoals[i], 144f, safeTopPx + _cfg.ScoreTopMargin + 36f, 1.3f);
                     else Hide(_stageGoals[i]);
+                    // Rappel de la règle sous l'objectif, pour savoir ce qui change pendant l'étape.
+                    if (goalInGame && _cfg.Journey[i].Rule != StageRule.FirstFlight) Place(_stageRules[i], 144f, safeTopPx + _cfg.ScoreTopMargin + 48f, 1.1f, maxWidth: 200f);
+                    else Hide(_stageRules[i]);
                 }
             }
 

@@ -72,6 +72,27 @@ namespace ElementalPhenix.Tests
         }
 
         [Test]
+        public void TrafficTightensSpacingAndGatesNarrowTheOpening()
+        {
+            var city = _cfg.ForStage(System.Array.FindIndex(_cfg.Journey, s => s.Rule == StageRule.DenseTraffic));
+            Assert.Less(city.PipeSpacing, _cfg.PipeSpacing);
+            Assert.Greater(city.PipeGap, _cfg.PipeGap);
+            var gates = _cfg.ForStage(System.Array.FindIndex(_cfg.Journey, s => s.Rule == StageRule.NarrowGates));
+            Assert.Less(gates.PipeGap, _cfg.PipeGap);
+            Assert.Greater(gates.PipeSpacing, _cfg.PipeSpacing);
+            // Ni tours mobiles ni tuyaux seuls de plus que dans le mode classique.
+            Assert.AreEqual(_cfg.MovingPipesFromScore, city.MovingPipesFromScore);
+            Assert.AreEqual(_cfg.SinglePipeChance, gates.SinglePipeChance);
+        }
+
+        [Test]
+        public void EachStageHasItsOwnRule()
+        {
+            for (int r = 0; r < System.Enum.GetValues(typeof(StageRule)).Length; r++)
+                Assert.AreEqual(1, System.Array.FindAll(_cfg.Journey, s => s.Rule == (StageRule)r).Length, ((StageRule)r).ToString());
+        }
+
+        [Test]
         public void GustsPushTheBirdUpAndDown()
         {
             var storm = _cfg.ForStage(System.Array.FindIndex(_cfg.Journey, s => s.Theme == Theme.Storm));

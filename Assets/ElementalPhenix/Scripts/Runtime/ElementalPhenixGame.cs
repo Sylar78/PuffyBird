@@ -43,6 +43,7 @@ namespace ElementalPhenix
         StarView _stars;
         BirdView _bird;
         BoostTrailView _trail;
+        StageFxView _stageFx;
         UiLayer _ui;
         HudView _hud;
         MenuView _menu;
@@ -112,6 +113,7 @@ namespace ElementalPhenix
             _stars = new StarView(world, materials, _space, _sim.Stars.Capacity);
             _bird = new BirdView(world, materials, _space);
             _trail = new BoostTrailView(world, materials, _space);
+            _stageFx = new StageFxView(world, materials, _space);
             _ui = new UiLayer(world, materials, _space);
             _hud = new HudView(_ui, materials);
             _menu = new MenuView(_ui);
@@ -495,9 +497,13 @@ namespace ElementalPhenix
             _sfx.Muted = _sim.Muted;
         }
 
+        /// <summary>Règle de l'étape du Voyage en cours, dont les effets sont montrés (aucune hors Voyage).</summary>
+        StageRule StageRuleShown => _sim.IsJourney ? _cfg.Journey[_sim.JourneyStage].Rule : StageRule.FirstFlight;
+
         void React(GameEvents events)
         {
             _sfx.Play(events);
+            if ((events & GameEvents.Flap) != 0) _stageFx.OnFlap(_bird.Position);
             if ((events & GameEvents.RunStarted) != 0)
             {
                 _nearMissesThisRun = 0;
@@ -607,7 +613,7 @@ namespace ElementalPhenix
             float lightning = _weather.Flash * (ReduceFlash ? 0.2f : 1f);
             _scenery.SetFlash(lightning);
             _lighting.SetFlash(lightning);
-            _pipes.Update(_sim.Pipes, alpha, dt);
+            _pipes.Update(_sim.Pipes, _sim.Config.PipeGap, alpha, dt);
             _stars.Update(_sim.Stars, alpha, _realTime);
             int skin = DisplayedSkin();
             if (skin != _shownSkin)
@@ -620,6 +626,7 @@ namespace ElementalPhenix
             _bird.Update(_sim, alpha, dt);
             _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
+            _stageFx.Update(_sim, StageRuleShown, _bird.Position, dt);
             _ui.BeginFrame();
             bool menuCoversTitle = _menu.Screen == MenuScreen.Settings || _menu.Screen == MenuScreen.Consent;
             _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx, _menu.IsOpen, menuCoversTitle);

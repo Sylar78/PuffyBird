@@ -156,7 +156,8 @@ namespace ElementalPhenix.Rendering
             if (pair.Id == pipeId) pair.Wobble = WobbleDuration;
         }
 
-        public void Update(PipeField pipes, float alpha, float deltaTime)
+        /// <param name="pipeGap">Ouverture de la partie en cours (elle change selon l'étape du Voyage).</param>
+        public void Update(PipeField pipes, float pipeGap, float alpha, float deltaTime)
         {
             for (int i = 0; i < _pairs.Length; i++) _pairs[i].Id = -1;
 
@@ -172,7 +173,7 @@ namespace ElementalPhenix.Rendering
                 // Paires mobiles : les deux tuyaux se décalent ensemble, l'ouverture garde sa hauteur.
                 float gapTop = p.BaseTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha);
                 float gapTopY = _space.Y(gapTop);
-                float gapBottomY = _space.Y(gapTop + _cfg.PipeGap);
+                float gapBottomY = _space.Y(gapTop + pipeGap);
                 pair.Root.transform.localPosition = new Vector3(_space.X(x), 0f, 0f);
 
                 // Bas : du fond du sol jusqu'au bas de l'ouverture, chapeau en haut.
