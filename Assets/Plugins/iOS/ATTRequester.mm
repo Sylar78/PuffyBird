@@ -1,4 +1,4 @@
-// Pont natif App Tracking Transparency pour PuffyBird.Monetization.TrackingAuthorization.
+// Pont natif App Tracking Transparency pour ElementalPhenix.Monetization.TrackingAuthorization.
 #import <AppTrackingTransparency/AppTrackingTransparency.h>
 
 typedef void (*ATTCallback)(int status);

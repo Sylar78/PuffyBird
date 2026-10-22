@@ -78,8 +78,8 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           targetPlatform: iOS
-          buildName: PuffyBird
-          buildMethod: PuffyBird.Editor.BuildScript.BuildIOS
+          buildName: ElementalPhenix
+          buildMethod: ElementalPhenix.Editor.BuildScript.BuildIOS
           versioning: None
           customParameters: -buildNumber ${{ github.run_number }} -appleTeamId ${{ secrets.APPLE_TEAM_ID }}
 
@@ -98,8 +98,8 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           targetPlatform: iOS
-          buildName: PuffyBird
-          buildMethod: PuffyBird.Editor.BuildScript.BuildIOS
+          buildName: ElementalPhenix
+          buildMethod: ElementalPhenix.Editor.BuildScript.BuildIOS
           versioning: None
           customParameters: -buildNumber ${{ github.run_number }} -appleTeamId ${{ secrets.APPLE_TEAM_ID }}
 
@@ -113,7 +113,7 @@ jobs:
 
       # Archive tar : conserve les droits d'exécution des scripts du projet Xcode.
       - name: Empaqueter le projet Xcode
-        run: sudo tar -czf xcode-project.tgz -C build/iOS PuffyBird
+        run: sudo tar -czf xcode-project.tgz -C build/iOS ElementalPhenix
 
       - uses: actions/upload-artifact@v4
         with:
@@ -165,14 +165,14 @@ jobs:
           SEGMENT_DOWNLOAD_TIMEOUT_MINS: 3
         with:
           path: |
-            build/PuffyBird/Pods
-            build/PuffyBird/Podfile.lock
+            build/ElementalPhenix/Pods
+            build/ElementalPhenix/Podfile.lock
             ~/Library/Caches/CocoaPods
-          key: pods-v3-${{ hashFiles('build/PuffyBird/Podfile') }}
+          key: pods-v3-${{ hashFiles('build/ElementalPhenix/Podfile') }}
           restore-keys: pods-v3-
 
       - name: Pods CocoaPods (SDK pub)
-        working-directory: build/PuffyBird
+        working-directory: build/ElementalPhenix
         run: |
           if [ -f Podfile ]; then
             # Sans mise à jour de l'index d'abord (rapide avec le cache), avec sinon.
@@ -183,17 +183,17 @@ jobs:
 
       - name: Archive
         run: |
-          if [ -d build/PuffyBird/Unity-iPhone.xcworkspace ]; then
-            PROJECT_ARGS=(-workspace build/PuffyBird/Unity-iPhone.xcworkspace)
+          if [ -d build/ElementalPhenix/Unity-iPhone.xcworkspace ]; then
+            PROJECT_ARGS=(-workspace build/ElementalPhenix/Unity-iPhone.xcworkspace)
           else
-            PROJECT_ARGS=(-project build/PuffyBird/Unity-iPhone.xcodeproj)
+            PROJECT_ARGS=(-project build/ElementalPhenix/Unity-iPhone.xcodeproj)
           fi
           xcodebuild archive \
             "${PROJECT_ARGS[@]}" \
             -scheme Unity-iPhone \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/PuffyBird.xcarchive" \
+            -archivePath "$RUNNER_TEMP/ElementalPhenix.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -207,7 +207,7 @@ jobs:
         run: |
           sed "s/__TEAM_ID__/${TEAM_ID}/" ci/ios/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
           xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/PuffyBird.xcarchive" \
+            -archivePath "$RUNNER_TEMP/ElementalPhenix.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \

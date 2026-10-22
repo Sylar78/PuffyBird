@@ -1,4 +1,4 @@
-# Publier PuffyBird sur TestFlight (iOS)
+# Publier Elemental Phenix sur TestFlight (iOS)
 
 Le build iOS tourne entièrement sur GitHub : aucun Mac n'est nécessaire. Le workflow
 `.github/workflows/ios-testflight.yml` fait trois choses :
@@ -19,10 +19,10 @@ Le build iOS tourne entièrement sur GitHub : aucun Mac n'est nécessaire. Le wo
 - Dans [Certificates, Identifiers & Profiles > Identifiers](https://developer.apple.com/account/resources/identifiers/list), cliquer sur **+**, choisir *App IDs* puis *App*, et saisir l'identifiant explicite `fr.puffybird.app`. Aucune capacité particulière n'est à cocher.
 - Dans [App Store Connect > Apps](https://appstoreconnect.apple.com/apps), cliquer sur **+ > Nouvelle app** :
   - plateforme iOS ;
-  - nom : PuffyBird (il doit être libre sur l'App Store, sinon en choisir un autre ; c'est le nom affiché, pas l'identifiant) ;
+  - nom : Elemental Phenix (il doit être libre sur l'App Store, sinon en choisir un autre ; c'est le nom affiché, pas l'identifiant) ;
   - langue principale : français ;
   - identifiant de lot : `fr.puffybird.app` ;
-  - SKU : `puffybird`.
+  - SKU : `elementalphenix`.
 
 ### 3. Clé API App Store Connect
 

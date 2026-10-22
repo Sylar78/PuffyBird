@@ -96,11 +96,11 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           targetPlatform: Android
-          buildName: PuffyBird
-          buildMethod: PuffyBird.Editor.BuildScript.BuildAndroid
+          buildName: ElementalPhenix
+          buildMethod: ElementalPhenix.Editor.BuildScript.BuildAndroid
           versioning: None
           androidExportType: androidAppBundle
-          androidKeystoreName: puffybird-upload.keystore
+          androidKeystoreName: elementalphenix-upload.keystore
           androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
@@ -122,11 +122,11 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           targetPlatform: Android
-          buildName: PuffyBird
-          buildMethod: PuffyBird.Editor.BuildScript.BuildAndroid
+          buildName: ElementalPhenix
+          buildMethod: ElementalPhenix.Editor.BuildScript.BuildAndroid
           versioning: None
           androidExportType: androidAppBundle
-          androidKeystoreName: puffybird-upload.keystore
+          androidKeystoreName: elementalphenix-upload.keystore
           androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
@@ -146,9 +146,9 @@ jobs:
         run: |
           aab=$(sudo find build/Android -name '*.aab' | head -n 1)
           if [ -z "$aab" ]; then echo "::error::Aucun .aab produit."; exit 1; fi
-          sudo cp "$aab" "PuffyBird-${{ github.run_number }}.aab"
-          sudo chown "$(id -u)" "PuffyBird-${{ github.run_number }}.aab"
-          echo "file=PuffyBird-${{ github.run_number }}.aab" >> "$GITHUB_OUTPUT"
+          sudo cp "$aab" "ElementalPhenix-${{ github.run_number }}.aab"
+          sudo chown "$(id -u)" "ElementalPhenix-${{ github.run_number }}.aab"
+          echo "file=ElementalPhenix-${{ github.run_number }}.aab" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -184,6 +184,6 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ${{ env.PACKAGE_NAME }}
-          releaseFiles: PuffyBird-*.aab
+          releaseFiles: ElementalPhenix-*.aab
           track: ${{ inputs.track }}
           status: ${{ inputs.status }}

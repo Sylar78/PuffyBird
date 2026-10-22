@@ -1,4 +1,4 @@
-// Pont natif Game Center pour PuffyBird.Social.Leaderboard : connexion, envoi du score, succès, classement.
+// Pont natif Game Center pour ElementalPhenix.Social.Leaderboard : connexion, envoi du score, succès, classement.
 #import <GameKit/GameKit.h>
 
 extern UIViewController* UnityGetGLViewController();
@@ -25,7 +25,7 @@ extern "C"
         [GKLocalPlayer localPlayer].authenticateHandler = ^(UIViewController* controller, NSError* error)
         {
             gSignInController = controller;
-            if (error != nil) NSLog(@"PuffyBird : Game Center indisponible (%@)", error.localizedDescription);
+            if (error != nil) NSLog(@"ElementalPhenix : Game Center indisponible (%@)", error.localizedDescription);
         };
     }
 
@@ -40,7 +40,7 @@ extern "C"
         NSString* identifier = [NSString stringWithUTF8String:leaderboard];
         void (^done)(NSError*) = ^(NSError* error)
         {
-            if (error != nil) NSLog(@"PuffyBird : score non envoyé (%@)", error.localizedDescription);
+            if (error != nil) NSLog(@"ElementalPhenix : score non envoyé (%@)", error.localizedDescription);
         };
         if (@available(iOS 14.0, *))
         {
@@ -63,7 +63,7 @@ extern "C"
         entry.showsCompletionBanner = YES;
         [GKAchievement reportAchievements:@[entry] withCompletionHandler:^(NSError* error)
         {
-            if (error != nil) NSLog(@"PuffyBird : succès non envoyé (%@)", error.localizedDescription);
+            if (error != nil) NSLog(@"ElementalPhenix : succès non envoyé (%@)", error.localizedDescription);
         }];
     }
 

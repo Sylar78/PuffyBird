@@ -1,4 +1,4 @@
-# Publier PuffyBird sur l'App Store
+# Publier Elemental Phenix sur l'App Store
 
 Suite de `publication-ios-testflight.md`. Un build envoyé sur TestFlight est déjà dans App Store Connect : c'est ce même build que l'on soumet à Apple, sans rien recompiler. Les libellés de menus d'App Store Connect changent parfois ; se fier aux intitulés proches.
 
@@ -14,7 +14,7 @@ Suite de `publication-ios-testflight.md`. Un build envoyé sur TestFlight est d�
 
 ## 2. Remplir la fiche dans App Store Connect
 
-Dans **Apps > PuffyBird** :
+Dans **Apps > Elemental Phenix** :
 
 1. **Informations sur l'app** : sous-titre (30 caractères), catégorie **Jeux**, sous-catégories **Arcade** et **Occasionnel**, droits sur le contenu (aucun contenu tiers), **classification par âge** (questionnaire : pas de violence réaliste ni de contenu sensible ; la présence de pubs se déclare dans le questionnaire).
 2. **Tarifs et disponibilité** : gratuit, pays de diffusion.

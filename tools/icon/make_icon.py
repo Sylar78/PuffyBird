@@ -9,7 +9,7 @@ import sys
 import zlib
 
 SIZE = 1024
-OUT = sys.argv[1] if len(sys.argv) > 1 else "Assets/PuffyBird/Icons/AppIcon.png"
+OUT = sys.argv[1] if len(sys.argv) > 1 else "Assets/ElementalPhenix/Icons/AppIcon.png"
 
 
 def hex_rgb(h):
