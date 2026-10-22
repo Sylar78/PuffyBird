@@ -69,6 +69,14 @@ namespace ElementalPhenix.Core
         StarShield = 1 << 11,
         /// <summary>Objectif d'une étape du Voyage atteint.</summary>
         StageCleared = 1 << 12,
+        /// <summary>Un éclat d'élément a été ramassé.</summary>
+        Shard = 1 << 13,
+        /// <summary>La jauge de braises est pleine : la prochaine chute sera une renaissance.</summary>
+        EmbersFull = 1 << 14,
+        /// <summary>Le phénix renaît de ses cendres : la partie reprend avec le même score.</summary>
+        Rebirth = 1 << 15,
+        /// <summary>Le gardien du monde apparaît (dernières paires d'une étape du Voyage).</summary>
+        Guardian = 1 << 16,
     }
 
     public static class Medals

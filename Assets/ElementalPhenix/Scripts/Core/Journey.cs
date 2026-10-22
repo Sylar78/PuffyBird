@@ -23,6 +23,17 @@ namespace ElementalPhenix.Core
     /// (physique ou obstacles). Les facteurs valent 1 et les valeurs négatives gardent le réglage du
     /// mode classique. Appliquée par <see cref="GameConfig.ForStage"/>.
     /// </summary>
+    /// <summary>Motif des dernières paires d'une étape, lancées par le gardien du monde.</summary>
+    public enum GuardianPattern
+    {
+        /// <summary>Ouvertures alternativement basses et hautes.</summary>
+        Zigzag,
+        /// <summary>Ouvertures de plus en plus hautes.</summary>
+        Climb,
+        /// <summary>Ouvertures de plus en plus basses.</summary>
+        Dive,
+    }
+
     public sealed class JourneyStage
     {
         public Theme Theme;
@@ -41,6 +52,9 @@ namespace ElementalPhenix.Core
         /// <summary>Rafales : accélération verticale ajoutée à la gravité, en sinusoïde (px/s², y vers le bas).</summary>
         public float GustAcceleration;
         public float GustPeriod = 1f;
+        /// <summary>Part des intervalles avec un courant ascendant (abysses).</summary>
+        public float CurrentChance;
+        public GuardianPattern Guardian;
         public float StarChance = -1f;
         public int StarFirstPair = -1;
         public int MovingPipesFromScore = -1;

@@ -11,8 +11,8 @@ namespace ElementalPhenix.Core
     }
 
     /// <summary>
-    /// Étoiles de vitesse actives, dans un tableau de taille fixe (aucune allocation en jeu).
-    /// Elles défilent avec les tuyaux.
+    /// Objets ponctuels qui défilent avec les tuyaux, dans un tableau de taille fixe (aucune
+    /// allocation en jeu) : étoiles de vitesse, éclats d'élément et courants.
     /// </summary>
     public sealed class StarField
     {
@@ -64,14 +64,16 @@ namespace ElementalPhenix.Core
             for (int i = 0; i < _stars.Length; i++) _stars[i].PrevX = _stars[i].X;
         }
 
-        public void Advance(float dx, GameConfig cfg, float viewMargin)
+        /// <param name="radius">Demi-largeur de l'objet pour sa disparition hors champ (rayon de l'étoile par défaut).</param>
+        public void Advance(float dx, GameConfig cfg, float viewMargin, float radius = -1f)
         {
+            if (radius < 0f) radius = cfg.StarRadius;
             for (int i = 0; i < _stars.Length; i++)
             {
                 ref var s = ref _stars[i];
                 if (!s.Active) continue;
                 s.X -= dx;
-                if (s.X + cfg.StarRadius < -cfg.PipeDespawnMargin - viewMargin) s.Active = false;
+                if (s.X + radius < -cfg.PipeDespawnMargin - viewMargin) s.Active = false;
             }
         }
     }
