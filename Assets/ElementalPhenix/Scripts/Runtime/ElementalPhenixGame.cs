@@ -44,6 +44,15 @@ namespace ElementalPhenix
         BirdView _bird;
         BoostTrailView _trail;
         StageFxView _stageFx;
+        ShardView _shardView;
+        CurrentView _currentView;
+        GuardianView _guardian;
+        WakeTrailView _wake;
+        WakesView _wakes;
+        JourneyMapView _journeyMap;
+        /// <summary>Éclats de la partie déjà comptés, et ceux pas encore enregistrés (enregistrés hors du jeu).</summary>
+        int _seenShards;
+        int _pendingShards;
         UiLayer _ui;
         HudView _hud;
         MenuView _menu;
@@ -114,6 +123,10 @@ namespace ElementalPhenix
             _bird = new BirdView(world, materials, _space);
             _trail = new BoostTrailView(world, materials, _space);
             _stageFx = new StageFxView(world, materials, _space);
+            _shardView = new ShardView(world, materials, _space, _sim.Shards.Capacity);
+            _currentView = new CurrentView(world, materials, _space, _sim.Currents.Capacity);
+            _guardian = new GuardianView(world, materials, _space);
+            _wake = new WakeTrailView(world, materials);
             _ui = new UiLayer(world, materials, _space);
             _hud = new HudView(_ui, materials);
             _menu = new MenuView(_ui);
@@ -121,6 +134,12 @@ namespace ElementalPhenix
             _store = StoreServices.Create();
             _skins = new SkinsView(_ui, _store, !(_store is NoStore), IsSkinUnlocked, () => SelectedSkin, CurrentStreakDays);
             _menu.Skins = _skins;
+            _wakes = new WakesView(_ui, () => _prefs.Shards, () => _prefs.WakesOwned, () => Wakes.IndexOf(_prefs.Wake));
+            _menu.Wakes = _wakes;
+            _journeyMap = new JourneyMapView(_ui);
+            _menu.JourneyMap = _journeyMap;
+            _menu.JourneyCleared = () => Mathf.Min(_prefs.JourneyCleared, _cfg.Journey.Length);
+            _menu.ShardCount = () => _prefs.Shards + _pendingShards;
             if (PrivacyConsentNeeded)
             {
                 _menu.Consent = new ConsentView(_ui);
@@ -220,6 +239,7 @@ namespace ElementalPhenix
             var events = _sim.ConsumeEvents();
             if (_sim.RunId != _shownRun) ApplyRun();
             React(events);
+            BankShards();
             UpdateBanner();
             // Meilleur score envoyé au classement dès qu'il monte (à la mort) et que le joueur est connecté.
             _leaderboard.SubmitBest(_sim.Best);
@@ -283,7 +303,38 @@ namespace ElementalPhenix
                     _sim.StartDaily(DailyChallenge.SeedForDay(Today));
                     break;
                 case UiAction.PlayJourney:
-                    _sim.StartJourney(NextJourneyStage());
+                    _menu.Open(MenuScreen.Journey);
+                    break;
+                case UiAction.MapPlay:
+                    if (JourneyMapView.IsOpen(_journeyMap.Selected, _prefs.JourneyCleared))
+                    {
+                        _menu.Close();
+                        _sim.StartJourney(_journeyMap.Selected);
+                    }
+                    break;
+                case UiAction.OpenWakes:
+                    _menu.Open(MenuScreen.Wakes);
+                    break;
+                case UiAction.WakePrevious:
+                    _wakes.Step(-1);
+                    break;
+                case UiAction.WakeNext:
+                    _wakes.Step(1);
+                    break;
+                case UiAction.WakeUse:
+                    if (Wakes.IsOwned(_wakes.Browsed, _prefs.WakesOwned))
+                    {
+                        _prefs.Wake = Wakes.Get(_wakes.Browsed).Id;
+                        _haptics.Play(HapticKind.Medium);
+                    }
+                    break;
+                case UiAction.WakeUnlock:
+                    if (_prefs.UnlockWake(_wakes.Browsed))
+                    {
+                        _prefs.Wake = Wakes.Get(_wakes.Browsed).Id;
+                        _haptics.Play(HapticKind.Heavy);
+                        _trail.OnMilestone(_bird.Position, Medal.Platinum);
+                    }
                     break;
                 case UiAction.ToggleReduceFlash:
                     _prefs.ReduceFlash = !_prefs.ReduceFlash;
@@ -324,6 +375,17 @@ namespace ElementalPhenix
                     break;
                 case UiAction.ToggleSound:
                     ToggleSound();
+                    break;
+                case UiAction.MapNode0:
+                case UiAction.MapNode1:
+                case UiAction.MapNode2:
+                case UiAction.MapNode3:
+                case UiAction.MapNode4:
+                case UiAction.MapNode5:
+                case UiAction.MapNode6:
+                case UiAction.MapNode7:
+                case UiAction.MapNode8:
+                    _journeyMap.Select(action - UiAction.MapNode0);
                     break;
                 case UiAction.ToggleHaptics:
                     _prefs.Haptics = !_prefs.Haptics;
@@ -491,6 +553,25 @@ namespace ElementalPhenix
         /// <summary>Étape du Voyage proposée sur l'écran titre : la première non réussie, ou la première une fois le Voyage terminé.</summary>
         int NextJourneyStage() => _prefs.JourneyCleared >= _cfg.Journey.Length ? 0 : _prefs.JourneyCleared;
 
+        /// <summary>
+        /// Éclats ramassés : comptés tout de suite, enregistrés dès que le phénix ne vole plus (fin de
+        /// partie, attente du tap) pour ne jamais écrire sur le disque pendant le vol.
+        /// </summary>
+        void BankShards()
+        {
+            int delta = _sim.ShardsThisRun - _seenShards;
+            if (delta > 0)
+            {
+                _pendingShards += delta;
+                _seenShards = _sim.ShardsThisRun;
+            }
+            if (_pendingShards > 0 && _sim.State != GameState.Playing && _sim.State != GameState.Dying)
+            {
+                _prefs.AddShards(_pendingShards);
+                _pendingShards = 0;
+            }
+        }
+
         void ToggleSound()
         {
             _sim.Muted = !_sim.Muted;
@@ -504,6 +585,26 @@ namespace ElementalPhenix
         {
             _sfx.Play(events);
             if ((events & GameEvents.Flap) != 0) _stageFx.OnFlap(_bird.Position);
+            if ((events & GameEvents.Shard) != 0)
+            {
+                _trail.OnNearMiss(_bird.Position);
+                _haptics.Play(HapticKind.Light);
+            }
+            if ((events & GameEvents.EmbersFull) != 0) _haptics.Play(HapticKind.Medium);
+            if ((events & GameEvents.Rebirth) != 0)
+            {
+                _trail.OnMilestone(_bird.Position, Medal.Gold);
+                _trail.OnStar(_bird.Position);
+                _hud.ShowRebirth();
+                _haptics.Play(HapticKind.Heavy);
+                if (!ReduceFlash) _cameraRig.Shake(0.03f, 0.3f);
+            }
+            if ((events & GameEvents.Guardian) != 0)
+            {
+                _hud.ShowGuardian();
+                _haptics.Play(HapticKind.Medium);
+                if (!ReduceFlash) _cameraRig.Shake(0.02f, 0.4f);
+            }
             if ((events & GameEvents.RunStarted) != 0)
             {
                 _nearMissesThisRun = 0;
@@ -588,6 +689,7 @@ namespace ElementalPhenix
         void ApplyRun()
         {
             _shownRun = _sim.RunId;
+            _seenShards = 0;
             _bestAtRunStart = _sim.Best;
             _streakUnlockedThisRun = false;
             var theme = Palette.Theme(_sim.Theme);
@@ -596,6 +698,7 @@ namespace ElementalPhenix
             _weather.ApplyTheme(theme);
             _postFx.ApplyTheme(theme);
             _pipes.SetTheme(_sim.Theme);
+            _guardian.SetTheme(_sim.Theme);
             _cameraRig.Camera.backgroundColor = theme.SkyHorizon;
             _music.SetTheme(_sim.Theme);
         }
@@ -615,6 +718,9 @@ namespace ElementalPhenix
             _lighting.SetFlash(lightning);
             _pipes.Update(_sim.Pipes, _sim.Config.PipeGap, alpha, dt);
             _stars.Update(_sim.Stars, alpha, _realTime);
+            _shardView.Update(_sim.Shards, alpha, _realTime);
+            _currentView.Update(_sim.Currents, alpha, _realTime);
+            _guardian.Update(_sim, dt, _realTime);
             int skin = DisplayedSkin();
             if (skin != _shownSkin)
             {
@@ -622,13 +728,20 @@ namespace ElementalPhenix
                 _bird.SetSkin(skin);
                 _trail.SetSkin(skin);
             }
-            _bird.SetPreview(_menu.Screen == MenuScreen.Skins);
+            bool preview = _menu.Screen == MenuScreen.Skins || _menu.Screen == MenuScreen.Wakes;
+            _bird.SetPreview(preview);
             _bird.Update(_sim, alpha, dt);
             _bird.SetBoost(_sim.State == GameState.Playing ? _sim.BoostAmount : 0f, _realTime, dt);
             _trail.Update(_sim, _bird.Position, dt, _realTime);
             _stageFx.Update(_sim, StageRuleShown, _bird.Position, dt);
+            // Sillage : celui parcouru dans son menu (aperçu), sinon celui choisi, tant que le phénix vole.
+            var state = _sim.State;
+            bool flying = state == GameState.Title || state == GameState.Ready || state == GameState.Playing;
+            _wake.SetWake(_menu.Screen == MenuScreen.Wakes ? _wakes.Browsed : Wakes.IndexOf(_prefs.Wake));
+            float wakeScroll = preview ? 1.4f : (flying ? _sim.Config.ScrollSpeed * _sim.SpeedFactor / WorldSpace.PixelsPerUnit : 0f);
+            _wake.Update(_bird.Position, flying || preview, wakeScroll, dt);
             _ui.BeginFrame();
-            bool menuCoversTitle = _menu.Screen == MenuScreen.Settings || _menu.Screen == MenuScreen.Consent;
+            bool menuCoversTitle = _menu.Screen == MenuScreen.Settings || _menu.Screen == MenuScreen.Consent || _menu.Screen == MenuScreen.Journey;
             _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx, _menu.IsOpen, menuCoversTitle);
             _menu.Update(_sim, _cameraRig.SafeTopPx);
             _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, ReduceFlash);

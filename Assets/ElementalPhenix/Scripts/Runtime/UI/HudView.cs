@@ -77,6 +77,18 @@ namespace ElementalPhenix.UI
         readonly Element _homeTap;
         readonly Element _goalLabel;
         readonly UiLayer.Button _pauseButton;
+        // Éclats ramassés et jauge de braises (renaissance), sous le bouton pause.
+        readonly Element _shardIcon;
+        readonly Number _shardCount;
+        readonly Element _embersBack;
+        readonly Element _embersFill;
+        readonly Element _embersFull;
+        readonly Element _embersLabel;
+        readonly Element _guardianBanner;
+        readonly Element _rebirthBanner;
+        readonly Element _epilogue;
+        float _guardianTime;
+        float _rebirthTime;
 
         Medal _shownMedal = (Medal)(-1);
         Vector2 _sparkleOffset;
@@ -136,6 +148,20 @@ namespace ElementalPhenix.UI
             _pauseTap = Text(Lang.T("TOUCHE POUR REPRENDRE", "TAP TO RESUME", "TOCA PARA SEGUIR", "ZUM FORTSETZEN TIPPEN", "TOQUE PARA CONTINUAR"), TextAlign.Center, Color.white, outline);
             _pauseButton = ui.CreateButton(VoxelFont.PauseIcon, Palette.GameOver, Color.white);
 
+            var shardMesh = new MeshBuilder()
+                .AddCone(Vector3.zero, 0.5f, 0.75f, Palette.Hex("#8FE6FF"), 6)
+                .Append(new MeshBuilder().AddCone(Vector3.zero, 0.5f, 0.75f, Palette.Hex("#B07CFF"), 6), Matrix4x4.Rotate(Quaternion.Euler(180f, 0f, 0f)))
+                .Build("Éclat (interface)");
+            _shardIcon = Create("Éclat", shardMesh, _textMaterial);
+            _shardCount = CreateNumber(TextAlign.Left, 4);
+            _embersBack = Solid(Palette.Outline);
+            _embersFill = Solid(Palette.Hex("#FF7A1A"));
+            _embersFull = Solid(Palette.Hex("#FFD24D"));
+            _embersLabel = Text(Lang.T("RENAISSANCE", "REBIRTH", "RENACER", "WIEDERGEBURT", "RENASCER"), TextAlign.Left, Palette.Hex("#FFD24D"), outline);
+            _guardianBanner = Text(Lang.T("LE GARDIEN APPARAÎT !", "THE GUARDIAN APPEARS!", "¡APARECE EL GUARDIÁN!", "DER WÄCHTER ERSCHEINT!", "O GUARDIÃO APARECE!"), TextAlign.Center, Palette.GameOver, outline);
+            _rebirthBanner = Text(Lang.T("RENAISSANCE !", "REBIRTH!", "¡RENACIMIENTO!", "WIEDERGEBURT!", "RENASCIMENTO!"), TextAlign.Center, Palette.Hex("#FFB02E"), outline);
+            _epilogue = Text(JourneyTexts.Epilogue, TextAlign.Center, Color.white, outline);
+
             int stages = _cfg.Journey.Length;
             _stageNames = new Element[stages];
             _stageRules = new Element[stages];
@@ -144,9 +170,9 @@ namespace ElementalPhenix.UI
             {
                 var stage = _cfg.Journey[i];
                 int n = i + 1;
-                string name = StageName(stage.Theme);
+                string name = JourneyTexts.StageName(stage.Theme);
                 _stageNames[i] = Text(Lang.T($"ÉTAPE {n} : {name}", $"STAGE {n}: {name}", $"ETAPA {n}: {name}", $"ETAPPE {n}: {name}", $"ETAPA {n}: {name}"), TextAlign.Center, Palette.GetReady, outline);
-                _stageRules[i] = Text(RuleName(stage.Rule), TextAlign.Center, Color.white, outline);
+                _stageRules[i] = Text(JourneyTexts.RuleName(stage.Rule), TextAlign.Center, Color.white, outline);
                 int goal = stage.Goal;
                 _stageGoals[i] = Text(Lang.T($"OBJECTIF : {goal}", $"GOAL: {goal}", $"OBJETIVO: {goal}", $"ZIEL: {goal}", $"OBJETIVO: {goal}"), TextAlign.Center, Color.white, outline);
             }
@@ -155,40 +181,6 @@ namespace ElementalPhenix.UI
             _nextStage = Text(Lang.T("TOUCHE : ÉTAPE SUIVANTE", "TAP FOR NEXT STAGE", "TOCA: SIGUIENTE ETAPA", "TIPPEN: NÄCHSTE ETAPPE", "TOQUE: PRÓXIMA ETAPA"), TextAlign.Center, Color.white, outline);
             _homeTap = Text(Lang.T("TOUCHE POUR L'ACCUEIL", "TAP TO GO HOME", "TOCA PARA VOLVER", "TIPPEN ZUM MENÜ", "TOQUE PARA VOLTAR"), TextAlign.Center, Color.white, outline);
             _goalLabel = Text(Lang.T("OBJECTIF", "GOAL", "OBJETIVO", "ZIEL", "OBJETIVO"), TextAlign.Right, Palette.PanelLabel, Palette.Panel);
-        }
-
-        /// <summary>Nom d'une étape du Voyage (son décor).</summary>
-        static string StageName(Theme theme)
-        {
-            switch (theme)
-            {
-                case Theme.Night: return Lang.T("NUIT ÉTOILÉE", "STARRY NIGHT", "NOCHE ESTRELLADA", "STERNENNACHT", "NOITE ESTRELADA");
-                case Theme.City: return Lang.T("VILLE NÉON", "NEON CITY", "CIUDAD NEÓN", "NEONSTADT", "CIDADE NEON");
-                case Theme.Japan: return Lang.T("JAPON", "JAPAN", "JAPÓN", "JAPAN", "JAPÃO");
-                case Theme.Storm: return Lang.T("ORAGE", "STORM", "TORMENTA", "GEWITTER", "TEMPESTADE");
-                case Theme.Snow: return Lang.T("GRAND NORD", "FAR NORTH", "GRAN NORTE", "HOHER NORDEN", "EXTREMO NORTE");
-                case Theme.Jungle: return Lang.T("JUNGLE", "JUNGLE", "SELVA", "DSCHUNGEL", "SELVA");
-                case Theme.Sky: return Lang.T("CIEL", "SKY", "CIELO", "HIMMEL", "CÉU");
-                case Theme.Ocean: return Lang.T("ABYSSES", "ABYSS", "ABISMO", "TIEFSEE", "ABISMO");
-                default: return Lang.T("PRAIRIE", "MEADOW", "PRADERA", "WIESE", "PRADARIA");
-            }
-        }
-
-        /// <summary>Règle d'une étape du Voyage, en quelques mots (voir <see cref="GameConfig.Journey"/>).</summary>
-        static string RuleName(StageRule rule)
-        {
-            switch (rule)
-            {
-                case StageRule.MoreStars: return Lang.T("PLUS D'ÉTOILES", "MORE STARS", "MÁS ESTRELLAS", "MEHR STERNE", "MAIS ESTRELAS");
-                case StageRule.DenseTraffic: return Lang.T("TRAFIC DENSE", "HEAVY TRAFFIC", "TRÁFICO DENSO", "DICHTER VERKEHR", "TRÂNSITO INTENSO");
-                case StageRule.NarrowGates: return Lang.T("PORTES ÉTROITES", "NARROW GATES", "PUERTAS ESTRECHAS", "ENGE TORE", "PORTAS ESTREITAS");
-                case StageRule.Gusts: return Lang.T("RAFALES DE VENT", "WIND GUSTS", "RÁFAGAS DE VIENTO", "WINDBÖEN", "RAJADAS DE VENTO");
-                case StageRule.FrozenWings: return Lang.T("AILES GELÉES", "FROZEN WINGS", "ALAS HELADAS", "GEFRORENE FLÜGEL", "ASAS CONGELADAS");
-                case StageRule.WildRush: return Lang.T("COURSE FOLLE", "WILD RUSH", "CARRERA LOCA", "WILDE JAGD", "CORRIDA LOUCA");
-                case StageRule.LightAir: return Lang.T("AIR LÉGER", "LIGHT AIR", "AIRE LIGERO", "LEICHTE LUFT", "AR LEVE");
-                case StageRule.SlowSwim: return Lang.T("NAGE AU RALENTI", "SLOW SWIM", "NADO LENTO", "LANGSAM SCHWIMMEN", "NADO LENTO");
-                default: return Lang.T("PREMIER ENVOL", "FIRST FLIGHT", "PRIMER VUELO", "ERSTER FLUG", "PRIMEIRO VOO");
-            }
         }
 
         Element Create(string name, Mesh mesh, Material material) => _ui.Create(name, mesh, material);
@@ -220,6 +212,12 @@ namespace ElementalPhenix.UI
 
         /// <summary>Fait gonfler un instant le score en jeu (palier de médaille).</summary>
         public void PulseScore() => _pulse = PulseTime;
+
+        /// <summary>Annonce l'arrivée du gardien du monde.</summary>
+        public void ShowGuardian() => _guardianTime = 1.8f;
+
+        /// <summary>Annonce la renaissance des cendres, jusqu'au tap qui relance la partie.</summary>
+        public void ShowRebirth() => _rebirthTime = 1f;
 
         void Place(Element e, float px, float py, float voxelPx, float z = HudZ, float maxWidth = 0f) => _ui.Place(e, px, py, voxelPx, z, maxWidth);
 
@@ -360,6 +358,8 @@ namespace ElementalPhenix.UI
             }
             else Hide(_score);
 
+            UpdateRunExtras(sim, realTime, deltaTime, safeTopPx, showScore && !menuOpen);
+
             // Bouton pause, seulement pendant la partie (un tap ailleurs fait sauter l'oiseau).
             if (state == GameState.Playing)
             {
@@ -388,6 +388,62 @@ namespace ElementalPhenix.UI
             else HideOver();
         }
 
+        /// <summary>
+        /// Éclats de la partie et jauge de braises sous le bouton pause, annonces du gardien et de la
+        /// renaissance. Rien n'est créé ici : on place, on étire ou on masque.
+        /// </summary>
+        void UpdateRunExtras(GameSimulation sim, float realTime, float deltaTime, float safeTopPx, bool show)
+        {
+            if (_guardianTime > 0f) _guardianTime -= deltaTime;
+            if (sim.State != GameState.Ready) _rebirthTime = 0f;
+
+            float y = safeTopPx + _cfg.ScoreTopMargin + PauseButtonSize + 12f;
+            if (show && sim.ShardsThisRun > 0)
+            {
+                var p = _space.OnScreen(14f, y + 4f, HudZ, out float t);
+                float d = 12f / WorldSpace.PixelsPerUnit * t;
+                _shardIcon.Transform.localPosition = p;
+                _shardIcon.Transform.localRotation = Quaternion.Euler(0f, realTime * 90f, 0f);
+                _shardIcon.Transform.localScale = new Vector3(d, d, d);
+                UiLayer.Show(_shardIcon);
+                PlaceNumber(_shardCount, sim.ShardsThisRun, 24f, y - 2f, 1.4f);
+                y += 18f;
+            }
+            else
+            {
+                Hide(_shardIcon);
+                Hide(_shardCount);
+            }
+
+            // Jauge de braises : hors Voyage, tant que la renaissance n'a pas servi.
+            if (show && !sim.IsJourney && !sim.Reborn)
+            {
+                float k = Mathf.Clamp01((float)sim.Embers / _cfg.RebirthCost);
+                const float width = 56f;
+                PlaceBox(_embersBack, 8f, y, width + 4f, 8f, HudZ + 0.06f);
+                bool full = sim.RebirthReady;
+                var fill = full ? _embersFull : _embersFill;
+                Hide(full ? _embersFill : _embersFull);
+                if (k > 0f) PlaceBox(fill, 10f, y + 2f, width * k, 4f, HudZ + 0.03f);
+                else Hide(fill);
+                // Pleine : le libellé clignote à côté de la jauge.
+                if (full && Blink(realTime)) Place(_embersLabel, 8f, y + 11f, 1f);
+                else Hide(_embersLabel);
+            }
+            else
+            {
+                Hide(_embersBack);
+                Hide(_embersFill);
+                Hide(_embersFull);
+                Hide(_embersLabel);
+            }
+
+            if (_guardianTime > 0f && sim.State == GameState.Playing) Place(_guardianBanner, 144f, 150f, 2.4f, maxWidth: 264f);
+            else Hide(_guardianBanner);
+            if (_rebirthTime > 0f && sim.State == GameState.Ready) Place(_rebirthBanner, 144f, 150f, 3f, maxWidth: 264f);
+            else Hide(_rebirthBanner);
+        }
+
         void UpdateOver(GameSimulation sim, float t, float deltaTime)
         {
             // Titre : flamme éteinte, étape réussie ou voyage terminé.
@@ -396,6 +452,8 @@ namespace ElementalPhenix.UI
             if (title != _gameOver) Hide(_gameOver);
             if (title != _stageCleared) Hide(_stageCleared);
             if (title != _journeyDone) Hide(_journeyDone);
+            if (title == _journeyDone) Place(_epilogue, 144f, OverScreenTimeline.TitleY(t) + 22f, 1.3f, maxWidth: 264f);
+            else Hide(_epilogue);
 
             if (OverScreenTimeline.PanelVisible(t))
             {
@@ -494,6 +552,7 @@ namespace ElementalPhenix.UI
             Hide(_gameOver);
             Hide(_stageCleared);
             Hide(_journeyDone);
+            Hide(_epilogue);
             Hide(_retry);
             Hide(_nextStage);
             Hide(_homeTap);

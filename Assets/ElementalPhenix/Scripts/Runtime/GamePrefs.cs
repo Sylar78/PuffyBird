@@ -27,6 +27,9 @@ namespace ElementalPhenix
         const string ReduceFlashKey = "elementalphenix.reduceflash";
         const string HighContrastKey = "elementalphenix.contrast";
         const string JourneyKey = "elementalphenix.journey";
+        const string ShardsKey = "elementalphenix.shards";
+        const string WakesKey = "elementalphenix.wakes";
+        const string WakeKey = "elementalphenix.wake";
 
         /// <summary>Consentement aux pubs personnalisées pas encore demandé.</summary>
         public const int ConsentUnknown = -1;
@@ -64,6 +67,9 @@ namespace ElementalPhenix
             _reduceFlash = PlayerPrefs.GetInt(ReduceFlashKey, 0) == 1;
             _highContrast = PlayerPrefs.GetInt(HighContrastKey, 0) == 1;
             _journeyCleared = PlayerPrefs.GetInt(JourneyKey, 0);
+            _shards = Math.Max(0, PlayerPrefs.GetInt(ShardsKey, 0));
+            _wakesOwned = PlayerPrefs.GetInt(WakesKey, 0);
+            _wake = PlayerPrefs.GetString(WakeKey, Wakes.DefaultId);
             Achievements = new AchievementTracker(PlayerPrefs.GetInt(AchievementsKey, 0), PlayerPrefs.GetInt(AchievementsReportedKey, 0));
         }
 
@@ -78,6 +84,47 @@ namespace ElementalPhenix
         }
 
         int _journeyCleared;
+        int _shards;
+        int _wakesOwned;
+        string _wake;
+
+        /// <summary>Éclats d'élément en réserve, pour débloquer des sillages.</summary>
+        public int Shards => _shards;
+
+        /// <summary>Sillages débloqués, un bit par indice de <see cref="Wakes"/>.</summary>
+        public int WakesOwned => _wakesOwned;
+
+        /// <summary>Ajoute les éclats d'une partie (à la fin de la partie, hors du jeu).</summary>
+        public void AddShards(int count)
+        {
+            if (count <= 0) return;
+            _shards += count;
+            PlayerPrefs.SetInt(ShardsKey, _shards);
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>Débloque un sillage avec les éclats en réserve ; faux s'il est trop cher ou déjà débloqué.</summary>
+        public bool UnlockWake(int index)
+        {
+            if (!Wakes.TryUnlock(index, ref _shards, ref _wakesOwned)) return false;
+            PlayerPrefs.SetInt(ShardsKey, _shards);
+            PlayerPrefs.SetInt(WakesKey, _wakesOwned);
+            PlayerPrefs.Save();
+            return true;
+        }
+
+        /// <summary>Identifiant du sillage choisi.</summary>
+        public string Wake
+        {
+            get => _wake;
+            set
+            {
+                if (_wake == value) return;
+                _wake = value ?? Wakes.DefaultId;
+                PlayerPrefs.SetString(WakeKey, _wake);
+                PlayerPrefs.Save();
+            }
+        }
 
         /// <summary>Étapes du Voyage des éléments réussies d'affilée depuis la première (0 à 9).</summary>
         public int JourneyCleared => _journeyCleared;
