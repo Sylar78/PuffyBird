@@ -15,6 +15,10 @@ namespace ElementalPhenix.UI
         Settings,
         Skins,
         Consent,
+        /// <summary>Carte du Voyage des éléments.</summary>
+        Journey,
+        /// <summary>Sillages débloqués avec les éclats (depuis le menu des phénix).</summary>
+        Wakes,
     }
 
     /// <summary>
@@ -78,6 +82,9 @@ namespace ElementalPhenix.UI
         float _safeTop;
         readonly Element _newSkin;
         SkinsView _skins;
+        readonly UiLayer.Button _wakesButton;
+        Element _titleShardsText;
+        int _titleShardsShown = -1;
         MenuScreen _returnTo;
         bool _inGame;
 
@@ -96,7 +103,7 @@ namespace ElementalPhenix.UI
             _overRankingButton = ui.CreateButton(VoxelFont.TrophyIcon + Lang.T(" CLASSEMENT", " RANKING", " RANKING", " RANGLISTE", " RANKING"), Palette.GetReady, Color.white);
             _overShareButton = ui.CreateButton(VoxelFont.ShareIcon + Lang.T(" PARTAGER", " SHARE", " COMPARTIR", " TEILEN", " COMPARTILHAR"), Palette.Hex("#4EA6D8"), Color.white);
             _skinsButton = ui.CreateButton(Lang.T("PHÉNIX", "PHOENIXES", "FÉNIX", "PHÖNIXE", "FÊNIX"), Palette.GameOver, Color.white);
-            _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" CONTINUER (PUB)", " CONTINUE (AD)", " CONTINUAR (ANUNCIO)", " WEITER (WERBUNG)", " CONTINUAR (ANÚNCIO)"), Palette.GetReady, Color.white);
+            _continueButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" RENAÎTRE (PUB)", " REVIVE (AD)", " RENACER (ANUNCIO)", " WIEDERBELEBEN (WERBUNG)", " RENASCER (ANÚNCIO)"), Palette.GetReady, Color.white);
             _dailyButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" DÉFI DU JOUR", " DAILY CHALLENGE", " RETO DEL DÍA", " TAGESAUFGABE", " DESAFIO DO DIA"), Palette.Hex("#E8892B"), Color.white);
             _journeyButton = ui.CreateButton(VoxelFont.PlayIcon + Lang.T(" VOYAGE", " JOURNEY", " VIAJE", " REISE", " JORNADA"), Palette.Hex("#C0392B"), Color.white);
             int stages = _cfg.Journey.Length;
@@ -107,6 +114,7 @@ namespace ElementalPhenix.UI
                 _journeyStageTexts[i] = ui.Text(Lang.T($"ÉTAPE {n} / {stages}", $"STAGE {n} / {stages}", $"ETAPA {n} / {stages}", $"ETAPPE {n} / {stages}", $"ETAPA {n} / {stages}"), TextAlign.Center, Palette.GetReady, Palette.Outline);
             }
             _dailyTag = ui.Text(Lang.T("DÉFI DU JOUR", "DAILY CHALLENGE", "RETO DEL DÍA", "TAGESAUFGABE", "DESAFIO DO DIA"), TextAlign.Center, Palette.GetReady, Palette.Outline);
+            _wakesButton = ui.CreateButton(Lang.T("SILLAGES", "TRAILS", "ESTELAS", "SPUREN", "RASTROS"), Palette.Hex("#4EA6D8"), Color.white);
             _newSkin = ui.Text(Lang.T("NOUVEAU PHÉNIX DÉBLOQUÉ !", "NEW PHOENIX UNLOCKED!", "¡NUEVO FÉNIX DESBLOQUEADO!", "NEUER PHÖNIX FREIGESCHALTET!", "NOVA FÊNIX DESBLOQUEADA!"), TextAlign.Center, Palette.GetReady, Palette.Outline);
         }
 
@@ -116,6 +124,18 @@ namespace ElementalPhenix.UI
             get => _skins;
             set => _skins = value;
         }
+
+        /// <summary>Carte du Voyage (bouton VOYAGE).</summary>
+        public JourneyMapView JourneyMap { get; set; }
+
+        /// <summary>Menu des sillages (bouton SILLAGES du menu des phénix).</summary>
+        public WakesView Wakes { get; set; }
+
+        /// <summary>Étapes du Voyage réussies d'affilée (carte).</summary>
+        public Func<int> JourneyCleared { get; set; }
+
+        /// <summary>Éclats en réserve, affichés sur l'écran titre.</summary>
+        public Func<int> ShardCount { get; set; }
 
         /// <summary>Écran de consentement aux pubs personnalisées ; null = pas de pub, pas d'écran.</summary>
         public ConsentView Consent { get; set; }
@@ -149,9 +169,15 @@ namespace ElementalPhenix.UI
         {
             if (screen == MenuScreen.Skins && _skins == null) return;
             if (screen == MenuScreen.Consent && Consent == null) return;
+            if (screen == MenuScreen.Journey && JourneyMap == null) return;
+            if (screen == MenuScreen.Wakes && Wakes == null) return;
             _returnTo = screen == MenuScreen.Consent ? Screen : MenuScreen.None;
+            // Retour des sillages vers les phénix : le phénix parcouru reste celui affiché.
+            bool fromWakes = Screen == MenuScreen.Wakes && screen == MenuScreen.Skins;
             Screen = screen;
-            if (screen == MenuScreen.Skins) _skins.Reset();
+            if (screen == MenuScreen.Skins && !fromWakes) _skins.Reset();
+            if (screen == MenuScreen.Journey) JourneyMap.Reset(JourneyStage != null ? JourneyStage() : 0);
+            if (screen == MenuScreen.Wakes) Wakes.Reset();
         }
 
         public void Close() => Screen = MenuScreen.None;
@@ -187,8 +213,8 @@ namespace ElementalPhenix.UI
             bool inGame = !fading && (state == GameState.Ready || state == GameState.Playing || state == GameState.Paused);
             _inGame = inGame;
             if (!title && !inGame) Close();
-            // Le menu des oiseaux ne s'ouvre que depuis l'écran titre.
-            if (!title && Screen == MenuScreen.Skins) Close();
+            // Les menus des oiseaux, des sillages et la carte ne s'ouvrent que depuis l'écran titre.
+            if (!title && (Screen == MenuScreen.Skins || Screen == MenuScreen.Wakes || Screen == MenuScreen.Journey)) Close();
 
             float iconY = safeTopPx + _cfg.ScoreTopMargin + IconButtonSize * 0.5f;
             if ((title || inGame) && !IsOpen) _ui.PlaceButton(_gearButton, UiAction.OpenSettings, _cfg.Width - 22f, iconY, IconButtonSize, IconButtonSize, 2f, hitMargin: 9f);
@@ -203,6 +229,9 @@ namespace ElementalPhenix.UI
                 _ui.PlaceButton(_journeyButton, UiAction.PlayJourney, JourneyX, DailyButtonY, ModeButtonWidth, IconButtonSize, 1.6f, hitMargin: 4f);
                 _ui.PlaceButton(_dailyButton, UiAction.PlayDaily, DailyX, DailyButtonY, ModeButtonWidth, IconButtonSize, 1.6f, hitMargin: 4f);
                 ShowJourneyStage(JourneyStage != null ? JourneyStage() : 0);
+                int shards = ShardCount != null ? ShardCount() : 0;
+                if (shards > 0) _ui.Place(TitleShardsText(shards), _cfg.Width * 0.5f, iconY + IconButtonSize * 0.5f + 8f, 1.3f);
+                else UiLayer.Hide(_titleShardsText);
             }
             else
             {
@@ -211,6 +240,7 @@ namespace ElementalPhenix.UI
                 UiLayer.Hide(_dailyButton);
                 UiLayer.Hide(_journeyButton);
                 ShowJourneyStage(-1);
+                UiLayer.Hide(_titleShardsText);
             }
 
             // Défi du jour : meilleur score du jour sous le bouton (titre), bandeau en attente de partie et à l'écran de fin.
@@ -261,8 +291,20 @@ namespace ElementalPhenix.UI
 
             if (Screen == MenuScreen.Settings) DrawSettings();
             else HideSettings();
-            if (Screen == MenuScreen.Skins) _skins.Draw();
-            else _skins?.Hide();
+            if (Screen == MenuScreen.Skins)
+            {
+                _skins.Draw();
+                if (Wakes != null) _ui.PlaceButton(_wakesButton, UiAction.OpenWakes, _cfg.Width * 0.5f, 410f, 120f, 22f, 1.6f);
+            }
+            else
+            {
+                _skins?.Hide();
+                UiLayer.Hide(_wakesButton);
+            }
+            if (Screen == MenuScreen.Wakes) Wakes.Draw();
+            else Wakes?.Hide();
+            if (Screen == MenuScreen.Journey) JourneyMap.Draw(JourneyCleared != null ? JourneyCleared() : 0, Time.unscaledTime);
+            else JourneyMap?.Hide();
             if (Screen == MenuScreen.Consent) Consent.Draw(ConsentChoice?.Invoke());
             else Consent?.Hide();
         }
@@ -278,6 +320,24 @@ namespace ElementalPhenix.UI
                 if (i == stage) _ui.Place(_journeyStageTexts[i], JourneyX, DailyBestY, 1.2f, maxWidth: ModeButtonWidth + 8f);
                 else UiLayer.Hide(_journeyStageTexts[i]);
             }
+        }
+
+        /// <summary>« ÉCLATS : n » sur l'écran titre, reconstruit seulement quand n change (hors partie).</summary>
+        Element TitleShardsText(int shards)
+        {
+            if (_titleShardsText != null && shards == _titleShardsShown) return _titleShardsText;
+            _titleShardsShown = shards;
+            var mesh = VoxelFont.Build(WakesView.ShardsLabel(shards), TextAlign.Center, Palette.Hex("#8FE6FF"), Palette.Outline);
+            if (_titleShardsText == null)
+            {
+                _titleShardsText = _ui.Create("Éclats", mesh, _ui.TextMaterial);
+            }
+            else
+            {
+                UnityEngine.Object.Destroy(_titleShardsText.Filter.sharedMesh);
+                _titleShardsText.Filter.sharedMesh = mesh;
+            }
+            return _titleShardsText;
         }
 
         /// <summary>« MEILLEUR AUJOURD'HUI : n », reconstruit seulement quand n change (à la mort, hors partie).</summary>

@@ -34,6 +34,22 @@ namespace ElementalPhenix.UI
         RestorePurchases,
         ToggleReduceFlash,
         ToggleHighContrast,
+        OpenWakes,
+        WakePrevious,
+        WakeNext,
+        WakeUse,
+        WakeUnlock,
+        MapPlay,
+        // Mondes de la carte du Voyage, à la suite : MapNode0 + indice de l'étape.
+        MapNode0,
+        MapNode1,
+        MapNode2,
+        MapNode3,
+        MapNode4,
+        MapNode5,
+        MapNode6,
+        MapNode7,
+        MapNode8,
     }
 
     /// <summary>

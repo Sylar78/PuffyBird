@@ -94,6 +94,35 @@ namespace ElementalPhenix.Core
         public float StarBoostDuration = 5f;
         public float StarBoostRamp = 0.3f;
 
+        // Éclats d'élément (extension) : parfois un éclat à ramasser entre deux paires, à l'écart du
+        // milieu des ouvertures (il faut aller le chercher). Ils s'accumulent pour débloquer des sillages.
+        public int ShardFirstPair = 1;
+        public float ShardChance = 0.4f;
+        public float ShardRadius = 8f;
+        /// <summary>Écart vertical maximal de l'éclat par rapport au milieu des deux ouvertures voisines.</summary>
+        public float ShardSpread = 42f;
+        public float ShardMarginTop = 24f;
+        public float ShardMarginGround = 30f;
+
+        // Renaissance des cendres (extension) : la jauge de braises se remplit (un point, un éclat) ;
+        // pleine, le phénix renaît une fois par partie au lieu de s'éteindre (hors Voyage).
+        public int RebirthCost = 20;
+        public int EmbersPerPoint = 1;
+        public int EmbersPerShard = 2;
+
+        // Courants (Voyage, abysses) : colonnes qui portent vers le haut entre deux paires.
+        public float CurrentChance;
+        public int CurrentFirstPair = 1;
+        /// <summary>Accélération dans un courant, ajoutée à la gravité (px/s², y vers le bas : négative = vers le haut).</summary>
+        public float CurrentAcceleration = -750f;
+        public float CurrentHalfWidth = 22f;
+
+        // Gardien (Voyage) : les dernières paires de chaque étape suivent un motif propre au monde.
+        public int GuardianPairs = 3;
+        public GuardianPattern GuardianPattern = GuardianPattern.Zigzag;
+        /// <summary>Écart du haut des ouvertures du gardien par rapport au milieu de la plage (§7.2).</summary>
+        public float GuardianStep = 55f;
+
         /// <summary>
         /// Seconde chance : attente maximale (s) du chargement de la vidéo après le tap sur CONTINUER.
         /// Si aucune vidéo n'a pu être chargée, la partie reprend quand même.
@@ -132,15 +161,15 @@ namespace ElementalPhenix.Core
         /// </summary>
         public JourneyStage[] Journey =
         {
-            new JourneyStage(Theme.Day, 10),
-            new JourneyStage(Theme.Night, 12) { StarChance = 0.45f, StarFirstPair = 1 },
-            new JourneyStage(Theme.City, 12) { MovingPipesFromScore = 0, MovingPipeChance = 0.6f },
-            new JourneyStage(Theme.Japan, 15) { SinglePipeFromPair = 2, SinglePipeChance = 0.35f },
-            new JourneyStage(Theme.Storm, 15) { GustAcceleration = 260f, GustPeriod = 2.4f },
-            new JourneyStage(Theme.Snow, 15) { GravityScale = 1.18f },
-            new JourneyStage(Theme.Jungle, 18) { ScrollScale = 1.15f },
-            new JourneyStage(Theme.Sky, 18) { GravityScale = 0.75f, FlapScale = 0.85f, MaxFallScale = 0.8f },
-            new JourneyStage(Theme.Ocean, 20) { GravityScale = 0.6f, FlapScale = 0.75f, MaxFallScale = 0.6f, ScrollScale = 0.85f },
+            new JourneyStage(Theme.Day, 10, StageRule.FirstFlight) { Guardian = GuardianPattern.Climb },
+            new JourneyStage(Theme.Night, 12, StageRule.MoreStars) { Guardian = GuardianPattern.Dive, StarChance = 0.45f, StarFirstPair = 1 },
+            new JourneyStage(Theme.City, 12, StageRule.DenseTraffic) { Guardian = GuardianPattern.Zigzag, SpacingScale = 0.8f, GapScale = 1.1f },
+            new JourneyStage(Theme.Japan, 15, StageRule.NarrowGates) { Guardian = GuardianPattern.Climb, GapScale = 0.86f, SpacingScale = 1.2f },
+            new JourneyStage(Theme.Storm, 15, StageRule.Gusts) { Guardian = GuardianPattern.Zigzag, GustAcceleration = 260f, GustPeriod = 2.4f },
+            new JourneyStage(Theme.Snow, 15, StageRule.FrozenWings) { Guardian = GuardianPattern.Dive, GravityScale = 1.18f },
+            new JourneyStage(Theme.Jungle, 18, StageRule.WildRush) { Guardian = GuardianPattern.Climb, ScrollScale = 1.15f },
+            new JourneyStage(Theme.Sky, 18, StageRule.LightAir) { Guardian = GuardianPattern.Zigzag, GravityScale = 0.75f, FlapScale = 0.85f, MaxFallScale = 0.8f },
+            new JourneyStage(Theme.Ocean, 20, StageRule.SlowSwim) { Guardian = GuardianPattern.Dive, CurrentChance = 0.45f, GravityScale = 0.6f, FlapScale = 0.75f, MaxFallScale = 0.6f, ScrollScale = 0.85f },
         };
         public float JourneyClearTime = 1.5f;
         /// <summary>Rappel de l'oiseau vers sa hauteur de départ pendant le vol de fin d'étape (1/s).</summary>
@@ -161,8 +190,12 @@ namespace ElementalPhenix.Core
             c.MaxRiseSpeed = MaxRiseSpeed * stage.FlapScale;
             c.MaxFallSpeed = MaxFallSpeed * stage.MaxFallScale;
             c.ScrollSpeed = ScrollSpeed * stage.ScrollScale;
+            c.PipeGap = PipeGap * stage.GapScale;
+            c.PipeSpacing = PipeSpacing * stage.SpacingScale;
             c.GustAcceleration = stage.GustAcceleration;
             c.GustPeriod = stage.GustPeriod;
+            c.CurrentChance = stage.CurrentChance;
+            c.GuardianPattern = stage.Guardian;
             if (stage.StarChance >= 0f) c.StarChance = stage.StarChance;
             if (stage.StarFirstPair >= 0) c.StarFirstPair = stage.StarFirstPair;
             if (stage.MovingPipesFromScore >= 0) c.MovingPipesFromScore = stage.MovingPipesFromScore;

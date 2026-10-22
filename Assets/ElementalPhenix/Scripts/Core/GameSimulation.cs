@@ -20,8 +20,12 @@ namespace ElementalPhenix.Core
         // Tirages des extensions (tuyaux mobiles, étoiles) : séparés, pour que la suite des
         // ouvertures reste celle de la spec à graine égale.
         readonly Rng _bonusRng;
+        // Éclats et courants : troisième générateur, pour ne pas décaler les tirages des extensions plus anciennes.
+        readonly Rng _lootRng;
         readonly PipeField _pipes = new PipeField(4);
         readonly StarField _stars = new StarField(4);
+        readonly StarField _shards = new StarField(4);
+        readonly StarField _currents = new StarField(4);
         readonly Bird _bird = new Bird();
         readonly bool _bestReadable;
 
@@ -49,6 +53,7 @@ namespace ElementalPhenix.Core
             _storage = storage ?? new MemoryScoreStorage();
             _rng = new Rng(seed);
             _bonusRng = new Rng(seed ^ 0x9E3779B9u);
+            _lootRng = new Rng(seed ^ 0x85EBCA6Bu);
             _bestReadable = _storage.TryReadBest(out int best);
             Best = _bestReadable ? Math.Max(0, best) : 0;
             ResetRun();
@@ -84,6 +89,21 @@ namespace ElementalPhenix.Core
         public Bird Bird => _bird;
         public PipeField Pipes => _pipes;
         public StarField Stars => _stars;
+        /// <summary>Éclats d'élément à ramasser (rayon <see cref="GameConfig.ShardRadius"/>).</summary>
+        public StarField Shards => _shards;
+        /// <summary>Courants ascendants (Voyage, abysses) : colonnes de demi-largeur <see cref="GameConfig.CurrentHalfWidth"/> ; Y est inutilisé.</summary>
+        public StarField Currents => _currents;
+        /// <summary>Éclats ramassés pendant la partie en cours.</summary>
+        public int ShardsThisRun { get; private set; }
+        /// <summary>Braises de la jauge de renaissance (0 à <see cref="GameConfig.RebirthCost"/>).</summary>
+        public int Embers { get; private set; }
+        /// <summary>Le phénix a déjà profité de sa renaissance dans cette partie.</summary>
+        public bool Reborn { get; private set; }
+        /// <summary>Jauge pleine et renaissance pas encore utilisée : la prochaine chute ramène le phénix.</summary>
+        public bool RebirthReady => !IsJourney && !Reborn && Embers >= _baseCfg.RebirthCost;
+        /// <summary>Le gardien du monde est là : ses paires sont apparues et l'étape n'est pas encore réussie.</summary>
+        public bool GuardianActive => IsJourney && _guardianShown && !StageCleared;
+        bool _guardianShown;
         /// <summary>Multiplicateur du défilement : 1, ou jusqu'à <see cref="GameConfig.StarBoostFactor"/> après une étoile.</summary>
         public float SpeedFactor => _speedFactor;
         /// <summary>Secondes d'accélération restantes (0 sans étoile).</summary>
@@ -160,8 +180,32 @@ namespace ElementalPhenix.Core
             if (!CanContinue) return;
             Continued = true;
             _bird.Reset(_cfg.BirdStartY);
+            ClearField();
+            _events |= GameEvents.Swoosh;
+            SetState(GameState.Ready);
+        }
+
+        /// <summary>
+        /// Renaissance des cendres (jauge pleine, une fois par partie) : comme la seconde chance,
+        /// le phénix repart en <see cref="GameState.Ready"/> avec le même score et le même décor.
+        /// </summary>
+        void Rebirth()
+        {
+            Reborn = true;
+            Embers = 0;
+            _bird.Reset(_cfg.BirdStartY);
+            ClearField();
+            _events |= GameEvents.Rebirth | GameEvents.Swoosh;
+            SetState(GameState.Ready);
+        }
+
+        /// <summary>Retire tuyaux, étoiles, éclats et courants, et efface la chute en cours.</summary>
+        void ClearField()
+        {
             _pipes.Clear();
             _stars.Clear();
+            _shards.Clear();
+            _currents.Clear();
             _boostTime = 0f;
             _speedFactor = 1f;
             Flash = 0f;
@@ -169,8 +213,6 @@ namespace ElementalPhenix.Core
             ShieldPipeId = -1;
             DiedOnGround = false;
             _dieSoundTimer = 0f;
-            _events |= GameEvents.Swoosh;
-            SetState(GameState.Ready);
         }
 
         public void Press()
@@ -276,7 +318,7 @@ namespace ElementalPhenix.Core
             {
                 Glide(dt);
                 _pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor, spawn: false);
-                _stars.Advance(_cfg.ScrollSpeed * _speedFactor * dt, _cfg, _viewMargin);
+                AdvanceFloaters(_cfg.ScrollSpeed * _speedFactor * dt);
                 return;
             }
 
@@ -284,7 +326,7 @@ namespace ElementalPhenix.Core
             {
                 float rotSpeed = State == GameState.Dying ? _cfg.RotSpeedDying : _cfg.RotSpeed;
                 if (StageCleared) Glide(dt);
-                else _bird.Integrate(dt, rotSpeed, _cfg, _cfg.GustAt(Time));
+                else _bird.Integrate(dt, rotSpeed, _cfg, _cfg.GustAt(Time) + (State == GameState.Playing ? CurrentAt(_cfg.BirdCenterX, _currents, 0f, _cfg) : 0f));
                 if (_bird.Y + _cfg.BirdHeight >= _cfg.GroundY)
                 {
                     _bird.Y = _cfg.GroundY - _cfg.BirdHeight;
@@ -297,7 +339,7 @@ namespace ElementalPhenix.Core
 
             if (_pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor, spawn: !StageCleared)) OnPairSpawned();
             _pipes.UpdateMotion(Time, _cfg);
-            _stars.Advance(_cfg.ScrollSpeed * _speedFactor * dt, _cfg, _viewMargin);
+            AdvanceFloaters(_cfg.ScrollSpeed * _speedFactor * dt);
 
             if (StageCleared)
             {
@@ -320,6 +362,15 @@ namespace ElementalPhenix.Core
                 _boostTime = _cfg.StarBoostDuration;
                 _events |= GameEvents.Star;
             }
+            for (int i = 0; i < _shards.Capacity; i++)
+            {
+                ref var shard = ref _shards[i];
+                if (!shard.Active || !Collision.CircleCircle(cx, cy, _cfg.BirdRadius, shard.X, shard.Y, _cfg.ShardRadius)) continue;
+                shard.Active = false;
+                ShardsThisRun++;
+                AddEmbers(_cfg.EmbersPerShard);
+                _events |= GameEvents.Shard;
+            }
             for (int i = 0; i < _pipes.Count; i++)
             {
                 ref var p = ref _pipes[i];
@@ -341,7 +392,11 @@ namespace ElementalPhenix.Core
                             return;
                         }
                     }
-                    else if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
+                    else
+                    {
+                        if (Medals.For(Score, _cfg) != Medals.For(Score - 1, _cfg)) _events |= GameEvents.Milestone;
+                        AddEmbers(_cfg.EmbersPerPoint);
+                    }
                 }
                 if (p.Pierced) continue;
                 if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind))
@@ -411,6 +466,7 @@ namespace ElementalPhenix.Core
             {
                 _rng.Reseed(_dailySeed);
                 _bonusRng.Reseed(_dailySeed ^ 0x9E3779B9u);
+                _lootRng.Reseed(_dailySeed ^ 0x85EBCA6Bu);
             }
             _rng.Range(0, 2);
             BirdColor = _cfg.BirdColor;
@@ -419,7 +475,13 @@ namespace ElementalPhenix.Core
             _bird.Reset(_cfg.BirdStartY);
             _pipes.Clear();
             _stars.Clear();
+            _shards.Clear();
+            _currents.Clear();
             _pairsSpawned = 0;
+            ShardsThisRun = 0;
+            Embers = 0;
+            Reborn = false;
+            _guardianShown = false;
             _boostTime = 0f;
             _speedFactor = 1f;
             Score = 0;
@@ -491,8 +553,19 @@ namespace ElementalPhenix.Core
             int index = _pairsSpawned++;
             ref var last = ref _pipes.Last;
             float spacing = _cfg.PipeSpacing;
+            int guardianStep = GuardianStepOf();
 
-            if (index >= _cfg.SinglePipeFromPair && _pipes.Count >= 2 && _bonusRng.NextFloat() < _cfg.SinglePipeChance)
+            if (guardianStep >= 0)
+            {
+                // Gardien : paire fixe dont l'ouverture suit le motif du monde, espacement normal.
+                last.BaseTop = GuardianTop(guardianStep);
+                if (!_guardianShown)
+                {
+                    _guardianShown = true;
+                    _events |= GameEvents.Guardian;
+                }
+            }
+            else if (index >= _cfg.SinglePipeFromPair && _pipes.Count >= 2 && _bonusRng.NextFloat() < _cfg.SinglePipeChance)
             {
                 ref var prev = ref _pipes[_pipes.Count - 2];
                 float middle = (_cfg.GroundY - _cfg.PipeGap) * 0.5f;
@@ -508,22 +581,100 @@ namespace ElementalPhenix.Core
                 }
                 if (last.Kind != PipeKind.Pair) spacing = _cfg.AfterSinglePipeSpacing;
             }
-            if (index >= _cfg.MovingPipesFromScore && last.Kind == PipeKind.Pair && _bonusRng.NextFloat() < _cfg.MovingPipeChance)
+            if (guardianStep < 0 && index >= _cfg.MovingPipesFromScore && last.Kind == PipeKind.Pair && _bonusRng.NextFloat() < _cfg.MovingPipeChance)
             {
                 last.MoveAmplitude = _cfg.PipeMoveAmplitude;
                 last.MovePhase = (float)(_bonusRng.NextFloat() * 2.0 * Math.PI);
                 last.Shift = last.ShiftAt(Time, _cfg);
                 last.PrevShift = last.Shift;
             }
-            if (index >= _cfg.StarFirstPair && _pipes.Count >= 2 && _bonusRng.NextFloat() < _cfg.StarChance)
+            // Entre cette paire et la précédente : une étoile, sinon un courant, sinon un éclat (au plus un).
+            if (_pipes.Count >= 2)
             {
                 ref var prev = ref _pipes[_pipes.Count - 2];
                 float x = (prev.X + _cfg.PipeWidth + last.X) * 0.5f;
-                float y = (prev.BaseTop + last.BaseTop + _cfg.PipeGap) * 0.5f + (_bonusRng.NextFloat() * 2f - 1f) * _cfg.StarJitter;
-                _stars.Spawn(x, y);
+                float middle = (prev.BaseTop + last.BaseTop + _cfg.PipeGap) * 0.5f;
+                if (index >= _cfg.StarFirstPair && _bonusRng.NextFloat() < _cfg.StarChance)
+                {
+                    _stars.Spawn(x, middle + (_bonusRng.NextFloat() * 2f - 1f) * _cfg.StarJitter);
+                }
+                else if (_cfg.CurrentChance > 0f && index >= _cfg.CurrentFirstPair && _lootRng.NextFloat() < _cfg.CurrentChance)
+                {
+                    _currents.Spawn(x, 0f);
+                }
+                else if (index >= _cfg.ShardFirstPair && _lootRng.NextFloat() < _cfg.ShardChance)
+                {
+                    // À l'écart du milieu, en haut ou en bas : il faut aller le chercher.
+                    float side = _lootRng.NextFloat() < 0.5f ? -1f : 1f;
+                    float y = middle + side * _cfg.ShardSpread * (0.5f + 0.5f * _lootRng.NextFloat());
+                    y = Math.Max(_cfg.ShardMarginTop, Math.Min(_cfg.GroundY - _cfg.ShardMarginGround, y));
+                    _shards.Spawn(x, y);
+                }
             }
-            if (index >= _cfg.BreatherFromPair && _bonusRng.NextFloat() < _cfg.BreatherChance) spacing = _cfg.BreatherSpacing;
+            if (guardianStep < 0 && index >= _cfg.BreatherFromPair && _bonusRng.NextFloat() < _cfg.BreatherChance) spacing = _cfg.BreatherSpacing;
             _pipes.NextSpacing = spacing;
+        }
+
+        /// <summary>
+        /// Rang de la paire qui vient d'apparaître dans le motif du gardien (0 à <see cref="GameConfig.GuardianPairs"/> − 1),
+        /// ou −1 : hors Voyage, ou pas encore les dernières paires de l'étape. Compté depuis les points
+        /// restant à marquer, pour rester juste après une seconde chance.
+        /// </summary>
+        int GuardianStepOf()
+        {
+            if (!IsJourney) return -1;
+            int unscored = 0;
+            for (int i = 0; i < _pipes.Count; i++)
+            {
+                if (!_pipes[i].Scored) unscored++;
+            }
+            int point = Score + unscored;
+            int first = JourneyGoal - _cfg.GuardianPairs + 1;
+            if (point < first || point > JourneyGoal) return -1;
+            return point - first;
+        }
+
+        /// <summary>Haut de l'ouverture de la paire <paramref name="step"/> du motif du gardien, dans la plage de §7.2.</summary>
+        float GuardianTop(int step)
+        {
+            float center = (_cfg.GapTopMin + _cfg.GapTopMax) * 0.5f;
+            float a = _cfg.GuardianStep;
+            float top;
+            switch (_cfg.GuardianPattern)
+            {
+                case GuardianPattern.Climb: top = center + a - step * a; break;
+                case GuardianPattern.Dive: top = center - a + step * a; break;
+                default: top = center + (step % 2 == 0 ? a : -a); break;
+            }
+            return Math.Max(_cfg.GapTopMin, Math.Min(_cfg.GapTopMax, top));
+        }
+
+        /// <summary>
+        /// Accélération des courants à l'abscisse <paramref name="x"/> (0 hors courant). <paramref name="scroll"/>
+        /// décale les courants vers la gauche (anticipation du pilote automatique).
+        /// </summary>
+        public static float CurrentAt(float x, StarField currents, float scroll, GameConfig cfg)
+        {
+            for (int i = 0; i < currents.Capacity; i++)
+            {
+                ref var c = ref currents[i];
+                if (c.Active && Math.Abs(x - (c.X - scroll)) <= cfg.CurrentHalfWidth) return cfg.CurrentAcceleration;
+            }
+            return 0f;
+        }
+
+        void AdvanceFloaters(float dx)
+        {
+            _stars.Advance(dx, _cfg, _viewMargin);
+            _shards.Advance(dx, _cfg, _viewMargin, _cfg.ShardRadius);
+            _currents.Advance(dx, _cfg, _viewMargin, _cfg.CurrentHalfWidth);
+        }
+
+        void AddEmbers(int amount)
+        {
+            if (IsJourney || Reborn || Embers >= _cfg.RebirthCost) return;
+            Embers = Math.Min(_cfg.RebirthCost, Embers + amount);
+            if (Embers >= _cfg.RebirthCost) _events |= GameEvents.EmbersFull;
         }
 
         /// <summary>
@@ -582,6 +733,12 @@ namespace ElementalPhenix.Core
             }
             if (onGround)
             {
+                // Jauge de braises pleine : le phénix renaît au lieu de s'éteindre.
+                if (RebirthReady)
+                {
+                    Rebirth();
+                    return;
+                }
                 SetState(GameState.Over);
                 _events |= GameEvents.Swoosh;
             }
@@ -647,6 +804,11 @@ namespace ElementalPhenix.Core
         internal void ForceBoost(float seconds)
         {
             _boostTime = seconds;
+        }
+
+        internal void ForceEmbers(int embers)
+        {
+            Embers = embers;
         }
     }
 }

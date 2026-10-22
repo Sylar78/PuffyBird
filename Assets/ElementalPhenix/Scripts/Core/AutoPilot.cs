@@ -47,11 +47,13 @@ namespace ElementalPhenix.Core
             float dt = cfg.Step;
             int step = depth + 1;
             GameSimulation.StepBoost(ref m.BoostTime, ref m.Factor, dt, cfg);
+            // Les courants sont testés avant le défilement du pas, comme dans la simulation.
+            float current = GameSimulation.CurrentAt(cfg.BirdCenterX, sim.Currents, m.Scroll, cfg);
             m.Scroll += cfg.ScrollSpeed * m.Factor * dt;
 
             if (flap) vy = cfg.FlapVelocity;
             float time = sim.Time + dt * step;
-            vy += (cfg.Gravity + cfg.GustAt(time)) * dt;
+            vy += (cfg.Gravity + cfg.GustAt(time) + current) * dt;
             if (vy < cfg.MaxRiseSpeed) vy = cfg.MaxRiseSpeed;
             if (vy > cfg.MaxFallSpeed) vy = cfg.MaxFallSpeed;
             y += vy * dt;

@@ -9,7 +9,8 @@ namespace ElementalPhenix.Rendering
     /// chapeau en couches, recyclés dans un pool de 4 paires (aucune allocation en jeu ; les maillages
     /// des 9 décors sont construits au chargement). La géométrie visible correspond aux rectangles de
     /// collision : chapeau de 52 px, fût de 48 px. L'obstacle touché vibre (vertex shader), sans
-    /// jamais modifier la hitbox.
+    /// jamais modifier la hitbox. Franchi, il s'illumine : ses bandeaux (lanternes, néons, runes,
+    /// glace...) s'embrasent puis restent allumés, comme si le phénix le rallumait au passage.
     /// </summary>
     public sealed class PipeView
     {
@@ -17,6 +18,10 @@ namespace ElementalPhenix.Rendering
         const float BuriedDepth = 0.4f;
         const float WobbleDuration = 0.6f;
         const float WobbleAmplitude = 0.012f;
+        const float BaseEmission = 1.8f;
+        const float LitEmission = 2.8f;
+        const float FlashEmission = 4f;
+        const float LightUpTime = 0.5f;
 
         sealed class Pair
         {
@@ -28,6 +33,9 @@ namespace ElementalPhenix.Rendering
             public Renderer[] Renderers;
             public int Id = -1;
             public float Wobble;
+            /// <summary>Paire déjà allumée (identifiant de la paire de la simulation), −1 sinon.</summary>
+            public int LitId = -1;
+            public float LightUp;
         }
 
         readonly WorldSpace _space;
@@ -52,7 +60,7 @@ namespace ElementalPhenix.Rendering
             var material = materials.Lit("Obstacle", Color.white, 0.6f, 0f, 0.45f);
             material.SetFloat(MaterialLibrary.WobbleFrequency, 38f);
             // Bandeaux lumineux (néons, runes, glace) : l'alpha des couleurs de sommet dose la lueur.
-            material.SetFloat(MaterialLibrary.VertexEmission, 1.8f);
+            material.SetFloat(MaterialLibrary.VertexEmission, BaseEmission);
 
             float bodyRadius = WorldSpace.Length(_cfg.PipeBodyWidth) * 0.5f;
             float capRadius = WorldSpace.Length(_cfg.PipeWidth) * 0.5f;
@@ -156,7 +164,8 @@ namespace ElementalPhenix.Rendering
             if (pair.Id == pipeId) pair.Wobble = WobbleDuration;
         }
 
-        public void Update(PipeField pipes, float alpha, float deltaTime)
+        /// <param name="pipeGap">Ouverture de la partie en cours (elle change selon l'étape du Voyage).</param>
+        public void Update(PipeField pipes, float pipeGap, float alpha, float deltaTime)
         {
             for (int i = 0; i < _pairs.Length; i++) _pairs[i].Id = -1;
 
@@ -167,12 +176,18 @@ namespace ElementalPhenix.Rendering
                 var pair = _pairs[p.Id % _pairs.Length];
                 if (pair.Id != -1) continue;
                 pair.Id = p.Id;
+                // Franchie (point marqué) : l'obstacle s'allume une fois pour toutes.
+                if (p.Scored && pair.LitId != p.Id)
+                {
+                    pair.LitId = p.Id;
+                    pair.LightUp = LightUpTime;
+                }
 
                 float x = Mathf.LerpUnclamped(p.PrevX, p.X, alpha) + _cfg.PipeWidth * 0.5f;
                 // Paires mobiles : les deux tuyaux se décalent ensemble, l'ouverture garde sa hauteur.
                 float gapTop = p.BaseTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha);
                 float gapTopY = _space.Y(gapTop);
-                float gapBottomY = _space.Y(gapTop + _cfg.PipeGap);
+                float gapBottomY = _space.Y(gapTop + pipeGap);
                 pair.Root.transform.localPosition = new Vector3(_space.X(x), 0f, 0f);
 
                 // Bas : du fond du sol jusqu'au bas de l'ouverture, chapeau en haut.
@@ -201,14 +216,16 @@ namespace ElementalPhenix.Rendering
                 if (pair.Id == -1)
                 {
                     if (pair.Root.activeSelf) pair.Root.SetActive(false);
-                    if (pair.Wobble > 0f)
+                    if (pair.Wobble > 0f || pair.LitId != -1)
                     {
                         pair.Wobble = 0f;
+                        pair.LitId = -1;
+                        pair.LightUp = 0f;
                         for (int r = 0; r < pair.Renderers.Length; r++) pair.Renderers[r].SetPropertyBlock(null);
                     }
                     continue;
                 }
-                UpdateWobble(pair, deltaTime);
+                UpdateBlock(pair, deltaTime);
             }
         }
 
@@ -217,24 +234,30 @@ namespace ElementalPhenix.Rendering
             if (part.gameObject.activeSelf != active) part.gameObject.SetActive(active);
         }
 
-        void UpdateWobble(Pair pair, float deltaTime)
+        /// <summary>Vibration de l'obstacle touché et lueur de l'obstacle franchi, par bloc de propriétés.</summary>
+        void UpdateBlock(Pair pair, float deltaTime)
         {
-            if (pair.Wobble <= 0f) return;
+            // Emplacement repris par une nouvelle paire pas encore franchie : lueur d'origine.
+            if (pair.LitId != -1 && pair.LitId != pair.Id)
+            {
+                pair.LitId = -1;
+                pair.LightUp = 0f;
+                for (int r = 0; r < pair.Renderers.Length; r++) pair.Renderers[r].SetPropertyBlock(null);
+            }
+            bool lit = pair.LitId == pair.Id;
+            if (pair.Wobble <= 0f && !lit) return;
             pair.Wobble = Mathf.Max(0f, pair.Wobble - deltaTime);
+            if (pair.LightUp > 0f) pair.LightUp = Mathf.Max(0f, pair.LightUp - deltaTime);
             float k = pair.Wobble / WobbleDuration;
+            // Embrasement bref, puis lueur un peu plus vive qu'avant le passage.
+            float flash = pair.LightUp / LightUpTime;
+            float emission = lit ? Mathf.Lerp(LitEmission, FlashEmission, flash * flash) : BaseEmission;
             for (int r = 0; r < pair.Renderers.Length; r++)
             {
-                if (pair.Wobble > 0f)
-                {
-                    pair.Renderers[r].GetPropertyBlock(_block);
-                    _block.SetFloat(MaterialLibrary.WobbleAmount, WobbleAmplitude * k * k);
-                    pair.Renderers[r].SetPropertyBlock(_block);
-                }
-                else
-                {
-                    // Sans bloc de propriétés, le rendu reste compatible avec le SRP Batcher.
-                    pair.Renderers[r].SetPropertyBlock(null);
-                }
+                pair.Renderers[r].GetPropertyBlock(_block);
+                _block.SetFloat(MaterialLibrary.WobbleAmount, WobbleAmplitude * k * k);
+                _block.SetFloat(MaterialLibrary.VertexEmission, emission);
+                pair.Renderers[r].SetPropertyBlock(_block);
             }
         }
     }

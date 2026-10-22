@@ -10,7 +10,7 @@ namespace ElementalPhenix.Audio
     public sealed class SfxPlayer
     {
         const int SampleRate = 44100;
-        const int Voices = 6;
+        const int Voices = 8;
 
         readonly AudioClip[] _clips;
         readonly AudioSource[] _sources = new AudioSource[Voices];
@@ -67,6 +67,9 @@ namespace ElementalPhenix.Audio
             if ((events & GameEvents.Star) != 0) Play(SoundId.Star);
             if ((events & GameEvents.NearMiss) != 0) Play(SoundId.Graze);
             if ((events & (GameEvents.Milestone | GameEvents.StageCleared)) != 0) Play(SoundId.Milestone);
+            if ((events & GameEvents.Shard) != 0) Play(SoundId.Shard);
+            if ((events & GameEvents.Rebirth) != 0) Play(SoundId.Rebirth);
+            if ((events & GameEvents.Guardian) != 0) Play(SoundId.Guardian);
         }
     }
 }

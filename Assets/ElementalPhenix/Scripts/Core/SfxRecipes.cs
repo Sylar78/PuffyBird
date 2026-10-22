@@ -14,6 +14,12 @@ namespace ElementalPhenix.Core
         Graze,
         /// <summary>Palier de médaille : petite fanfare.</summary>
         Milestone,
+        /// <summary>Éclat d'élément ramassé : deux notes cristallines.</summary>
+        Shard,
+        /// <summary>Renaissance des cendres : souffle montant et accord.</summary>
+        Rebirth,
+        /// <summary>Apparition du gardien d'un monde : grondement grave.</summary>
+        Guardian,
     }
 
     /// <summary>
@@ -87,6 +93,31 @@ namespace ElementalPhenix.Core
                         Tone(buf, sampleRate, i * 0.1f, length, Wave.Square, 0.07f, notes[i], notes[i]);
                         Tone(buf, sampleRate, i * 0.1f, length, Wave.Triangle, 0.15f, notes[i] * 2f, notes[i] * 2f);
                     }
+                    return buf;
+                }
+                case SoundId.Shard:
+                {
+                    var buf = Alloc(0.22f, sampleRate);
+                    Tone(buf, sampleRate, 0f, 0.12f, Wave.Triangle, 0.22f, 1760f, 1760f);
+                    Tone(buf, sampleRate, 0.06f, 0.16f, Wave.Triangle, 0.2f, 2637f, 2637f);
+                    return buf;
+                }
+                case SoundId.Rebirth:
+                {
+                    // Souffle qui monte, puis accord majeur tenu (la, do dièse, mi).
+                    var buf = Alloc(0.9f, sampleRate);
+                    Noise(buf, sampleRate, 0f, 0.45f, 0.25f, 300f, 4000f, rng);
+                    float[] notes = { 880f, 1108.7f, 1318.5f };
+                    for (int i = 0; i < notes.Length; i++)
+                        Tone(buf, sampleRate, 0.3f + i * 0.04f, 0.6f, Wave.Triangle, 0.16f, notes[i], notes[i]);
+                    return buf;
+                }
+                case SoundId.Guardian:
+                {
+                    var buf = Alloc(0.8f, sampleRate);
+                    Tone(buf, sampleRate, 0f, 0.8f, Wave.Triangle, 0.35f, 110f, 82f);
+                    Tone(buf, sampleRate, 0.05f, 0.7f, Wave.Square, 0.05f, 165f, 123f);
+                    Noise(buf, sampleRate, 0f, 0.6f, 0.15f, 200f, 90f, rng);
                     return buf;
                 }
                 default:

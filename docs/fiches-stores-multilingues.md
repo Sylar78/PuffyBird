@@ -31,8 +31,8 @@ LE VOYAGE DES ÉLÉMENTS
 9 étapes, une par monde, chacune avec sa propre règle :
 • Prairie : premier envol entre les piliers de pierre.
 • Nuit étoilée : les étoiles se multiplient entre les obélisques de lune.
-• Ville néon : les tours bougent.
-• Japon : piliers laqués, parfois seuls.
+• Ville néon : trafic dense, les tours se rapprochent.
+• Japon : des portes laquées plus étroites.
 • Orage : des rafales de vent te poussent vers le haut ou vers le bas.
 • Grand Nord : ailes gelées, tu tombes plus vite entre les piliers de glace.
 • Jungle : la course s'accélère entre les troncs moussus.
@@ -80,8 +80,8 @@ JOURNEY OF THE ELEMENTS
 9 stages, one per world, each with its own rule:
 • Meadow: your first flight between stone pillars.
 • Starry Night: more stars between the moon obelisks.
-• Neon City: the towers move.
-• Japan: lacquered pillars, sometimes standing alone.
+• Neon City: heavy traffic, the towers crowd in.
+• Japan: narrower lacquered gates.
 • Storm: wind gusts push you up and down.
 • Far North: frozen wings, you fall faster between ice pillars.
 • Jungle: the race speeds up between mossy trunks.
@@ -129,8 +129,8 @@ EL VIAJE DE LOS ELEMENTOS
 9 etapas, una por mundo, cada una con su propia regla:
 • Pradera: tu primer vuelo entre pilares de piedra.
 • Noche estrellada: más estrellas entre los obeliscos lunares.
-• Ciudad neón: las torres se mueven.
-• Japón: pilares lacados, a veces solos.
+• Ciudad neón: tráfico denso, las torres se acercan.
+• Japón: puertas lacadas más estrechas.
 • Tormenta: ráfagas de viento te empujan arriba y abajo.
 • Gran Norte: alas heladas, caes más rápido entre pilares de hielo.
 • Selva: la carrera se acelera entre troncos con musgo.
@@ -178,8 +178,8 @@ DIE REISE DER ELEMENTE
 9 Etappen, eine pro Welt, jede mit eigener Regel:
 • Wiese: dein erster Flug zwischen Steinsäulen.
 • Sternennacht: mehr Sterne zwischen den Mond-Obelisken.
-• Neonstadt: die Türme bewegen sich.
-• Japan: lackierte Säulen, manchmal einzeln.
+• Neonstadt: dichter Verkehr, die Türme rücken zusammen.
+• Japan: engere lackierte Tore.
 • Gewitter: Windböen drücken dich hoch und runter.
 • Hoher Norden: gefrorene Flügel, du fällst schneller zwischen Eissäulen.
 • Dschungel: das Tempo steigt zwischen bemoosten Stämmen.
@@ -227,8 +227,8 @@ A JORNADA DOS ELEMENTOS
 9 etapas, uma por mundo, cada uma com a sua regra:
 • Pradaria: o seu primeiro voo entre pilares de pedra.
 • Noite estrelada: mais estrelas entre os obeliscos da lua.
-• Cidade neon: as torres se movem.
-• Japão: pilares laqueados, às vezes sozinhos.
+• Cidade neon: trânsito intenso, as torres se aproximam.
+• Japão: portas laqueadas mais estreitas.
 • Tempestade: rajadas de vento empurram você para cima e para baixo.
 • Extremo Norte: asas congeladas, você cai mais rápido entre pilares de gelo.
 • Selva: a corrida acelera entre troncos com musgo.
