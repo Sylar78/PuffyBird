@@ -123,6 +123,31 @@ namespace ElementalPhenix.Core
         /// <summary>Écart du haut des ouvertures du gardien par rapport au milieu de la plage (§7.2).</summary>
         public float GuardianStep = 55f;
 
+        // Pouvoirs d'élément (ElementPowers) : la jauge se remplit avec les points et les éclats ; pleine,
+        // le pouvoir du phénix se déclenche dès que le prochain obstacle est à moins de PowerTriggerDistance
+        // (bord gauche de l'obstacle moins centre du phénix). Sans phénix (PhoenixElement.None), rien ne change.
+        /// <summary>Pouvoirs aussi en mode classique et au défi du jour (toujours actifs en Voyage).</summary>
+        public bool ElementPowersInClassic = true;
+        public int PowerChargeCost = 10;
+        public int PowerChargePerPoint = 1;
+        public int PowerChargePerShard = 1;
+        public float PowerTriggerDistance = 90f;
+        // Eau : ralenti de tout le jeu (défilement, chute, tuyaux mobiles), trajectoires identiques mais plus lentes.
+        public float WaterSlowDuration = 3f;
+        public float WaterTimeScale = 0.6f;
+        public float WaterSlowRamp = 0.3f;
+        // Vent : souffle vers le milieu de l'ouverture visée, jusqu'à ce qu'elle soit franchie.
+        public float WindGuideMaxTime = 2.5f;
+        /// <summary>Vitesse voulue par px d'écart au centre de l'ouverture (1/s).</summary>
+        public float WindGuideGain = 5f;
+        public float WindGuideMaxSpeed = 220f;
+        /// <summary>Rapidité avec laquelle la vitesse rejoint la vitesse voulue (1/s).</summary>
+        public float WindGuideResponse = 10f;
+        // Lumière : les LightPairs prochaines ouvertures s'agrandissent de LightWiden px (moitié en haut, moitié en bas).
+        public float LightWiden = 36f;
+        public int LightPairs = 2;
+        public float LightWidenRate = 120f;
+
         /// <summary>
         /// Seconde chance : attente maximale (s) du chargement de la vidéo après le tap sur CONTINUER.
         /// Si aucune vidéo n'a pu être chargée, la partie reprend quand même.

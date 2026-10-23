@@ -77,6 +77,12 @@ namespace ElementalPhenix.Core
         Rebirth = 1 << 15,
         /// <summary>Le gardien du monde apparaît (dernières paires d'une étape du Voyage).</summary>
         Guardian = 1 << 16,
+        /// <summary>La jauge d'élément est pleine : le pouvoir du phénix se déclenchera à l'approche du prochain obstacle.</summary>
+        PowerReady = 1 << 17,
+        /// <summary>Le pouvoir d'élément vient de se déclencher (<see cref="GameSimulation.PowerPipeId"/> : la paire visée).</summary>
+        ElementPower = 1 << 18,
+        /// <summary>Pas de l'ombre : le phénix a touché l'obstacle visé et réapparaît au milieu de l'ouverture.</summary>
+        ShadowStep = 1 << 19,
     }
 
     public static class Medals

@@ -22,7 +22,11 @@ namespace ElementalPhenix.Core
             if (sim.State == GameState.Ready) return true;
             if (sim.State != GameState.Playing) return false;
             Explored.Clear();
-            var start = new Motion { BoostTime = sim.BoostTime, Factor = sim.SpeedFactor };
+            var start = new Motion
+            {
+                BoostTime = sim.BoostTime, Factor = sim.SpeedFactor, Time = sim.Time,
+                SlowTime = sim.SlowTime, Scale = sim.TimeScale, GuideTime = sim.GuideTime, GuideTarget = sim.GuideTarget,
+            };
             return !Survives(sim, sim.Bird.Y, sim.Bird.Vy, 0, flap: false, start);
         }
 
@@ -34,6 +38,12 @@ namespace ElementalPhenix.Core
             public float Factor;
             public int TakenStars;
             public int PickStep;
+            /// <summary>Temps de jeu (ralenti par la marée lente), ralenti et courant porteur en cours.</summary>
+            public float Time;
+            public float SlowTime;
+            public float Scale;
+            public float GuideTime;
+            public int GuideTarget;
         }
 
         /// <summary>
@@ -46,14 +56,31 @@ namespace ElementalPhenix.Core
             var cfg = sim.Config;
             float dt = cfg.Step;
             int step = depth + 1;
-            GameSimulation.StepBoost(ref m.BoostTime, ref m.Factor, dt, cfg);
-            // Les courants sont testés avant le défilement du pas, comme dans la simulation.
-            float current = GameSimulation.CurrentAt(cfg.BirdCenterX, sim.Currents, m.Scroll, cfg);
-            m.Scroll += cfg.ScrollSpeed * m.Factor * dt;
-
+            ElementPowers.StepSlow(ref m.SlowTime, ref m.Scale, dt, cfg);
+            float gdt = dt * m.Scale;
+            m.Time += gdt;
+            float time = m.Time;
+            GameSimulation.StepBoost(ref m.BoostTime, ref m.Factor, gdt, cfg);
+            var pipes = sim.Pipes;
             if (flap) vy = cfg.FlapVelocity;
-            float time = sim.Time + dt * step;
-            vy += (cfg.Gravity + cfg.GustAt(time) + current) * dt;
+            // Les courants et le souffle sont calculés avant le défilement du pas, comme dans la simulation.
+            float accel = cfg.GustAt(time) + GameSimulation.CurrentAt(cfg.BirdCenterX, sim.Currents, m.Scroll, cfg);
+            if (m.GuideTime > 0f)
+            {
+                m.GuideTime = System.Math.Max(0f, m.GuideTime - gdt);
+                int target = -1;
+                for (int i = 0; i < pipes.Count; i++) if (pipes[i].Id == m.GuideTarget) target = i;
+                if (target >= 0 && cfg.BirdCenterX - cfg.BirdRadius < pipes[target].X - m.Scroll + cfg.PipeWidth)
+                {
+                    ref var g = ref pipes[target];
+                    float center = g.BaseTop + g.ShiftAt(time - gdt, cfg) - g.Widen * 0.5f + g.Gap(cfg) * 0.5f;
+                    accel = ElementPowers.GuideAcceleration(y + cfg.BirdHeight * 0.5f, vy, center, cfg);
+                }
+                else m.GuideTime = 0f;
+            }
+            m.Scroll += cfg.ScrollSpeed * m.Factor * gdt;
+            dt = gdt;
+            vy += (cfg.Gravity + accel) * dt;
             if (vy < cfg.MaxRiseSpeed) vy = cfg.MaxRiseSpeed;
             if (vy > cfg.MaxFallSpeed) vy = cfg.MaxFallSpeed;
             y += vy * dt;
@@ -72,11 +99,13 @@ namespace ElementalPhenix.Core
                 m.BoostTime = cfg.StarBoostDuration;
                 m.PickStep = step;
             }
-            var pipes = sim.Pipes;
             for (int i = 0; i < pipes.Count; i++)
             {
                 ref var p = ref pipes[i];
-                if (Collision.HitsPipe(cx, cy, cfg.BirdRadius, p.BaseTop + p.ShiftAt(time, cfg), p.X - m.Scroll, cfg, p.Kind)) return false;
+                // Paire déjà traversable (étoile, feu, ombre). L'élargissement en cours est pris tel quel :
+                // l'ouverture ne fait que grandir, la prévision reste prudente.
+                if (p.Pierced) continue;
+                if (Collision.HitsPipe(cx, cy, cfg.BirdRadius, p.BaseTop + p.ShiftAt(time, cfg) - p.Widen * 0.5f, p.X - m.Scroll, cfg, p.Kind, p.Gap(cfg))) return false;
             }
             if (step >= Horizon) return true;
 

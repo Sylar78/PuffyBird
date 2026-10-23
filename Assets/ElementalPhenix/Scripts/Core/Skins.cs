@@ -13,7 +13,7 @@ namespace ElementalPhenix.Core
         Streak,
     }
 
-    /// <summary>Un oiseau du catalogue : apparence seulement, aucune influence sur le jeu.</summary>
+    /// <summary>Un phénix du catalogue : apparence et pouvoir d'élément (<see cref="Element"/>).</summary>
     public sealed class SkinInfo
     {
         public readonly string Id;
@@ -22,11 +22,14 @@ namespace ElementalPhenix.Core
         public readonly SkinUnlock Unlock;
         /// <summary>Médaille à obtenir (meilleur score) si <see cref="Unlock"/> vaut <see cref="SkinUnlock.Medal"/>.</summary>
         public readonly Medal Medal;
+        /// <summary>Élément du phénix : son pouvoir (<see cref="ElementPowers"/>), de force comparable pour tous.</summary>
+        public readonly PhoenixElement Element;
 
-        public SkinInfo(string id, string[] names, SkinUnlock unlock, Medal medal = Medal.None)
+        public SkinInfo(string id, string[] names, PhoenixElement element, SkinUnlock unlock, Medal medal = Medal.None)
         {
             Id = id;
             _names = names;
+            Element = element;
             Unlock = unlock;
             Medal = medal;
         }
@@ -49,7 +52,8 @@ namespace ElementalPhenix.Core
     /// <summary>
     /// Catalogue des oiseaux : cinq phénix en armure, un par élément (feu, eau, vent, lumière,
     /// ténèbres). Le feu est offert, l'eau et le vent se gagnent aux médailles de bronze et d'or,
-    /// la lumière par la série de jours, les ténèbres s'achètent.
+    /// la lumière par la série de jours, les ténèbres s'achètent. Chacun a le pouvoir de son élément,
+    /// de force comparable : l'achat donne un style de jeu, pas un avantage.
     /// </summary>
     public static class Skins
     {
@@ -61,11 +65,11 @@ namespace ElementalPhenix.Core
 
         static readonly SkinInfo[] All =
         {
-            new SkinInfo(DefaultId, Names("FEU", "FIRE", "FUEGO", "FEUER", "FOGO"), SkinUnlock.Free),
-            new SkinInfo("blue", Names("EAU", "WATER", "AGUA", "WASSER", "ÁGUA"), SkinUnlock.Medal, Medal.Bronze),
-            new SkinInfo("mint", Names("VENT", "WIND", "VIENTO", "WIND", "VENTO"), SkinUnlock.Medal, Medal.Gold),
-            new SkinInfo("streak", Names("LUMIÈRE", "LIGHT", "LUZ", "LICHT", "LUZ"), SkinUnlock.Streak),
-            new SkinInfo("ninja", Names("TÉNÈBRES", "DARK", "TINIEBLAS", "FINSTERN", "TREVAS"), SkinUnlock.Purchase),
+            new SkinInfo(DefaultId, Names("FEU", "FIRE", "FUEGO", "FEUER", "FOGO"), PhoenixElement.Fire, SkinUnlock.Free),
+            new SkinInfo("blue", Names("EAU", "WATER", "AGUA", "WASSER", "ÁGUA"), PhoenixElement.Water, SkinUnlock.Medal, Medal.Bronze),
+            new SkinInfo("mint", Names("VENT", "WIND", "VIENTO", "WIND", "VENTO"), PhoenixElement.Wind, SkinUnlock.Medal, Medal.Gold),
+            new SkinInfo("streak", Names("LUMIÈRE", "LIGHT", "LUZ", "LICHT", "LUZ"), PhoenixElement.Light, SkinUnlock.Streak),
+            new SkinInfo("ninja", Names("TÉNÈBRES", "DARK", "TINIEBLAS", "FINSTERN", "TREVAS"), PhoenixElement.Shadow, SkinUnlock.Purchase),
         };
 
         /// <summary>Noms dans l'ordre de <see cref="Language"/> : français, anglais, espagnol, allemand, portugais.</summary>
