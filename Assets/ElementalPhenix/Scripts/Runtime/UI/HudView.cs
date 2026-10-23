@@ -89,6 +89,12 @@ namespace ElementalPhenix.UI
         readonly Element _epilogue;
         float _guardianTime;
         float _rebirthTime;
+        // Jauge du pouvoir d'élément (sous celle des braises) et annonce du pouvoir, une par élément.
+        readonly Element _powerBack;
+        readonly Element[] _powerFills;
+        readonly Element[] _powerBanners;
+        PhoenixElement _powerShown;
+        float _powerTime;
 
         Medal _shownMedal = (Medal)(-1);
         Vector2 _sparkleOffset;
@@ -161,6 +167,16 @@ namespace ElementalPhenix.UI
             _guardianBanner = Text(Lang.T("LE GARDIEN APPARAÎT !", "THE GUARDIAN APPEARS!", "¡APARECE EL GUARDIÁN!", "DER WÄCHTER ERSCHEINT!", "O GUARDIÃO APARECE!"), TextAlign.Center, Palette.GameOver, outline);
             _rebirthBanner = Text(Lang.T("RENAISSANCE !", "REBIRTH!", "¡RENACIMIENTO!", "WIEDERGEBURT!", "RENASCIMENTO!"), TextAlign.Center, Palette.Hex("#FFB02E"), outline);
             _epilogue = Text(JourneyTexts.Epilogue, TextAlign.Center, Color.white, outline);
+            _powerBack = Solid(Palette.Outline);
+            int elements = System.Enum.GetValues(typeof(PhoenixElement)).Length;
+            _powerFills = new Element[elements];
+            _powerBanners = new Element[elements];
+            for (int i = 1; i < elements; i++)
+            {
+                var element = (PhoenixElement)i;
+                _powerFills[i] = Solid(PowerTexts.Tint(element));
+                _powerBanners[i] = Text(PowerTexts.Name(element), TextAlign.Center, PowerTexts.Tint(element), outline);
+            }
 
             int stages = _cfg.Journey.Length;
             _stageNames = new Element[stages];
@@ -218,6 +234,13 @@ namespace ElementalPhenix.UI
 
         /// <summary>Annonce la renaissance des cendres, jusqu'au tap qui relance la partie.</summary>
         public void ShowRebirth() => _rebirthTime = 1f;
+
+        /// <summary>Annonce le pouvoir d'élément qui vient de se déclencher.</summary>
+        public void ShowPower(PhoenixElement element)
+        {
+            _powerShown = element;
+            _powerTime = 1.2f;
+        }
 
         void Place(Element e, float px, float py, float voxelPx, float z = HudZ, float maxWidth = 0f) => _ui.Place(e, px, py, voxelPx, z, maxWidth);
 
@@ -395,6 +418,7 @@ namespace ElementalPhenix.UI
         void UpdateRunExtras(GameSimulation sim, float realTime, float deltaTime, float safeTopPx, bool show)
         {
             if (_guardianTime > 0f) _guardianTime -= deltaTime;
+            if (_powerTime > 0f) _powerTime -= deltaTime;
             if (sim.State != GameState.Ready) _rebirthTime = 0f;
 
             float y = safeTopPx + _cfg.ScoreTopMargin + PauseButtonSize + 12f;
@@ -429,6 +453,7 @@ namespace ElementalPhenix.UI
                 // Pleine : le libellé clignote à côté de la jauge.
                 if (full && Blink(realTime)) Place(_embersLabel, 8f, y + 11f, 1f);
                 else Hide(_embersLabel);
+                y += 22f;
             }
             else
             {
@@ -436,6 +461,28 @@ namespace ElementalPhenix.UI
                 Hide(_embersFill);
                 Hide(_embersFull);
                 Hide(_embersLabel);
+            }
+
+            // Jauge du pouvoir d'élément, à la couleur du phénix : pleine, elle clignote jusqu'au déclenchement.
+            int shownPower = show && sim.PowersActive ? (int)sim.Element : 0;
+            for (int i = 1; i < _powerFills.Length; i++)
+            {
+                if (i != shownPower) Hide(_powerFills[i]);
+            }
+            if (shownPower > 0)
+            {
+                const float width = 56f;
+                float k = Mathf.Clamp01((float)sim.ElementCharge / _cfg.PowerChargeCost);
+                PlaceBox(_powerBack, 8f, y, width + 4f, 8f, HudZ + 0.06f);
+                bool visible = k > 0f && (!sim.PowerReady || Blink(realTime * 2f));
+                if (visible) PlaceBox(_powerFills[shownPower], 10f, y + 2f, width * k, 4f, HudZ + 0.03f);
+                else Hide(_powerFills[shownPower]);
+            }
+            else Hide(_powerBack);
+            for (int i = 1; i < _powerBanners.Length; i++)
+            {
+                if (i == (int)_powerShown && _powerTime > 0f && sim.State == GameState.Playing) Place(_powerBanners[i], 144f, 120f, 2.6f, maxWidth: 264f);
+                else Hide(_powerBanners[i]);
             }
 
             if (_guardianTime > 0f && sim.State == GameState.Playing) Place(_guardianBanner, 144f, 150f, 2.4f, maxWidth: 264f);

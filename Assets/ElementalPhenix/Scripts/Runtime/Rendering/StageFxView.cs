@@ -122,6 +122,8 @@ namespace ElementalPhenix.Rendering
             // Rafale en cours, de −1 (pousse vers le haut) à 1 (pousse vers le bas) ; seulement en jeu, comme la simulation.
             float gust = rule == StageRule.Gusts && state == GameState.Playing && cfg.GustAcceleration != 0f
                 ? cfg.GustAt(sim.Time) / cfg.GustAcceleration : 0f;
+            // Courant porteur (pouvoir du vent) : les flèches montrent où le souffle emmène le phénix.
+            if (sim.Guiding) gust = GuidePull(sim);
 
             if (running && (rule == StageRule.FrozenWings || rule == StageRule.LightAir || rule == StageRule.SlowSwim))
             {
@@ -142,6 +144,20 @@ namespace ElementalPhenix.Rendering
             UpdateStreaks(streaks && running, scroll, gust, deltaTime);
             UpdateMotes(scroll, deltaTime, sim.Time);
             UpdateArrows(birdPosition, gust, sim.Time);
+        }
+
+        /// <summary>Direction du courant porteur, de −1 (vers le haut) à 1 (vers le bas), comme une rafale.</summary>
+        static float GuidePull(GameSimulation sim)
+        {
+            var cfg = sim.Config;
+            for (int i = 0; i < sim.Pipes.Count; i++)
+            {
+                ref var p = ref sim.Pipes[i];
+                if (p.Id != sim.GuideTarget) continue;
+                float offset = ElementPowers.OpeningCenter(p, cfg) - sim.Bird.CenterY(cfg);
+                return Mathf.Clamp(offset / 30f, -1f, 1f);
+            }
+            return 0f;
         }
 
         void Clear()
