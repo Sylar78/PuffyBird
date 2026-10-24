@@ -8,8 +8,9 @@ namespace ElementalPhenix.Tests
     {
         GameConfig _cfg;
 
+        // Les mécaniques sont testées en mode classique, où elles sont désactivées par défaut.
         [SetUp]
-        public void SetUp() => _cfg = GameConfig.CreateDefault();
+        public void SetUp() => _cfg = new GameConfig { ElementPowersInClassic = true };
 
         GameSimulation StartClassic(uint seed, PhoenixElement element)
         {
@@ -92,11 +93,15 @@ namespace ElementalPhenix.Tests
         }
 
         [Test]
-        public void PowersCanBeKeptForTheJourneyOnly()
+        public void PowersAreKeptForTheJourneyByDefault()
         {
-            _cfg.ElementPowersInClassic = false;
-            var sim = StartClassic(5, PhoenixElement.Fire);
+            var cfg = GameConfig.CreateDefault();
+            var sim = new GameSimulation(cfg, new MemoryScoreStorage(), 5, startOnTitle: false) { Element = PhoenixElement.Fire };
             Assert.IsFalse(sim.PowersActive);
+            var journey = new GameSimulation(cfg, new MemoryScoreStorage(), 5) { Element = PhoenixElement.Fire };
+            journey.StartJourney(0);
+            for (int i = 0; i < 60 && journey.State != GameState.Ready; i++) journey.Step();
+            Assert.IsTrue(journey.PowersActive);
         }
 
         [Test]

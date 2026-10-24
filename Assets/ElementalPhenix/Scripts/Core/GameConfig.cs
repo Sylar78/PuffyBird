@@ -126,8 +126,11 @@ namespace ElementalPhenix.Core
         // Pouvoirs d'élément (ElementPowers) : la jauge se remplit avec les points et les éclats ; pleine,
         // le pouvoir du phénix se déclenche dès que le prochain obstacle est à moins de PowerTriggerDistance
         // (bord gauche de l'obstacle moins centre du phénix). Sans phénix (PhoenixElement.None), rien ne change.
-        /// <summary>Pouvoirs aussi en mode classique et au défi du jour (toujours actifs en Voyage).</summary>
-        public bool ElementPowersInClassic = true;
+        /// <summary>
+        /// Pouvoirs aussi en mode classique et au défi du jour (toujours actifs en Voyage). Faux en attendant
+        /// la décision sur le phénix acheté (24/10/2026) : le mode classique et le classement restent ceux de la spec.
+        /// </summary>
+        public bool ElementPowersInClassic;
         public int PowerChargeCost = 10;
         public int PowerChargePerPoint = 1;
         public int PowerChargePerShard = 1;
