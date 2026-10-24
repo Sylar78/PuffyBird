@@ -20,10 +20,12 @@ namespace ElementalPhenix.Core
         /// peut donc pas passer au-dessus ; le tuyau du bas descend jusqu'au sol. Un tuyau seul
         /// (<paramref name="kind"/>) n'a que l'un des deux.
         /// </summary>
-        public static bool HitsPipe(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg, PipeKind kind = PipeKind.Pair)
+        /// <param name="gap">Hauteur de l'ouverture (<see cref="PipePair.Gap"/>) ; négative = <see cref="GameConfig.PipeGap"/>.</param>
+        public static bool HitsPipe(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg, PipeKind kind = PipeKind.Pair, float gap = -1f)
         {
+            if (gap < 0f) gap = cfg.PipeGap;
             return (kind != PipeKind.BottomOnly && CircleRect(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop))
-                || (kind != PipeKind.TopOnly && CircleRect(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY));
+                || (kind != PipeKind.TopOnly && CircleRect(cx, cy, radius, pipeX, gapTop + gap, cfg.PipeWidth, cfg.GroundY));
         }
 
         /// <summary>
@@ -40,12 +42,13 @@ namespace ElementalPhenix.Core
         }
 
         /// <summary>Écart entre l'oiseau et le tuyau le plus proche d'une paire (même géométrie que <see cref="HitsPipe"/>).</summary>
-        public static float PipeGap(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg, PipeKind kind = PipeKind.Pair)
+        public static float PipeGap(float cx, float cy, float radius, float gapTop, float pipeX, GameConfig cfg, PipeKind kind = PipeKind.Pair, float gap = -1f)
         {
+            if (gap < 0f) gap = cfg.PipeGap;
             float top = kind == PipeKind.BottomOnly ? float.MaxValue
                 : CircleRectGap(cx, cy, radius, pipeX, -InfiniteHeight, cfg.PipeWidth, InfiniteHeight + gapTop);
             float bottom = kind == PipeKind.TopOnly ? float.MaxValue
-                : CircleRectGap(cx, cy, radius, pipeX, gapTop + cfg.PipeGap, cfg.PipeWidth, cfg.GroundY);
+                : CircleRectGap(cx, cy, radius, pipeX, gapTop + gap, cfg.PipeWidth, cfg.GroundY);
             return top < bottom ? top : bottom;
         }
 

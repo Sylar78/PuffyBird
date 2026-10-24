@@ -11,6 +11,8 @@ namespace ElementalPhenix.Rendering
     /// collision : chapeau de 52 px, fût de 48 px. L'obstacle touché vibre (vertex shader), sans
     /// jamais modifier la hitbox. Franchi, il s'illumine : ses bandeaux (lanternes, néons, runes,
     /// glace...) s'embrasent puis restent allumés, comme si le phénix le rallumait au passage.
+    /// Pouvoirs d'élément : l'obstacle brûlé par le feu flambe puis se réduit en cendres (il ne
+    /// touche déjà plus), l'ouverture écartée par la lumière s'agrandit avec sa hitbox.
     /// </summary>
     public sealed class PipeView
     {
@@ -22,6 +24,8 @@ namespace ElementalPhenix.Rendering
         const float LitEmission = 2.8f;
         const float FlashEmission = 4f;
         const float LightUpTime = 0.5f;
+        const float BurnTime = 0.45f;
+        const float BurnEmission = 7f;
 
         sealed class Pair
         {
@@ -36,6 +40,9 @@ namespace ElementalPhenix.Rendering
             /// <summary>Paire déjà allumée (identifiant de la paire de la simulation), −1 sinon.</summary>
             public int LitId = -1;
             public float LightUp;
+            /// <summary>Paire brûlée par le feu (identifiant de la simulation), −1 sinon ; temps écoulé depuis.</summary>
+            public int BurnId = -1;
+            public float Burn;
         }
 
         readonly WorldSpace _space;
@@ -164,7 +171,7 @@ namespace ElementalPhenix.Rendering
             if (pair.Id == pipeId) pair.Wobble = WobbleDuration;
         }
 
-        /// <param name="pipeGap">Ouverture de la partie en cours (elle change selon l'étape du Voyage).</param>
+        /// <param name="pipeGap">Ouverture de la partie en cours (elle change selon l'étape du Voyage), sans l'élargissement de la lumière.</param>
         public void Update(PipeField pipes, float pipeGap, float alpha, float deltaTime)
         {
             for (int i = 0; i < _pairs.Length; i++) _pairs[i].Id = -1;
@@ -184,11 +191,22 @@ namespace ElementalPhenix.Rendering
                 }
 
                 float x = Mathf.LerpUnclamped(p.PrevX, p.X, alpha) + _cfg.PipeWidth * 0.5f;
-                // Paires mobiles : les deux tuyaux se décalent ensemble, l'ouverture garde sa hauteur.
-                float gapTop = p.BaseTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha);
+                // Paires mobiles : les deux tuyaux se décalent ensemble, l'ouverture garde sa hauteur
+                // (agrandie autour de son milieu par la lumière, comme la hitbox).
+                float widen = Mathf.LerpUnclamped(p.PrevWiden, p.Widen, alpha);
+                float gapTop = p.BaseTop + Mathf.LerpUnclamped(p.PrevShift, p.Shift, alpha) - widen * 0.5f;
                 float gapTopY = _space.Y(gapTop);
-                float gapBottomY = _space.Y(gapTop + pipeGap);
+                float gapBottomY = _space.Y(gapTop + pipeGap + widen);
                 pair.Root.transform.localPosition = new Vector3(_space.X(x), 0f, 0f);
+                // Brûlé : l'obstacle flambe puis se réduit en cendres.
+                if (p.Burned && pair.BurnId != p.Id)
+                {
+                    pair.BurnId = p.Id;
+                    pair.Burn = 0f;
+                }
+                float ash = pair.BurnId == p.Id ? Mathf.Clamp01(pair.Burn / BurnTime) : 0f;
+                float width = 1f - ash * ash;
+                pair.Root.transform.localScale = new Vector3(width, 1f, width);
 
                 // Bas : du fond du sol jusqu'au bas de l'ouverture, chapeau en haut.
                 float bottomLength = gapBottomY + BuriedDepth;
@@ -202,10 +220,11 @@ namespace ElementalPhenix.Rendering
                 pair.TopCap.localPosition = new Vector3(0f, gapTopY + capHeight, 0f);
 
                 // Tuyau seul : l'autre est masqué (l'ouverture touche le haut de l'écran ou le sol).
-                SetActive(pair.TopBody, p.Kind != PipeKind.BottomOnly);
-                SetActive(pair.TopCap, p.Kind != PipeKind.BottomOnly);
-                SetActive(pair.BottomBody, p.Kind != PipeKind.TopOnly);
-                SetActive(pair.BottomCap, p.Kind != PipeKind.TopOnly);
+                bool gone = ash >= 1f;
+                SetActive(pair.TopBody, p.Kind != PipeKind.BottomOnly && !gone);
+                SetActive(pair.TopCap, p.Kind != PipeKind.BottomOnly && !gone);
+                SetActive(pair.BottomBody, p.Kind != PipeKind.TopOnly && !gone);
+                SetActive(pair.BottomCap, p.Kind != PipeKind.TopOnly && !gone);
 
                 if (!pair.Root.activeSelf) pair.Root.SetActive(true);
             }
@@ -216,11 +235,13 @@ namespace ElementalPhenix.Rendering
                 if (pair.Id == -1)
                 {
                     if (pair.Root.activeSelf) pair.Root.SetActive(false);
-                    if (pair.Wobble > 0f || pair.LitId != -1)
+                    if (pair.Wobble > 0f || pair.LitId != -1 || pair.BurnId != -1)
                     {
                         pair.Wobble = 0f;
                         pair.LitId = -1;
                         pair.LightUp = 0f;
+                        pair.BurnId = -1;
+                        pair.Root.transform.localScale = Vector3.one;
                         for (int r = 0; r < pair.Renderers.Length; r++) pair.Renderers[r].SetPropertyBlock(null);
                     }
                     continue;
@@ -244,14 +265,24 @@ namespace ElementalPhenix.Rendering
                 pair.LightUp = 0f;
                 for (int r = 0; r < pair.Renderers.Length; r++) pair.Renderers[r].SetPropertyBlock(null);
             }
+            // Emplacement repris par une paire qui n'a pas brûlé : pleine largeur.
+            if (pair.BurnId != -1 && pair.BurnId != pair.Id)
+            {
+                pair.BurnId = -1;
+                pair.Root.transform.localScale = Vector3.one;
+                for (int r = 0; r < pair.Renderers.Length; r++) pair.Renderers[r].SetPropertyBlock(null);
+            }
             bool lit = pair.LitId == pair.Id;
-            if (pair.Wobble <= 0f && !lit) return;
+            bool burning = pair.BurnId == pair.Id;
+            if (pair.Wobble <= 0f && !lit && !burning) return;
             pair.Wobble = Mathf.Max(0f, pair.Wobble - deltaTime);
             if (pair.LightUp > 0f) pair.LightUp = Mathf.Max(0f, pair.LightUp - deltaTime);
+            if (burning) pair.Burn += deltaTime;
             float k = pair.Wobble / WobbleDuration;
             // Embrasement bref, puis lueur un peu plus vive qu'avant le passage.
             float flash = pair.LightUp / LightUpTime;
             float emission = lit ? Mathf.Lerp(LitEmission, FlashEmission, flash * flash) : BaseEmission;
+            if (burning) emission = BurnEmission;
             for (int r = 0; r < pair.Renderers.Length; r++)
             {
                 pair.Renderers[r].GetPropertyBlock(_block);

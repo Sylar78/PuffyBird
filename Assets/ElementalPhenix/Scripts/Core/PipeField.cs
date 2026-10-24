@@ -39,9 +39,20 @@ namespace ElementalPhenix.Core
         /// <summary>Décalage vertical courant des deux tuyaux, y vers le bas.</summary>
         public float Shift;
         public float PrevShift;
+        /// <summary>Élargissement de l'ouverture (pouvoir de la lumière), en px, réparti en haut et en bas ; il rejoint <see cref="WidenTarget"/>.</summary>
+        public float Widen;
+        public float PrevWiden;
+        public float WidenTarget;
+        /// <summary>L'obstacle a brûlé (pouvoir du feu) : il est aussi <see cref="Pierced"/>.</summary>
+        public bool Burned;
+        /// <summary>Pas de l'ombre armé contre cette paire : au contact, le phénix réapparaît au milieu de l'ouverture.</summary>
+        public bool ShadowGuard;
 
         /// <summary>Haut de l'ouverture à cet instant.</summary>
-        public float OpeningTop => BaseTop + Shift;
+        public float OpeningTop => BaseTop + Shift - Widen * 0.5f;
+
+        /// <summary>Hauteur de l'ouverture : <see cref="GameConfig.PipeGap"/>, plus l'élargissement de la lumière.</summary>
+        public float Gap(GameConfig cfg) => cfg.PipeGap + Widen;
 
         /// <summary>Décalage vertical au temps de simulation <paramref name="time"/> (paires mobiles).</summary>
         public float ShiftAt(float time, GameConfig cfg)
@@ -120,6 +131,7 @@ namespace ElementalPhenix.Core
                 ref var p = ref this[i];
                 p.PrevX = p.X;
                 p.PrevShift = p.Shift;
+                p.PrevWiden = p.Widen;
             }
         }
 

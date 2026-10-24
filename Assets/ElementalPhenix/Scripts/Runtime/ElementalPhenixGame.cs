@@ -224,6 +224,9 @@ namespace ElementalPhenix
 
             _cameraRig.UpdateViewport();
             _sim.ViewMargin = _cameraRig.SideMarginPx;
+            // Pouvoir d'élément : celui du phénix choisi (le phénix de départ tant que le choix n'est pas débloqué).
+            int played = SelectedSkin;
+            _sim.Element = Skins.Get(IsSkinUnlocked(played) ? played : 0).Element;
             int steps = _clock.Advance(dt);
             for (int i = 0; i < steps; i++)
             {
@@ -591,6 +594,19 @@ namespace ElementalPhenix
                 _haptics.Play(HapticKind.Light);
             }
             if ((events & GameEvents.EmbersFull) != 0) _haptics.Play(HapticKind.Medium);
+            if ((events & GameEvents.PowerReady) != 0) _haptics.Play(HapticKind.Light);
+            if ((events & GameEvents.ElementPower) != 0)
+            {
+                _hud.ShowPower(_sim.Element);
+                _trail.OnStar(_bird.Position);
+                _haptics.Play(HapticKind.Heavy);
+            }
+            if ((events & GameEvents.ShadowStep) != 0)
+            {
+                // L'ombre a avalé le choc : étincelles là où le phénix réapparaît.
+                _trail.OnNearMiss(_bird.Position);
+                _haptics.Play(HapticKind.Medium);
+            }
             if ((events & GameEvents.Rebirth) != 0)
             {
                 _trail.OnMilestone(_bird.Position, Medal.Gold);
@@ -744,7 +760,7 @@ namespace ElementalPhenix
             bool menuCoversTitle = _menu.Screen == MenuScreen.Settings || _menu.Screen == MenuScreen.Consent || _menu.Screen == MenuScreen.Journey;
             _hud.Update(_sim, _realTime, dt, _cameraRig.SafeTopPx, _menu.IsOpen, menuCoversTitle);
             _menu.Update(_sim, _cameraRig.SafeTopPx);
-            _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, ReduceFlash);
+            _postFx.Update(_sim.Flash / _cfg.FlashTime, _sim.FadeAlpha, lightning, ReduceFlash, _sim.State == GameState.Playing ? _sim.SlowAmount : 0f);
         }
 
         // Pause automatique quand l'application passe en arrière-plan (§4.4).

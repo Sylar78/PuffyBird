@@ -124,6 +124,23 @@ namespace ElementalPhenix.Tests
             }
         }
 
+        /// <summary>Les pouvoirs qui touchent à la physique (ralenti, souffle) restent justes avec les rafales et les courants.</summary>
+        [TestCase(4, PhoenixElement.Wind)]
+        [TestCase(8, PhoenixElement.Wind)]
+        [TestCase(4, PhoenixElement.Water)]
+        [TestCase(8, PhoenixElement.Water)]
+        [TestCase(3, PhoenixElement.Light)]
+        public void AutoPilotClearsStagesWithPowers(int stage, PhoenixElement element)
+        {
+            for (uint seed = 1; seed <= 2; seed++)
+            {
+                var sim = StartStage(stage, seed);
+                sim.Element = element;
+                PlayWithBot(sim, 120f);
+                Assert.IsTrue(sim.StageCleared, $"étape {stage}, graine {seed} : mort à {sim.Score} / {sim.JourneyGoal}");
+            }
+        }
+
         [Test]
         public void ClearedStageGlidesWithoutPipesThenLeadsToTheNextOne()
         {
