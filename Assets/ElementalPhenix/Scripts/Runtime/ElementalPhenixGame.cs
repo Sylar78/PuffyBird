@@ -734,7 +734,7 @@ namespace ElementalPhenix
             _lighting.SetFlash(lightning);
             _pipes.Update(_sim.Pipes, _sim.Config.PipeGap, alpha, dt);
             _stars.Update(_sim.Stars, alpha, _realTime);
-            _shardView.Update(_sim.Shards, alpha, _realTime);
+            _shardView.Update(_sim.Shards, alpha, _realTime, dt, _bird.Position);
             _currentView.Update(_sim.Currents, alpha, _realTime);
             _guardian.Update(_sim, dt, _realTime);
             int skin = DisplayedSkin();
