@@ -5,17 +5,19 @@ using UnityEngine.Rendering;
 namespace ElementalPhenix.Rendering
 {
     /// <summary>
-    /// Obstacles en 3D, propres à chaque décor (<see cref="ObstacleStyles"/>) : fût à facettes et
-    /// chapeau en couches, recyclés dans un pool de 4 paires (aucune allocation en jeu ; les maillages
-    /// des 9 décors sont construits au chargement). La géométrie visible correspond aux rectangles de
-    /// collision : chapeau de 52 px, fût de 48 px. L'obstacle touché vibre (vertex shader), sans
+    /// Obstacles en 3D, propres à chaque décor (<see cref="ObstacleMeshes"/>) : en bas, une forme qui
+    /// pousse du sol ; en haut, une variante qui pend. Recyclés dans un pool de 4 paires (aucune
+    /// allocation en jeu ; les maillages des 9 décors sont construits au chargement, ceux de la palette
+    /// contrastée à la première demande, hors partie). Chaque forme contient le rectangle de collision
+    /// de 52 px de large et s'arrête au bord de l'ouverture. L'obstacle touché vibre (vertex shader), sans
     /// jamais modifier la hitbox. Franchi, il s'illumine : ses bandeaux (lanternes, néons, runes,
     /// glace...) s'embrasent puis restent allumés, comme si le phénix le rallumait au passage.
     /// </summary>
     public sealed class PipeView
     {
-        const float TopPipeHeight = 14f;
-        const float BuriedDepth = 0.4f;
+        const float TopLength = 14f;
+        /// <summary>Longueur de l'obstacle du bas : jusque sous le sol, quelle que soit l'ouverture.</summary>
+        const float BottomLength = 6f;
         const float WobbleDuration = 0.6f;
         const float WobbleAmplitude = 0.012f;
         const float BaseEmission = 1.8f;
@@ -26,10 +28,8 @@ namespace ElementalPhenix.Rendering
         sealed class Pair
         {
             public GameObject Root;
-            public Transform TopBody;
-            public Transform TopCap;
-            public Transform BottomBody;
-            public Transform BottomCap;
+            public Transform Top;
+            public Transform Bottom;
             public Renderer[] Renderers;
             public int Id = -1;
             public float Wobble;
@@ -42,19 +42,20 @@ namespace ElementalPhenix.Rendering
         readonly GameConfig _cfg;
         readonly Pair[] _pairs = new Pair[4];
         readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
-        // Maillages par décor : [thème * 2 + contrasté].
-        readonly Mesh[] _bodyMeshes;
-        readonly Mesh[] _capMeshes;
+        // Maillages par décor : [thème * 2 + contrasté] ; ceux de la palette contrastée sont faits à la première demande.
+        readonly Mesh[] _bottomMeshes;
+        readonly Mesh[] _topMeshes;
+        readonly float _half;
         Theme _theme;
         bool _contrast;
-        readonly MeshFilter[] _bodyFilters = new MeshFilter[8];
-        readonly MeshFilter[] _capFilters = new MeshFilter[8];
+        readonly MeshFilter[] _bottomFilters = new MeshFilter[4];
+        readonly MeshFilter[] _topFilters = new MeshFilter[4];
 
         public PipeView(Transform parent, MaterialLibrary materials, WorldSpace space)
         {
             _space = space;
             _cfg = space.Config;
-            var root = new GameObject("Tuyaux").transform;
+            var root = new GameObject("Obstacles").transform;
             root.SetParent(parent, false);
 
             var material = materials.Lit("Obstacle", Color.white, 0.6f, 0f, 0.45f);
@@ -62,62 +63,36 @@ namespace ElementalPhenix.Rendering
             // Bandeaux lumineux (néons, runes, glace) : l'alpha des couleurs de sommet dose la lueur.
             material.SetFloat(MaterialLibrary.VertexEmission, BaseEmission);
 
-            float bodyRadius = WorldSpace.Length(_cfg.PipeBodyWidth) * 0.5f;
-            float capRadius = WorldSpace.Length(_cfg.PipeWidth) * 0.5f;
-            float capHeight = WorldSpace.Length(_cfg.PipeCapHeight);
-
-            // Fût : prisme unitaire (hauteur 1, base à l'origine), étiré à la bonne longueur.
-            // Chapeau : couches empilées, base côté fût, bord côté ouverture. Deux palettes par décor : normale et contrastée.
-            var themes = (Theme[])System.Enum.GetValues(typeof(Theme));
-            _bodyMeshes = new Mesh[themes.Length * 2];
-            _capMeshes = new Mesh[themes.Length * 2];
-            foreach (var theme in themes)
-            {
-                var style = ObstacleStyles.For(theme);
-                for (int c = 0; c < 2; c++)
-                {
-                    bool contrast = c == 1;
-                    string suffix = theme + (contrast ? " contrasté" : "");
-                    _bodyMeshes[(int)theme * 2 + c] = BuildBody(bodyRadius, style, contrast, "Fût " + suffix);
-                    _capMeshes[(int)theme * 2 + c] = BuildCap(capRadius, capHeight, style, contrast, "Chapeau " + suffix);
-                }
-            }
+            // Demi-largeur du rectangle de collision, avec une marge d'arrondi : la forme le recouvre toujours.
+            _half = WorldSpace.Length(_cfg.PipeWidth) * 0.5f + 0.004f;
+            int themes = System.Enum.GetValues(typeof(Theme)).Length;
+            _bottomMeshes = new Mesh[themes * 2];
+            _topMeshes = new Mesh[themes * 2];
+            for (int t = 0; t < themes; t++) BuildMeshes((Theme)t, false);
 
             for (int i = 0; i < _pairs.Length; i++)
             {
                 var pair = new Pair { Root = new GameObject("Paire " + i) };
                 pair.Root.transform.SetParent(root, false);
-                pair.TopBody = CreatePart(pair.Root.transform, "Fût haut", _bodyMeshes[0], material);
-                pair.TopCap = CreatePart(pair.Root.transform, "Chapeau haut", _capMeshes[0], material);
-                pair.BottomBody = CreatePart(pair.Root.transform, "Fût bas", _bodyMeshes[0], material);
-                pair.BottomCap = CreatePart(pair.Root.transform, "Chapeau bas", _capMeshes[0], material);
-                // Le chapeau du haut est retourné : lèvre vers le bas (§7.1).
-                pair.TopCap.localRotation = Quaternion.Euler(180f, 0f, 0f);
-                _bodyFilters[i * 2] = pair.TopBody.GetComponent<MeshFilter>();
-                _bodyFilters[i * 2 + 1] = pair.BottomBody.GetComponent<MeshFilter>();
-                _capFilters[i * 2] = pair.TopCap.GetComponent<MeshFilter>();
-                _capFilters[i * 2 + 1] = pair.BottomCap.GetComponent<MeshFilter>();
+                pair.Bottom = CreatePart(pair.Root.transform, "Obstacle bas", _bottomMeshes[0], material);
+                pair.Top = CreatePart(pair.Root.transform, "Obstacle haut", _topMeshes[0], material);
+                // L'obstacle du haut est retourné : il s'étend vers le haut depuis le bord de l'ouverture.
+                pair.Top.localScale = new Vector3(1f, -1f, 1f);
+                _bottomFilters[i] = pair.Bottom.GetComponent<MeshFilter>();
+                _topFilters[i] = pair.Top.GetComponent<MeshFilter>();
                 pair.Renderers = pair.Root.GetComponentsInChildren<Renderer>();
                 pair.Root.SetActive(false);
                 _pairs[i] = pair;
             }
         }
 
-        static Mesh BuildBody(float radius, ObstacleStyles.Style style, bool contrast, string name)
+        void BuildMeshes(Theme theme, bool contrast)
         {
-            var color = ObstacleStyles.ColorOf(style, ObstacleStyles.Role.Body, contrast);
-            return new MeshBuilder().AddPrism(Vector3.zero, radius, radius, 1f, color, style.Sides, caps: false).Build(name);
-        }
-
-        static Mesh BuildCap(float radius, float height, ObstacleStyles.Style style, bool contrast, string name)
-        {
-            var builder = new MeshBuilder();
-            foreach (var layer in style.Cap)
-            {
-                var color = ObstacleStyles.ColorOf(style, layer.Role, contrast);
-                builder.AddPrism(new Vector3(0f, height * layer.From, 0f), radius * layer.Bottom, radius * layer.Top, height * layer.Height, color, style.Sides);
-            }
-            return builder.Build(name);
+            int index = (int)theme * 2 + (contrast ? 1 : 0);
+            if (_bottomMeshes[index] != null) return;
+            string suffix = theme + (contrast ? " contrasté" : "");
+            _bottomMeshes[index] = ObstacleMeshes.Build(theme, contrast, _half, BottomLength, false, "Obstacle bas " + suffix);
+            _topMeshes[index] = ObstacleMeshes.Build(theme, contrast, _half, TopLength, true, "Obstacle haut " + suffix);
         }
 
         /// <summary>Obstacles du décor de la partie. Hors partie (changement de décor).</summary>
@@ -136,11 +111,13 @@ namespace ElementalPhenix.Rendering
 
         void ApplyMeshes()
         {
+            // Palette contrastée : construite la première fois qu'on la demande (réglage, hors partie).
+            if (_contrast) BuildMeshes(_theme, true);
             int index = (int)_theme * 2 + (_contrast ? 1 : 0);
-            for (int i = 0; i < _bodyFilters.Length; i++)
+            for (int i = 0; i < _bottomFilters.Length; i++)
             {
-                _bodyFilters[i].sharedMesh = _bodyMeshes[index];
-                _capFilters[i].sharedMesh = _capMeshes[index];
+                _bottomFilters[i].sharedMesh = _bottomMeshes[index];
+                _topFilters[i].sharedMesh = _topMeshes[index];
             }
         }
 
@@ -169,7 +146,6 @@ namespace ElementalPhenix.Rendering
         {
             for (int i = 0; i < _pairs.Length; i++) _pairs[i].Id = -1;
 
-            float capHeight = WorldSpace.Length(_cfg.PipeCapHeight);
             for (int i = 0; i < pipes.Count; i++)
             {
                 ref var p = ref pipes[i];
@@ -190,22 +166,14 @@ namespace ElementalPhenix.Rendering
                 float gapBottomY = _space.Y(gapTop + pipeGap);
                 pair.Root.transform.localPosition = new Vector3(_space.X(x), 0f, 0f);
 
-                // Bas : du fond du sol jusqu'au bas de l'ouverture, chapeau en haut.
-                float bottomLength = gapBottomY + BuriedDepth;
-                pair.BottomBody.localPosition = new Vector3(0f, -BuriedDepth, 0f);
-                pair.BottomBody.localScale = new Vector3(1f, Mathf.Max(0.01f, bottomLength), 1f);
-                pair.BottomCap.localPosition = new Vector3(0f, gapBottomY - capHeight, 0f);
+                // Bas : du bord de l'ouverture jusque sous le sol. Haut : du bord de l'ouverture jusque
+                // bien au-dessus de l'écran (obstacle « infini »).
+                pair.Bottom.localPosition = new Vector3(0f, gapBottomY, 0f);
+                pair.Top.localPosition = new Vector3(0f, gapTopY, 0f);
 
-                // Haut : du haut de l'ouverture jusque bien au-dessus de l'écran (tuyau « infini »).
-                pair.TopBody.localPosition = new Vector3(0f, gapTopY, 0f);
-                pair.TopBody.localScale = new Vector3(1f, TopPipeHeight, 1f);
-                pair.TopCap.localPosition = new Vector3(0f, gapTopY + capHeight, 0f);
-
-                // Tuyau seul : l'autre est masqué (l'ouverture touche le haut de l'écran ou le sol).
-                SetActive(pair.TopBody, p.Kind != PipeKind.BottomOnly);
-                SetActive(pair.TopCap, p.Kind != PipeKind.BottomOnly);
-                SetActive(pair.BottomBody, p.Kind != PipeKind.TopOnly);
-                SetActive(pair.BottomCap, p.Kind != PipeKind.TopOnly);
+                // Obstacle seul : l'autre est masqué (l'ouverture touche le haut de l'écran ou le sol).
+                SetActive(pair.Top, p.Kind != PipeKind.BottomOnly);
+                SetActive(pair.Bottom, p.Kind != PipeKind.TopOnly);
 
                 if (!pair.Root.activeSelf) pair.Root.SetActive(true);
             }

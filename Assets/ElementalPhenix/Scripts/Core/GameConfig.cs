@@ -44,8 +44,6 @@ namespace ElementalPhenix.Core
         // Tuyaux (§7)
         public float ScrollSpeed = 120f;
         public float PipeWidth = 52f;
-        public float PipeBodyWidth = 48f;
-        public float PipeCapHeight = 24f;
         public float PipeGap = 100f;
         public float PipeSpacing = 150f;
         public int GapTopMin = 80;
