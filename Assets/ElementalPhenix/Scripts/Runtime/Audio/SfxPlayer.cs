@@ -64,7 +64,8 @@ namespace ElementalPhenix.Audio
             if ((events & (GameEvents.Hit | GameEvents.StarShield)) != 0) Play(SoundId.Hit);
             if ((events & GameEvents.Die) != 0) Play(SoundId.Die);
             if ((events & GameEvents.Swoosh) != 0) Play(SoundId.Swoosh);
-            if ((events & GameEvents.Star) != 0) Play(SoundId.Star);
+            if ((events & (GameEvents.Star | GameEvents.ElementPower)) != 0) Play(SoundId.Star);
+            if ((events & GameEvents.ShadowStep) != 0) Play(SoundId.Swoosh);
             if ((events & GameEvents.NearMiss) != 0) Play(SoundId.Graze);
             if ((events & (GameEvents.Milestone | GameEvents.StageCleared)) != 0) Play(SoundId.Milestone);
             if ((events & GameEvents.Shard) != 0) Play(SoundId.Shard);

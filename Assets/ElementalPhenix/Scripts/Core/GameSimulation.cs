@@ -42,6 +42,12 @@ namespace ElementalPhenix.Core
         float _clearTime;
         float _boostTime;
         float _speedFactor = 1f;
+        // Pouvoirs d'élément : ralenti de l'eau, souffle du vent, ouvertures que la lumière doit encore écarter.
+        float _slowTime;
+        float _timeScale = 1f;
+        float _guideTime;
+        int _guideTarget = -1;
+        int _lightPending;
         GameEvents _events;
 
         public GameSimulation(GameConfig cfg, IScoreStorage storage, uint seed, bool startOnTitle = true)
@@ -115,6 +121,31 @@ namespace ElementalPhenix.Core
         /// de terminer la partie. Le sol tue toujours.
         /// </summary>
         public bool Shielded => State == GameState.Playing && _boostTime > 0f;
+
+        /// <summary>
+        /// Élément du phénix choisi (fixé par le rendu d'après le catalogue). <see cref="PhoenixElement.None"/> :
+        /// aucun pouvoir, le jeu de la spec.
+        /// </summary>
+        public PhoenixElement Element { get; set; }
+        /// <summary>Le pouvoir d'élément agit dans cette partie : un élément, et le Voyage ou les pouvoirs autorisés en classique.</summary>
+        public bool PowersActive => Element != PhoenixElement.None && (IsJourney || _baseCfg.ElementPowersInClassic);
+        /// <summary>Jauge d'élément (0 à <see cref="GameConfig.PowerChargeCost"/>).</summary>
+        public int ElementCharge { get; private set; }
+        /// <summary>Jauge pleine : le pouvoir se déclenchera à l'approche du prochain obstacle.</summary>
+        public bool PowerReady => PowersActive && ElementCharge >= _cfg.PowerChargeCost;
+        /// <summary>Paire visée par le dernier pouvoir déclenché, ou −1.</summary>
+        public int PowerPipeId { get; private set; } = -1;
+        /// <summary>Échelle du temps de jeu : 1, ou jusqu'à <see cref="GameConfig.WaterTimeScale"/> pendant la marée lente.</summary>
+        public float TimeScale => _timeScale;
+        /// <summary>Intensité du ralenti dans [0, 1], pour les effets visuels.</summary>
+        public float SlowAmount => (1f - _timeScale) / (1f - _cfg.WaterTimeScale);
+        /// <summary>Le courant porteur mène le phénix vers l'ouverture visée.</summary>
+        public bool Guiding => State == GameState.Playing && _guideTime > 0f;
+        /// <summary>Secondes restantes du courant porteur (0 sans souffle), et paire visée.</summary>
+        public float GuideTime => _guideTime;
+        public int GuideTarget => _guideTarget;
+        /// <summary>Secondes restantes de la marée lente (temps réel).</summary>
+        public float SlowTime => _slowTime;
 
         float _viewMargin;
 
@@ -208,11 +239,22 @@ namespace ElementalPhenix.Core
             _currents.Clear();
             _boostTime = 0f;
             _speedFactor = 1f;
+            StopPowers();
             Flash = 0f;
             HitPipeId = -1;
             ShieldPipeId = -1;
             DiedOnGround = false;
             _dieSoundTimer = 0f;
+        }
+
+        /// <summary>Arrête le ralenti, le souffle et l'écartement en attente (la jauge reste).</summary>
+        void StopPowers()
+        {
+            _slowTime = 0f;
+            _timeScale = 1f;
+            _guideTime = 0f;
+            _guideTarget = -1;
+            _lightPending = 0;
         }
 
         public void Press()
@@ -289,7 +331,10 @@ namespace ElementalPhenix.Core
             // En pause, tout est figé, sauf le fondu d'un retour à l'accueil.
             if (State == GameState.Paused && !IsFadingOut) return;
 
-            Time += dt;
+            // Marée lente : le temps du jeu ralentit (défilement, chute, tuyaux mobiles, étoile), pas les écrans.
+            if (State == GameState.Playing) ElementPowers.StepSlow(ref _slowTime, ref _timeScale, dt, _cfg);
+            float gdt = dt * _timeScale;
+            Time += gdt;
             StateTime += dt;
             if (Flash > 0f) Flash = Math.Max(0f, Flash - dt);
             UpdateTransition(dt);
@@ -300,11 +345,11 @@ namespace ElementalPhenix.Core
                 || (State == GameState.Over && StageCleared);
             if (scrolling)
             {
-                if (State == GameState.Playing) StepBoost(ref _boostTime, ref _speedFactor, dt, _cfg);
-                float dx = _cfg.ScrollSpeed * _speedFactor * dt;
+                if (State == GameState.Playing) StepBoost(ref _boostTime, ref _speedFactor, gdt, _cfg);
+                float dx = _cfg.ScrollSpeed * _speedFactor * gdt;
                 ScrollDistance += dx;
                 GroundOffset = (GroundOffset + dx) % _cfg.GroundPattern;
-                _bird.AnimateWings(dt, _cfg);
+                _bird.AnimateWings(gdt, _cfg);
             }
 
             if (State == GameState.Title || State == GameState.Ready)
@@ -326,7 +371,7 @@ namespace ElementalPhenix.Core
             {
                 float rotSpeed = State == GameState.Dying ? _cfg.RotSpeedDying : _cfg.RotSpeed;
                 if (StageCleared) Glide(dt);
-                else _bird.Integrate(dt, rotSpeed, _cfg, _cfg.GustAt(Time) + (State == GameState.Playing ? CurrentAt(_cfg.BirdCenterX, _currents, 0f, _cfg) : 0f));
+                else _bird.Integrate(gdt, rotSpeed, _cfg, State == GameState.Playing ? PlayingAcceleration(gdt) : _cfg.GustAt(Time));
                 if (_bird.Y + _cfg.BirdHeight >= _cfg.GroundY)
                 {
                     _bird.Y = _cfg.GroundY - _cfg.BirdHeight;
@@ -337,9 +382,10 @@ namespace ElementalPhenix.Core
 
             if (State != GameState.Playing) return;
 
-            if (_pipes.Advance(dt, _rng, _cfg, _viewMargin, _speedFactor, spawn: !StageCleared)) OnPairSpawned();
+            if (_pipes.Advance(gdt, _rng, _cfg, _viewMargin, _speedFactor, spawn: !StageCleared)) OnPairSpawned();
             _pipes.UpdateMotion(Time, _cfg);
-            AdvanceFloaters(_cfg.ScrollSpeed * _speedFactor * dt);
+            AdvanceFloaters(_cfg.ScrollSpeed * _speedFactor * gdt);
+            UpdateWiden(gdt);
 
             if (StageCleared)
             {
@@ -354,6 +400,7 @@ namespace ElementalPhenix.Core
 
             float cx = _cfg.BirdCenterX;
             float cy = _bird.CenterY(_cfg);
+            TriggerPower(cx);
             for (int i = 0; i < _stars.Capacity; i++)
             {
                 ref var star = ref _stars[i];
@@ -369,6 +416,7 @@ namespace ElementalPhenix.Core
                 shard.Active = false;
                 ShardsThisRun++;
                 AddEmbers(_cfg.EmbersPerShard);
+                AddCharge(_cfg.PowerChargePerShard);
                 _events |= GameEvents.Shard;
             }
             for (int i = 0; i < _pipes.Count; i++)
@@ -380,6 +428,7 @@ namespace ElementalPhenix.Core
                     p.Scored = true;
                     Score++;
                     _events |= GameEvents.Point;
+                    AddCharge(_cfg.PowerChargePerPoint);
                     if (IsJourney)
                     {
                         if (Score >= JourneyGoal)
@@ -388,6 +437,7 @@ namespace ElementalPhenix.Core
                             StageCleared = true;
                             _clearTime = 0f;
                             _boostTime = 0f;
+                            StopPowers();
                             _events |= GameEvents.StageCleared;
                             return;
                         }
@@ -399,8 +449,21 @@ namespace ElementalPhenix.Core
                     }
                 }
                 if (p.Pierced) continue;
-                if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind))
+                if (Collision.HitsPipe(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind, p.Gap(_cfg)))
                 {
+                    if (p.ShadowGuard)
+                    {
+                        // Pas de l'ombre : le phénix se fond dans l'ombre et réapparaît au milieu de
+                        // l'ouverture, sans élan ; cette paire ne peut plus le toucher.
+                        p.ShadowGuard = false;
+                        p.Pierced = true;
+                        _bird.Y = ElementPowers.OpeningCenter(p, _cfg) - _cfg.BirdHeight * 0.5f;
+                        _bird.PrevY = _bird.Y;
+                        _bird.Vy = 0f;
+                        _bird.Rot = 0f;
+                        _events |= GameEvents.ShadowStep;
+                        continue;
+                    }
                     if (_boostTime > 0f)
                     {
                         ShieldPipeId = p.Id;
@@ -419,7 +482,7 @@ namespace ElementalPhenix.Core
                 // Frôlement : tuyau approché à moins de NearMissDistance pendant la traversée, signalé
                 // quand l'oiseau l'a dépassé sans le toucher.
                 if (cx + _cfg.BirdRadius > p.X && cx - _cfg.BirdRadius < p.X + _cfg.PipeWidth
-                    && Collision.PipeGap(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind) <= _cfg.NearMissDistance)
+                    && Collision.PipeGap(cx, cy, _cfg.BirdRadius, p.OpeningTop, p.X, _cfg, p.Kind, p.Gap(_cfg)) <= _cfg.NearMissDistance)
                 {
                     p.Grazed = true;
                 }
@@ -484,6 +547,9 @@ namespace ElementalPhenix.Core
             _guardianShown = false;
             _boostTime = 0f;
             _speedFactor = 1f;
+            StopPowers();
+            ElementCharge = 0;
+            PowerPipeId = -1;
             Score = 0;
             NewBest = false;
             Continued = false;
@@ -611,6 +677,12 @@ namespace ElementalPhenix.Core
                     _shards.Spawn(x, y);
                 }
             }
+            // Révélation : les paires que la lumière n'a pas encore pu écarter (elles n'existaient pas).
+            if (_lightPending > 0)
+            {
+                _lightPending--;
+                last.WidenTarget = _cfg.LightWiden;
+            }
             if (guardianStep < 0 && index >= _cfg.BreatherFromPair && _bonusRng.NextFloat() < _cfg.BreatherChance) spacing = _cfg.BreatherSpacing;
             _pipes.NextSpacing = spacing;
         }
@@ -670,6 +742,94 @@ namespace ElementalPhenix.Core
             _currents.Advance(dx, _cfg, _viewMargin, _cfg.CurrentHalfWidth);
         }
 
+        /// <summary>
+        /// Accélération verticale ajoutée à la gravité pendant la partie : rafales et courants, ou le
+        /// courant porteur du vent, qui les remplace tant qu'il mène le phénix vers l'ouverture visée.
+        /// </summary>
+        float PlayingAcceleration(float gdt)
+        {
+            if (_guideTime > 0f)
+            {
+                _guideTime = Math.Max(0f, _guideTime - gdt);
+                int index = IndexOfPipe(_guideTarget);
+                // Ouverture franchie (ou paire disparue) : le souffle retombe.
+                if (index >= 0 && _cfg.BirdCenterX - _cfg.BirdRadius < _pipes[index].X + _cfg.PipeWidth)
+                {
+                    return ElementPowers.GuideAcceleration(_bird.CenterY(_cfg), _bird.Vy, ElementPowers.OpeningCenter(_pipes[index], _cfg), _cfg);
+                }
+                _guideTime = 0f;
+                _guideTarget = -1;
+            }
+            return _cfg.GustAt(Time) + CurrentAt(_cfg.BirdCenterX, _currents, 0f, _cfg);
+        }
+
+        int IndexOfPipe(int id)
+        {
+            for (int i = 0; i < _pipes.Count; i++)
+            {
+                if (_pipes[i].Id == id) return i;
+            }
+            return -1;
+        }
+
+        void AddCharge(int amount)
+        {
+            if (!PowersActive || ElementCharge >= _cfg.PowerChargeCost) return;
+            ElementCharge = Math.Min(_cfg.PowerChargeCost, ElementCharge + amount);
+            if (ElementCharge >= _cfg.PowerChargeCost) _events |= GameEvents.PowerReady;
+        }
+
+        /// <summary>
+        /// Jauge pleine : le pouvoir vise la première paire pas encore franchie (ni déjà traversable) dès
+        /// que son bord gauche est à moins de <see cref="GameConfig.PowerTriggerDistance"/> du phénix.
+        /// </summary>
+        void TriggerPower(float cx)
+        {
+            if (!PowerReady) return;
+            for (int i = 0; i < _pipes.Count; i++)
+            {
+                ref var p = ref _pipes[i];
+                if (p.Scored || p.Pierced || p.X + _cfg.PipeWidth < cx - _cfg.BirdRadius) continue;
+                if (p.X - cx > _cfg.PowerTriggerDistance) return;
+                ElementCharge = 0;
+                PowerPipeId = p.Id;
+                _events |= GameEvents.ElementPower;
+                switch (Element)
+                {
+                    case PhoenixElement.Fire:
+                        p.Burned = true;
+                        p.Pierced = true;
+                        break;
+                    case PhoenixElement.Water:
+                        _slowTime = _cfg.WaterSlowDuration;
+                        break;
+                    case PhoenixElement.Wind:
+                        _guideTime = _cfg.WindGuideMaxTime;
+                        _guideTarget = p.Id;
+                        break;
+                    case PhoenixElement.Light:
+                        int left = _cfg.LightPairs;
+                        for (int k = i; k < _pipes.Count && left > 0; k++, left--) _pipes[k].WidenTarget = _cfg.LightWiden;
+                        _lightPending = left;
+                        break;
+                    case PhoenixElement.Shadow:
+                        p.ShadowGuard = true;
+                        break;
+                }
+                return;
+            }
+        }
+
+        /// <summary>Les ouvertures touchées par la lumière s'écartent en douceur jusqu'à leur cible.</summary>
+        void UpdateWiden(float gdt)
+        {
+            for (int i = 0; i < _pipes.Count; i++)
+            {
+                ref var p = ref _pipes[i];
+                if (p.Widen < p.WidenTarget) p.Widen = Math.Min(p.WidenTarget, p.Widen + _cfg.LightWidenRate * gdt);
+            }
+        }
+
         void AddEmbers(int amount)
         {
             if (IsJourney || Reborn || Embers >= _cfg.RebirthCost) return;
@@ -710,6 +870,7 @@ namespace ElementalPhenix.Core
 
         void Die(bool onGround)
         {
+            StopPowers();
             if (State == GameState.Playing)
             {
                 _events |= GameEvents.Hit;
@@ -809,6 +970,11 @@ namespace ElementalPhenix.Core
         internal void ForceEmbers(int embers)
         {
             Embers = embers;
+        }
+
+        internal void ForceCharge(int charge)
+        {
+            ElementCharge = charge;
         }
     }
 }

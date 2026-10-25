@@ -15,12 +15,17 @@ namespace ElementalPhenix.Rendering
         const float FlashExposure = 2.4f;
         const float LightningExposure = 0.7f;
         const float FadeExposure = -10f;
+        const float BaseSaturation = 12f;
+        /// <summary>Marée lente : couleurs désaturées et vignette plus marquée, comme un temps suspendu.</summary>
+        const float SlowSaturation = -35f;
+        const float SlowVignette = 0.15f;
 
         readonly Bloom _bloom;
         readonly ColorAdjustments _color;
         readonly Vignette _vignette;
         readonly DepthOfField _dof;
         float _baseExposure;
+        float _baseVignette;
 
         public PostFxController(Transform parent)
         {
@@ -36,7 +41,7 @@ namespace ElementalPhenix.Rendering
 
             _color = profile.Add<ColorAdjustments>(true);
             _color.contrast.value = 8f;
-            _color.saturation.value = 12f;
+            _color.saturation.value = BaseSaturation;
 
             _vignette = profile.Add<Vignette>(true);
             _vignette.smoothness.value = 0.45f;
@@ -64,6 +69,7 @@ namespace ElementalPhenix.Rendering
             _bloom.tint.value = colors.BloomTint;
             _color.colorFilter.value = colors.ColorFilter;
             _vignette.intensity.value = colors.Vignette;
+            _baseVignette = colors.Vignette;
             _baseExposure = colors.Exposure;
         }
 
@@ -78,10 +84,13 @@ namespace ElementalPhenix.Rendering
         /// <param name="flash">0..1, flash blanc d'impact.</param>
         /// <param name="fade">0..1, fondu au noir.</param>
         /// <param name="lightning">0..1, lueur d'un éclair (décor d'orage).</param>
-        public void Update(float flash, float fade, float lightning, bool reduceFlash)
+        /// <param name="slow">0..1, ralenti de la marée lente (pouvoir de l'eau).</param>
+        public void Update(float flash, float fade, float lightning, bool reduceFlash, float slow = 0f)
         {
             float f = reduceFlash ? flash * 0.25f : flash;
             _color.postExposure.value = _baseExposure + f * FlashExposure + lightning * LightningExposure + fade * FadeExposure;
+            _color.saturation.value = BaseSaturation + slow * SlowSaturation;
+            _vignette.intensity.value = _baseVignette + slow * SlowVignette;
         }
     }
 }

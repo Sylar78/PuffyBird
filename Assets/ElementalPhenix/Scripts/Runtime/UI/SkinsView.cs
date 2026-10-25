@@ -10,7 +10,7 @@ namespace ElementalPhenix.UI
 
     /// <summary>
     /// Menu des oiseaux, sous l'aperçu agrandi de l'oiseau : nom et flèches pour parcourir le
-    /// catalogue, état (débloqué, score à atteindre, prix) et bouton CHOISIR / ACHETER. Les libellés sont
+    /// catalogue, pouvoir de son élément, état (débloqué, score à atteindre, prix) et bouton CHOISIR / ACHETER. Les libellés sont
     /// construits au chargement, sauf les prix : la boutique les donne plus tard, une seule fois.
     /// </summary>
     public sealed class SkinsView
@@ -19,7 +19,8 @@ namespace ElementalPhenix.UI
         const float PanelWidth = 240f;
         const float PanelHeight = 132f;
         const float NameY = 290f;
-        const float StatusY = 318f;
+        const float PowerY = 306f;
+        const float StatusY = 324f;
         const float ActionY = 348f;
         const float BackY = 381f;
 
@@ -45,6 +46,7 @@ namespace ElementalPhenix.UI
         readonly Element _panelInner;
         readonly Element[] _names = new Element[Skins.Count];
         readonly Element[] _hints = new Element[Skins.Count];
+        readonly Element[] _powers = new Element[Skins.Count];
         readonly Element[] _prices = new Element[Skins.Count];
         readonly string[] _priceTexts = new string[Skins.Count];
         readonly Element _unlocked;
@@ -80,6 +82,7 @@ namespace ElementalPhenix.UI
                 var skin = Skins.Get(i);
                 if (includePaid || skin.Unlock != SkinUnlock.Purchase) _browsable[count++] = i;
                 _names[i] = ui.Text(skin.NameIn(Lang.Current), TextAlign.Center, Color.white, Palette.Outline);
+                _powers[i] = ui.Text(PowerTexts.Description(skin.Element), TextAlign.Center, PowerTexts.Tint(skin.Element), Palette.Outline);
                 if (skin.Unlock == SkinUnlock.Medal)
                 {
                     int required = Skins.RequiredScore(skin.Medal, _cfg);
@@ -140,8 +143,10 @@ namespace ElementalPhenix.UI
             for (int i = 0; i < Skins.Count; i++)
             {
                 if (i != browsed) UiLayer.Hide(_names[i]);
+                if (i != browsed) UiLayer.Hide(_powers[i]);
             }
             _ui.Place(_names[browsed], cx, NameY - VoxelFont.GlyphHeight * 1.2f, 2.4f, maxWidth: PanelWidth - 96f);
+            _ui.Place(_powers[browsed], cx, PowerY - VoxelFont.GlyphHeight * 0.6f, 1.2f, maxWidth: PanelWidth - 16f);
             _ui.PlaceButton(_previous, UiAction.SkinPrevious, left + 26f, NameY, 30f, 26f, 2f, hitMargin: 6f);
             _ui.PlaceButton(_next, UiAction.SkinNext, left + PanelWidth - 26f, NameY, 30f, 26f, 2f, hitMargin: 6f);
 
@@ -206,6 +211,7 @@ namespace ElementalPhenix.UI
             UiLayer.Hide(_panel);
             UiLayer.Hide(_panelInner);
             foreach (var e in _names) UiLayer.Hide(e);
+            foreach (var e in _powers) UiLayer.Hide(e);
             HideStatuses(null);
             foreach (var e in _actionLabels) UiLayer.Hide(e);
             UiLayer.Hide(_previous);
