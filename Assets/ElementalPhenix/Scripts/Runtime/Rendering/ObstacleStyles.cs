@@ -4,13 +4,13 @@ using UnityEngine;
 namespace ElementalPhenix.Rendering
 {
     /// <summary>
-    /// Obstacles propres à chaque décor : pierre taillée, obélisque de lune, tour néon, pilier laqué,
-    /// paratonnerre, pilier de glace, tronc moussu, colonne de marbre, corail. Seule l'apparence change :
-    /// fût de 48 px et chapeau de 52 px sur 24 px, comme les rectangles de collision (§7.1, §9).
+    /// Couleurs des obstacles de chaque décor (formes : <see cref="ObstacleMeshes"/>) : rochers de grès,
+    /// cristaux de lune, tour néon, pagode, basalte foudroyé, glace, tronc à lianes, colonne dans les
+    /// nuages, récif de corail. Seule l'apparence change, jamais les rectangles de collision (§7.1, §9).
     /// </summary>
     public static class ObstacleStyles
     {
-        /// <summary>Couleur d'une couche du chapeau, prise dans la palette du style (ou dans la palette contrastée).</summary>
+        /// <summary>Rôle d'une couleur, pris dans la palette du style (ou dans la palette contrastée).</summary>
         public enum Role : byte
         {
             Body,
@@ -18,39 +18,17 @@ namespace ElementalPhenix.Rendering
             Rim,
             /// <summary>Lumineuse (émission des couleurs de sommet), gardée aussi en mode contrasté.</summary>
             Glow,
-        }
-
-        /// <summary>
-        /// Une couche du chapeau : de <see cref="From"/> à <see cref="From"/> + <see cref="Height"/> (fractions
-        /// de la hauteur, 0 côté fût, 1 côté ouverture), rayons en fraction du rayon du chapeau.
-        /// </summary>
-        public struct Layer
-        {
-            public float From;
-            public float Height;
-            public float Bottom;
-            public float Top;
-            public Role Role;
-
-            public Layer(float from, float height, float bottom, float top, Role role)
-            {
-                From = from;
-                Height = height;
-                Bottom = bottom;
-                Top = top;
-                Role = role;
-            }
+            /// <summary>Détail propre au décor (mousse, bois coupé, nuage, algue).</summary>
+            Accent,
         }
 
         public sealed class Style
         {
-            /// <summary>Nombre de faces du fût et du chapeau (prisme à arêtes nettes).</summary>
-            public int Sides;
             public Color Body;
             public Color Shade;
             public Color Rim;
             public Color Glow;
-            public Layer[] Cap;
+            public Color Accent;
         }
 
         /// <summary>Couleur sans lueur : l'alpha des couleurs de sommet masque l'émission du matériau.</summary>
@@ -63,79 +41,41 @@ namespace ElementalPhenix.Rendering
             return c;
         }
 
-        static Layer L(float from, float height, float bottom, float top, Role role) => new Layer(from, height, bottom, top, role);
-
         public static Style For(Theme theme)
         {
             switch (theme)
             {
                 case Theme.Night:
-                    // Obélisque de lune : pierre bleu nuit, bandeau de runes lumineuses.
-                    return new Style
-                    {
-                        Sides = 4, Body = Matte("#33406E"), Shade = Matte("#222B4F"), Rim = Matte("#5A6BA8"), Glow = Lit("#7FE3FF", 1f),
-                        Cap = new[] { L(0f, 0.2f, 0.92f, 1f, Role.Shade), L(0.2f, 0.25f, 1f, 1f, Role.Body), L(0.45f, 0.15f, 1.02f, 1.02f, Role.Glow), L(0.6f, 0.4f, 1f, 1f, Role.Rim) },
-                    };
+                    // Cristaux de lune : pierre bleu nuit, cristaux clairs, veines de runes lumineuses.
+                    return new Style { Body = Matte("#2E3A66"), Shade = Matte("#1E2647"), Rim = Lit("#9FB4F2", 0.25f), Glow = Lit("#7FE3FF", 1f), Accent = Lit("#C9D6FF", 0.4f) };
                 case Theme.City:
-                    // Tour néon : métal sombre, deux anneaux roses lumineux.
-                    return new Style
-                    {
-                        Sides = 6, Body = Matte("#3B4150"), Shade = Matte("#262A33"), Rim = Matte("#5C6475"), Glow = Lit("#FF4FD8", 1f),
-                        Cap = new[] { L(0f, 0.18f, 0.92f, 1f, Role.Shade), L(0.18f, 0.14f, 1.02f, 1.02f, Role.Glow), L(0.32f, 0.36f, 1f, 1f, Role.Body), L(0.68f, 0.12f, 1.02f, 1.02f, Role.Glow), L(0.8f, 0.2f, 1f, 1f, Role.Rim) },
-                    };
+                    // Tour néon : béton sombre, corniches de métal, fenêtres et enseignes roses et cyan.
+                    return new Style { Body = Matte("#3B4150"), Shade = Matte("#22262F"), Rim = Matte("#6A7385"), Glow = Lit("#FF4FD8", 1f), Accent = Lit("#5FE8FF", 1f) };
                 case Theme.Japan:
-                    // Pilier laqué vermillon, bague dorée et poutre noire, à la manière d'un torii.
-                    return new Style
-                    {
-                        Sides = 20, Body = Matte("#D2412C"), Shade = Matte("#1E1717"), Rim = Matte("#E8B04A"), Glow = Lit("#FFD27A", 0.6f),
-                        Cap = new[] { L(0f, 0.12f, 1f, 1f, Role.Rim), L(0.12f, 0.33f, 0.98f, 0.98f, Role.Body), L(0.45f, 0.55f, 1.03f, 1.03f, Role.Shade) },
-                    };
+                    // Pagode : murs vermillon, toits sombres, liserés d'or, lanternes.
+                    return new Style { Body = Matte("#C8392A"), Shade = Matte("#221A1C"), Rim = Matte("#E8B04A"), Glow = Lit("#FFC46A", 0.9f), Accent = Matte("#F2E6CF") };
                 case Theme.Storm:
-                    // Paratonnerre : fer sombre, bagues de cuivre, bord chargé d'électricité.
-                    return new Style
-                    {
-                        Sides = 8, Body = Matte("#4A5059"), Shade = Matte("#2E3238"), Rim = Matte("#C9773A"), Glow = Lit("#8FD8FF", 1f),
-                        Cap = new[] { L(0f, 0.15f, 0.95f, 1f, Role.Rim), L(0.15f, 0.2f, 1f, 1f, Role.Body), L(0.35f, 0.15f, 1.02f, 1.02f, Role.Rim), L(0.5f, 0.3f, 1f, 1f, Role.Shade), L(0.8f, 0.2f, 1f, 1f, Role.Glow) },
-                    };
+                    // Orgues de basalte : roche noire, bagues de cuivre, fissures chargées d'éclairs.
+                    return new Style { Body = Matte("#3E434B"), Shade = Matte("#272A30"), Rim = Matte("#C9773A"), Glow = Lit("#8FD8FF", 1f), Accent = Matte("#565C66") };
                 case Theme.Snow:
-                    // Pilier de glace : cristal hexagonal, givre clair et lueur froide au bord.
-                    return new Style
-                    {
-                        Sides = 6, Body = Lit("#BFE6F7", 0.12f), Shade = Matte("#8CCBE8"), Rim = Matte("#F4FCFF"), Glow = Lit("#DFF6FF", 0.6f),
-                        Cap = new[] { L(0f, 0.3f, 0.9f, 1.03f, Role.Shade), L(0.3f, 0.4f, 1.03f, 1.03f, Role.Rim), L(0.7f, 0.3f, 1.03f, 1f, Role.Glow) },
-                    };
+                    // Glace : cristal bleuté, éclats de givre, lueur froide.
+                    return new Style { Body = Lit("#A9DCF2", 0.12f), Shade = Matte("#7FBEDD"), Rim = Lit("#F4FCFF", 0.2f), Glow = Lit("#DFF6FF", 0.6f), Accent = Lit("#CFF0FF", 0.3f) };
                 case Theme.Jungle:
-                    // Tronc moussu : écorce brune, anneaux de mousse.
-                    return new Style
-                    {
-                        Sides = 11, Body = Matte("#7A5233"), Shade = Matte("#553620"), Rim = Matte("#5E9E35"), Glow = Lit("#B8F06A", 0.5f),
-                        Cap = new[] { L(0f, 0.2f, 0.95f, 1f, Role.Shade), L(0.2f, 0.3f, 1.03f, 1.03f, Role.Rim), L(0.5f, 0.2f, 1f, 1f, Role.Body), L(0.7f, 0.3f, 1.03f, 1.03f, Role.Rim) },
-                    };
+                    // Tronc géant : écorce brune, lianes, feuilles, bois clair de la coupe.
+                    return new Style { Body = Matte("#6E4A2E"), Shade = Matte("#4A301C"), Rim = Matte("#4F8E2E"), Glow = Lit("#B8F06A", 0.45f), Accent = Matte("#D8B07A") };
                 case Theme.Sky:
-                    // Colonne de marbre cannelée, chapiteau à bague d'or.
-                    return new Style
-                    {
-                        Sides = 16, Body = Matte("#ECEEF4"), Shade = Matte("#C9CDD8"), Rim = Matte("#E8C25A"), Glow = Lit("#FFF1B8", 0.6f),
-                        Cap = new[] { L(0f, 0.15f, 0.9f, 1f, Role.Shade), L(0.15f, 0.15f, 1.03f, 1.03f, Role.Rim), L(0.3f, 0.3f, 1f, 1f, Role.Body), L(0.6f, 0.4f, 1.03f, 1f, Role.Shade) },
-                    };
+                    // Colonne de marbre prise dans les nuages : cannelures, chapiteau, bagues d'or.
+                    return new Style { Body = Matte("#ECEEF4"), Shade = Matte("#BFC4D2"), Rim = Matte("#E8C25A"), Glow = Lit("#FFF1B8", 0.6f), Accent = Lit("#FFFFFF", 0.2f) };
                 case Theme.Ocean:
-                    // Corail : rose orangé, bord de polypes qui luisent doucement.
-                    return new Style
-                    {
-                        Sides = 9, Body = Matte("#F27466"), Shade = Matte("#C24F45"), Rim = Matte("#FFB7A6"), Glow = Lit("#FFD9CC", 0.5f),
-                        Cap = new[] { L(0f, 0.3f, 0.9f, 1.03f, Role.Shade), L(0.3f, 0.4f, 1.03f, 1.03f, Role.Body), L(0.7f, 0.3f, 1.03f, 1f, Role.Glow) },
-                    };
+                    // Récif : corail rose orangé, branches, polypes lumineux, varech.
+                    return new Style { Body = Matte("#E86A5E"), Shade = Matte("#B44A43"), Rim = Matte("#FFB7A6"), Glow = Lit("#FFE0D2", 0.6f), Accent = Matte("#3E8F6A") };
                 default:
-                    // Prairie : pierre de grès taillée, chapiteau ceint de mousse.
-                    return new Style
-                    {
-                        Sides = 8, Body = Matte("#D8C49A"), Shade = Matte("#A88E62"), Rim = Matte("#79B04A"), Glow = Lit("#E9F7A0", 0.5f),
-                        Cap = new[] { L(0f, 0.2f, 0.92f, 1f, Role.Shade), L(0.2f, 0.25f, 1f, 1f, Role.Body), L(0.45f, 0.15f, 1.03f, 1.03f, Role.Rim), L(0.6f, 0.4f, 1f, 1f, Role.Body) },
-                    };
+                    // Prairie : rochers de grès empilés, mousse, racines.
+                    return new Style { Body = Matte("#CDB78C"), Shade = Matte("#9C8259"), Rim = Matte("#6FA343"), Glow = Lit("#E9F7A0", 0.4f), Accent = Matte("#5A3E24") };
             }
         }
 
-        /// <summary>Couleur d'une couche ; en mode contrasté, la palette orangée (§ accessibilité), lueurs comprises.</summary>
+        /// <summary>Couleur d'un rôle ; en mode contrasté, la palette orangée (§ accessibilité), lueurs comprises.</summary>
         public static Color ColorOf(Style style, Role role, bool contrast)
         {
             if (contrast)
@@ -143,7 +83,8 @@ namespace ElementalPhenix.Rendering
                 switch (role)
                 {
                     case Role.Shade: return NoGlow(Palette.PipeShadeContrast);
-                    case Role.Rim: return NoGlow(Palette.PipeRimContrast);
+                    case Role.Rim:
+                    case Role.Accent: return NoGlow(Palette.PipeRimContrast);
                     case Role.Glow: return style.Glow;
                     default: return NoGlow(Palette.PipeBodyContrast);
                 }
@@ -153,6 +94,7 @@ namespace ElementalPhenix.Rendering
                 case Role.Shade: return style.Shade;
                 case Role.Rim: return style.Rim;
                 case Role.Glow: return style.Glow;
+                case Role.Accent: return style.Accent;
                 default: return style.Body;
             }
         }

@@ -6,8 +6,8 @@ namespace ElementalPhenix.Rendering
 {
     /// <summary>
     /// L'oiseau en volume : corps dodu, ventre clair, yeux, bec, houppette et deux ailes animées,
-    /// ou phénix en armure (heaume à couronne de pointes, ailes à épaulières et médaillons,
-    /// plumes sombres cerclées de flammes, queue de rubans et de feu qui ondule).
+    /// ou phénix en oiseau de proie (<see cref="PhoenixMeshes"/> : bec crochu, aigrette, ailes en
+    /// couches aux pointes de flammes, longue traîne qui ondule).
     /// Le battement suit la séquence haut → milieu → bas → milieu de la spec (§6.6), en continu ;
     /// les plumes du bout des ailes fléchissent dans le vertex shader. Petits nuages de « puff »
     /// à chaque battement, plumes qui volent à l'impact. Tout est purement visuel : la hitbox
@@ -22,6 +22,8 @@ namespace ElementalPhenix.Rendering
         const int FeatherCount = 10;
         const int SparkleCount = 14;
         const float SparkleRate = 22f;
+        /// <summary>Taille du modèle : un peu plus petit que le cercle de collision n'est grand.</summary>
+        const float ModelScale = 0.88f;
         /// <summary>Aperçu du menu des oiseaux : centre (px logiques) et agrandissement.</summary>
         const float PreviewX = 144f;
         const float PreviewY = 182f;
@@ -94,13 +96,13 @@ namespace ElementalPhenix.Rendering
                 if (_looks[i].Shape == Palette.BodyShape.Phoenix)
                 {
                     var plumage = _looks[i].Phoenix;
-                    _bodyMeshes[i] = BuildPhoenixBody(plumage).Build("Oiseau " + skin.Id);
-                    _wingMeshes[i] = BuildPhoenixWing(plumage).Build("Aile " + skin.Id);
-                    _tailMeshes[i] = BuildPhoenixTail(plumage).Build("Queue " + skin.Id);
+                    _bodyMeshes[i] = PhoenixMeshes.Body(plumage).Build("Oiseau " + skin.Id);
+                    _wingMeshes[i] = PhoenixMeshes.Wing(plumage).Build("Aile " + skin.Id);
+                    _tailMeshes[i] = PhoenixMeshes.Tail(plumage).Build("Queue " + skin.Id);
                     var radiant = Palette.Radiant(plumage);
-                    _radiantBody[i] = BuildPhoenixBody(radiant).Build("Oiseau étoilé " + skin.Id);
-                    _radiantWing[i] = BuildPhoenixWing(radiant).Build("Aile étoilée " + skin.Id);
-                    _radiantTail[i] = BuildPhoenixTail(radiant).Build("Queue étoilée " + skin.Id);
+                    _radiantBody[i] = PhoenixMeshes.Body(radiant).Build("Oiseau étoilé " + skin.Id);
+                    _radiantWing[i] = PhoenixMeshes.Wing(radiant).Build("Aile étoilée " + skin.Id);
+                    _radiantTail[i] = PhoenixMeshes.Tail(radiant).Build("Queue étoilée " + skin.Id);
                 }
                 else
                 {
@@ -128,7 +130,7 @@ namespace ElementalPhenix.Rendering
             _farWing.localPosition = new Vector3(-0.01f, 0.01f, 0.105f);
             _farWing.localScale = new Vector3(1f, 1f, -1f);
             _tail = CreatePart(_model, "Queue", _bodyMaterial, out _tailFilter).transform;
-            _tail.localPosition = PhoenixTailRoot;
+            _tail.localPosition = PhoenixMeshes.TailRoot;
 
             var puffMesh = new MeshBuilder().AddSphere(Vector3.zero, 1f, Color.white, 12, 8).Build("Puff");
             _puffMaterial = materials.Lit("Puff", Color.white, 0.1f, 0f, 0.6f);
@@ -147,192 +149,7 @@ namespace ElementalPhenix.Rendering
             SetSkin(0);
         }
 
-        // Phénix : positions des articulations dans le repère du modèle (bec vers +x).
-        static readonly Vector3 PhoenixShoulder = new Vector3(0f, 0.045f, 0.06f);
         static readonly Vector3 RoundShoulder = new Vector3(-0.01f, 0.01f, 0.105f);
-        static readonly Vector3 PhoenixTailRoot = new Vector3(-0.11f, 0f, 0f);
-
-        /// <summary>
-        /// Ellipsoïde allongé le long de <paramref name="dir"/>, de <paramref name="start"/> à
-        /// <paramref name="end"/> depuis <paramref name="origin"/>, aplati selon <paramref name="normal"/>.
-        /// </summary>
-        static void AddSegment(MeshBuilder b, Vector3 origin, Vector3 dir, Vector3 normal, float start, float end,
-            float width, float thickness, Color color, int longitude = 10, int latitude = 6)
-        {
-            var center = origin + dir * ((start + end) * 0.5f);
-            var piece = new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(width, thickness, (end - start) * 0.5f), color, longitude, latitude);
-            b.Append(piece, Matrix4x4.TRS(center, Quaternion.LookRotation(dir, normal), Vector3.one));
-        }
-
-        /// <summary>Pointe conique de la base <paramref name="basePos"/> vers <paramref name="dir"/>.</summary>
-        static void AddSpike(MeshBuilder b, Vector3 basePos, Vector3 dir, float radius, float length, Color color, int segments = 8)
-        {
-            b.Append(new MeshBuilder().AddCone(Vector3.zero, radius, length, color, segments),
-                Matrix4x4.TRS(basePos, Quaternion.FromToRotation(Vector3.up, dir.normalized), Vector3.one));
-        }
-
-        /// <summary>
-        /// Ruban qui se courbe dans le plan de profil : direction de <paramref name="fromDeg"/> à
-        /// <paramref name="toDeg"/> (degrés, 0 = vers le bec, 90 = vers le haut), largeur et couleur
-        /// interpolées de la base au bout. Aplati face à la caméra. Renvoie la position du bout.
-        /// </summary>
-        static Vector3 AddCurve(MeshBuilder b, Vector3 start, float fromDeg, float toDeg, float length,
-            float width0, float width1, Color color0, Color color1, float thickness = 0.006f, int segments = 6)
-        {
-            var previous = start;
-            float step = length / segments;
-            for (int i = 1; i <= segments; i++)
-            {
-                float u = (float)i / segments;
-                float a = Mathf.Lerp(fromDeg, toDeg, (i - 0.5f) / segments) * Mathf.Deg2Rad;
-                var dir = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f);
-                AddSegment(b, previous, dir, Vector3.back, -0.006f, step + 0.006f, Mathf.Lerp(width0, width1, u), thickness,
-                    Color.Lerp(color0, color1, u));
-                previous += dir * step;
-            }
-            return previous;
-        }
-
-        static Vector3 Direction(float degrees)
-        {
-            float a = degrees * Mathf.Deg2Rad;
-            return new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f);
-        }
-
-        /// <summary>
-        /// Corps du phénix en armure : buste sombre au ventre de feu, plastron à gemme, cou lumineux,
-        /// heaume au bec de métal et aux yeux de gemme, couronne de pointes, deux rubans qui
-        /// tombent de la tête et serres de feu.
-        /// </summary>
-        static MeshBuilder BuildPhoenixBody(Palette.PhoenixColors c)
-        {
-            var b = new MeshBuilder();
-            b.AddEllipsoid(new Vector3(-0.02f, 0f, 0f), new Vector3(0.11f, 0.072f, 0.068f), c.Body, 22, 14);
-            b.AddEllipsoid(new Vector3(-0.005f, -0.04f, 0f), new Vector3(0.075f, 0.04f, 0.056f), c.Plume, 16, 10);
-            // Plastron : plaque d'armure bordée de deux arêtes claires, gemme au centre.
-            b.AddEllipsoid(new Vector3(0.048f, 0.005f, 0f), new Vector3(0.056f, 0.066f, 0.062f), c.Armor, 18, 12);
-            for (int side = -1; side <= 1; side += 2)
-                AddSegment(b, new Vector3(0.07f, 0.05f, 0.042f * side), new Vector3(0.25f, -1f, -0.35f * side).normalized, Vector3.right,
-                    0f, 0.09f, 0.008f, 0.01f, c.ArmorTrim);
-            b.AddSphere(new Vector3(0.1f, 0.0f, 0f), 0.017f, c.Gem, 12, 10);
-            b.AddSphere(new Vector3(0.112f, 0.004f, 0f), 0.008f, c.GemCore, 8, 6);
-            // Cou lumineux penché vers l'avant, collier d'armure.
-            b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.034f, 0.062f, 0.036f), c.Plume, 14, 10),
-                Matrix4x4.TRS(new Vector3(0.095f, 0.06f, 0f), Quaternion.Euler(0f, 0f, -35f), Vector3.one));
-            b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.042f, 0.022f, 0.048f), c.Armor, 14, 8),
-                Matrix4x4.TRS(new Vector3(0.082f, 0.045f, 0f), Quaternion.Euler(0f, 0f, -35f), Vector3.one));
-
-            // Heaume, bec de métal légèrement crochu.
-            var head = new Vector3(0.135f, 0.11f, 0f);
-            b.AddSphere(head, 0.038f, c.Armor, 16, 12);
-            b.AddEllipsoid(head + new Vector3(0.012f, -0.012f, 0f), new Vector3(0.026f, 0.02f, 0.03f), c.Body, 12, 8);
-            AddSpike(b, head + new Vector3(0.03f, -0.002f, 0f), Direction(-14f), 0.014f, 0.062f, c.ArmorTrim, 10);
-            AddSpike(b, head + new Vector3(0.03f, -0.014f, 0f), Direction(-40f), 0.008f, 0.03f, c.Armor, 8);
-            // Yeux en fente, lumineux, des deux côtés.
-            for (int side = -1; side <= 1; side += 2)
-            {
-                b.Append(new MeshBuilder().AddEllipsoid(Vector3.zero, new Vector3(0.014f, 0.0055f, 0.006f), c.Gem, 10, 6),
-                    Matrix4x4.TRS(head + new Vector3(0.018f, 0.006f, 0.032f * side), Quaternion.Euler(0f, 0f, 12f), Vector3.one));
-            }
-            // Couronne : éventail de pointes vers le haut et l'arrière, flammes au milieu, gemme frontale.
-            const int crest = 7;
-            for (int k = 0; k < crest; k++)
-            {
-                float t = (float)k / (crest - 1);
-                float angle = Mathf.Lerp(70f, 175f, t);
-                float length = Mathf.Lerp(0.07f, 0.1f, Mathf.Sin(t * Mathf.PI));
-                var color = k == 2 || k == 4 ? c.FlameA : (k % 2 == 0 ? c.Armor : c.ArmorTrim);
-                AddSpike(b, head + new Vector3(-0.005f, 0.025f, 0f), Direction(angle), 0.011f, length, color);
-            }
-            for (int side = -1; side <= 1; side += 2)
-                AddSpike(b, head + new Vector3(-0.01f, 0.012f, 0.03f * side), new Vector3(-0.7f, 0.55f, 0.45f * side), 0.01f, 0.07f, c.ArmorTrim);
-            b.AddSphere(head + new Vector3(0.02f, 0.03f, 0f), 0.01f, c.Gem, 8, 6);
-            // Rubans qui tombent de l'arrière de la tête.
-            for (int side = -1; side <= 1; side += 2)
-                AddCurve(b, head + new Vector3(-0.02f, -0.01f, 0.026f * side), -95f, -150f, 0.17f, 0.009f, 0.004f, c.Ribbon, c.FlameTip, 0.005f);
-
-            // Pattes d'armure et serres de feu.
-            for (int side = -1; side <= 1; side += 2)
-            {
-                var hip = new Vector3(0.005f, -0.055f, 0.026f * side);
-                AddSegment(b, hip, Direction(-75f), Vector3.back, 0f, 0.05f, 0.014f, 0.014f, c.Armor);
-                var foot = hip + Direction(-75f) * 0.05f;
-                for (int k = -1; k <= 1; k++)
-                    AddSpike(b, foot, new Vector3(0.6f, -1f, 0.35f * k), 0.005f, 0.026f, c.FlameTip, 6);
-            }
-            return b;
-        }
-
-        /// <summary>
-        /// Aile du phénix au repos : à plat (plan xz), étendue vers −z depuis l'épaule. Bras et
-        /// épaulière d'armure à cornes, médaillon à gemme rayonnant, puis onze longues plumes
-        /// sombres en éventail, cerclées de flammes, sur un voile lumineux.
-        /// </summary>
-        static MeshBuilder BuildPhoenixWing(Palette.PhoenixColors c)
-        {
-            var b = new MeshBuilder();
-            var arm = new Vector3(-0.2f, 0f, -1f).normalized;
-            AddSegment(b, Vector3.zero, arm, Vector3.up, 0f, 0.21f, 0.028f, 0.02f, c.Armor, 12, 8);
-            // Épaulière bombée et arête claire du bord d'attaque.
-            b.AddEllipsoid(new Vector3(0.005f, 0.012f, -0.05f), new Vector3(0.058f, 0.024f, 0.06f), c.Armor, 16, 10);
-            AddSegment(b, new Vector3(0.04f, 0.016f, 0f), new Vector3(0.1f, 0f, -1f).normalized, Vector3.up, 0f, 0.19f, 0.011f, 0.018f, c.ArmorTrim);
-            // Cornes : une vers l'avant à l'épaule, une lame au bout de l'aile.
-            AddSpike(b, new Vector3(0.03f, 0.02f, -0.06f), new Vector3(0.9f, 0.35f, -0.35f), 0.016f, 0.09f, c.ArmorTrim, 10);
-            AddSpike(b, new Vector3(-0.045f, 0.004f, -0.205f), new Vector3(-0.1f, 0f, -1f), 0.016f, 0.085f, c.ArmorTrim, 10);
-            // Médaillon : gemme sertie d'armure, rayons fins tout autour, petite gemme voisine.
-            var medal = new Vector3(-0.025f, 0.028f, -0.125f);
-            b.AddEllipsoid(medal - new Vector3(0f, 0.006f, 0f), new Vector3(0.03f, 0.012f, 0.03f), c.Armor, 14, 8);
-            b.AddSphere(medal, 0.019f, c.Gem, 12, 10);
-            b.AddSphere(medal + new Vector3(0.004f, 0.015f, 0f), 0.008f, c.GemCore, 8, 6);
-            for (int k = 0; k < 10; k++)
-            {
-                float a = k * Mathf.PI * 2f / 10f;
-                AddSpike(b, medal, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)), 0.0045f, 0.055f, c.ArmorTrim, 6);
-            }
-            b.AddSphere(new Vector3(0.012f, 0.024f, -0.165f), 0.011f, c.Gem, 10, 8);
-
-            // Voile lumineux sous les plumes.
-            b.AddEllipsoid(new Vector3(-0.08f, -0.008f, -0.12f), new Vector3(0.09f, 0.004f, 0.11f), c.Plume, 16, 8);
-            // Plumes : de la pointe de l'aile (vers l'extérieur) jusqu'au corps (vers l'arrière).
-            const int count = 11;
-            for (int k = 0; k < count; k++)
-            {
-                float t = (float)k / (count - 1);
-                var root = Vector3.Lerp(new Vector3(-0.045f, 0f, -0.205f), new Vector3(-0.02f, 0f, -0.025f), t);
-                float a = Mathf.Lerp(18f, 95f, t) * Mathf.Deg2Rad;
-                var dir = new Vector3(-Mathf.Sin(a), 0f, -Mathf.Cos(a));
-                float length = Mathf.Lerp(0.26f, 0.14f, t);
-                var flame = k % 2 == 0 ? c.FlameA : c.FlameB;
-                // Flamme large dessous, plume sombre étroite dessus, pointe sombre effilée.
-                AddSegment(b, root + Vector3.down * 0.002f, dir, Vector3.up, length * 0.1f, length * 0.9f, 0.03f, 0.006f, flame);
-                AddSegment(b, root + Vector3.up * 0.002f, dir, Vector3.up, 0f, length * 0.75f, 0.016f, 0.006f, c.Body);
-                AddSegment(b, root + Vector3.up * 0.003f, dir, Vector3.up, length * 0.6f, length * 1.04f, 0.009f, 0.006f, c.Body);
-                AddSegment(b, root + Vector3.up * 0.004f, dir, Vector3.up, length * 0.82f, length * 0.98f, 0.005f, 0.006f, c.FlameTip);
-            }
-            return b;
-        }
-
-        /// <summary>
-        /// Queue du phénix vers −x : un long ruban fin qui ondule et quatre traînes de flammes
-        /// assombries au centre, de la couleur des flammes vers leur pointe claire.
-        /// </summary>
-        static MeshBuilder BuildPhoenixTail(Palette.PhoenixColors c)
-        {
-            var b = new MeshBuilder();
-            AddCurve(b, new Vector3(0f, 0f, 0.01f), 192f, 222f, 0.32f, 0.012f, 0.003f, c.Ribbon, c.FlameTip, 0.006f, 8);
-            AddFlameTrain(b, c, 168f, 150f, 0.17f, 0.015f);
-            AddFlameTrain(b, c, 182f, 172f, 0.22f, -0.01f);
-            AddFlameTrain(b, c, 198f, 212f, 0.2f, 0.02f);
-            AddFlameTrain(b, c, 212f, 236f, 0.15f, -0.015f);
-            return b;
-        }
-
-        static void AddFlameTrain(MeshBuilder b, Palette.PhoenixColors c, float fromDeg, float toDeg, float length, float depth)
-        {
-            var start = new Vector3(0f, 0f, depth);
-            AddCurve(b, start, fromDeg, toDeg, length, 0.024f, 0.005f, c.FlameA, c.FlameTip, 0.006f);
-            AddCurve(b, start + Vector3.back * 0.004f, fromDeg, toDeg, length * 0.8f, 0.009f, 0.003f, c.Body, c.FlameB, 0.006f);
-        }
 
         static MeshBuilder BuildWing(Palette.BirdColors colors)
         {
@@ -460,7 +277,7 @@ namespace ElementalPhenix.Rendering
             _golden = false;
             var look = _looks[_skin];
             ApplyMeshes(_bodyMeshes[_skin], _wingMeshes[_skin], _tailMeshes[_skin]);
-            var shoulder = look.Shape == Palette.BodyShape.Phoenix ? PhoenixShoulder : RoundShoulder;
+            var shoulder = look.Shape == Palette.BodyShape.Phoenix ? PhoenixMeshes.Shoulder : RoundShoulder;
             _nearWing.localPosition = new Vector3(shoulder.x, shoulder.y, -shoulder.z);
             _farWing.localPosition = shoulder;
             SetFinish(look.Emission, look.VertexEmission, look.Glitter, look.Smoothness, look.Metallic, look.Rim, look.RimStrength);
@@ -535,7 +352,7 @@ namespace ElementalPhenix.Rendering
                 }
             }
             UpdateSparkles(deltaTime);
-            _aura.Update(_root.position, _root.localScale.x, golden ? amount : 0f, _auraActive, deltaTime, time);
+            _aura.Update(_root.position, _root.localScale.x * ModelScale, golden ? amount : 0f, _auraActive, deltaTime, time);
         }
 
         void SetFinish(Color emission, float vertexEmission, float glitter, float smoothness, float metallic, Color rimColor, float rim)
@@ -600,7 +417,7 @@ namespace ElementalPhenix.Rendering
                 p.Transform.position = origin + Random.insideUnitSphere * 0.03f;
                 p.Transform.gameObject.SetActive(true);
             }
-            _aura.Burst(_root.position, _root.localScale.x);
+            _aura.Burst(_root.position, _root.localScale.x * ModelScale);
         }
 
         public void OnHit()
@@ -644,7 +461,7 @@ namespace ElementalPhenix.Rendering
             // Étirement au battement puis retour : la silhouette reste plus petite que la hitbox n'est grande.
             _squash = Mathf.Max(0f, _squash - deltaTime * 6f);
             float s = Mathf.Sin(_squash * Mathf.PI) * 0.12f;
-            _model.localScale = new Vector3(1f - s * 0.5f, 1f + s, 1f - s * 0.5f);
+            _model.localScale = new Vector3(1f - s * 0.5f, 1f + s, 1f - s * 0.5f) * ModelScale;
 
             // Ailes : phase continue calée sur la séquence d'images de la spec, figées à la mort.
             var look = _looks[_skin];
